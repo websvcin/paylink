@@ -1,0 +1,127 @@
+/* ✅ Step Progress Bar */
+.step-progress {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 40px auto 30px auto;
+    max-width: 600px;
+    position: relative;
+}
+.step {
+    position: relative;
+    text-align: center;
+    flex: 1;
+}
+.step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 20px;
+    right: -50%;
+    width: 100%;
+    height: 3px;
+    background-color: #e5e7eb;
+    z-index: 0;
+    transition: all 0.3s ease;
+}
+.step.done:not(:last-child)::after {
+    background-color: #16a34a;
+}
+.step-circle {
+    position: relative;
+    z-index: 1;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #374151;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    margin: 0 auto 10px auto;
+    transition: all 0.3s ease;
+}
+.step.active .step-circle,
+.step.done .step-circle {
+    background: #16a34a;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(22,163,74,0.5);
+}
+.step-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+/* ✅ Payment Form Styles */
+.payment-container {
+    max-width: 860px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+.payment-header {
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+    color: #fff;
+    text-align: center;
+    padding: 25px;
+}
+.payment-form { padding: 40px; }
+.form-control, .form-select {
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+/* ✅ Buttons */
+.btn-primary {
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 30px;
+    font-weight: 600;
+}
+.gateway-btn {
+    border-radius: 8px;
+    padding: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+.gateway-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* ✅ Step Animation */
+.step-fade {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+.step-fade.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ✅ Overlay Loader */
+.payment-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(255,255,255,0.9);
+    color: #16a34a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    font-size: 1.2rem;
+    z-index: 9999;
+}
+
+/* ✅ Responsive */
+@media (max-width: 768px) {
+    .payment-form { padding: 20px; }
+    .btn-primary { width: 100%; }
+}
+    
