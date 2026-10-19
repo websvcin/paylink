@@ -1,0 +1,54 @@
+@using WebSvc.PayLink.Storage.Provisioning
+@model (PayLink.Pages.HostingInput Input, bool AllowNone, bool HasSaved)
+@{
+    var i = Model.Input;
+    var keep = Model.HasSaved ? "Saved. Leave blank to keep it." : "";
+}
+<div class="opts">
+    @if (Model.AllowNone)
+    {
+        <label class="opt"><input type="radio" name="Hosting.Kind" value="None" checked="@(i.Kind == HostingKind.None)"><div><b>None</b><span>Tenants choose SQLite or bring their own MySQL. You can set this up later.</span></div></label>
+    }
+    <label class="opt"><input type="radio" name="Hosting.Kind" value="MySqlServer" checked="@(i.Kind == HostingKind.MySqlServer)"><div><b>A MySQL server</b><span>An admin account that can CREATE DATABASE, CREATE USER and GRANT. Tested end to end.</span></div></label>
+    <div class="reveal card">
+        <div class="grid2">
+            <div class="field"><label for="h_MySqlHost">Host</label><input id="h_MySqlHost" name="Hosting.MySqlHost" class="mono" value="@i.MySqlHost"></div>
+            <div class="field"><label for="h_MySqlPort">Port</label><input id="h_MySqlPort" name="Hosting.MySqlPort" type="number" class="mono" value="@i.MySqlPort"></div>
+            <div class="field"><label for="h_MySqlAdminUser">Admin user</label><input id="h_MySqlAdminUser" name="Hosting.MySqlAdminUser" class="mono" value="@i.MySqlAdminUser" autocomplete="off"></div>
+            <div class="field"><label for="h_MySqlAdminPassword">Admin password</label><input id="h_MySqlAdminPassword" name="Hosting.MySqlAdminPassword" type="password" class="mono" placeholder="@keep" autocomplete="new-password"></div>
+            <div class="field"><label for="h_MySqlSslMode">SSL mode</label>
+                <select id="h_MySqlSslMode" name="Hosting.MySqlSslMode">
+                    @foreach (var mode in new[] { MySqlConnector.MySqlSslMode.Required, MySqlConnector.MySqlSslMode.Preferred, MySqlConnector.MySqlSslMode.VerifyFull, MySqlConnector.MySqlSslMode.None })
+                    {
+                        <option value="@mode" selected="@(i.MySqlSslMode == mode)">@mode</option>
+                    }
+                </select>
+            </div>
+            <div class="field"><label for="h_MySqlUserHost">Created users may connect from</label><input id="h_MySqlUserHost" name="Hosting.MySqlUserHost" class="mono" value="@i.MySqlUserHost"><span class="hint">"%" means any host. Use the PayLink server's address to be stricter.</span></div>
+        </div>
+    </div>
+    <label class="opt"><input type="radio" name="Hosting.Kind" value="Plesk" checked="@(i.Kind == HostingKind.Plesk)"><div><b>Plesk</b><span>Uses the Plesk REST API. Not yet tested against a live Plesk server, so use Test &amp; verify.</span></div></label>
+    <div class="reveal card">
+        <div class="grid2">
+            <div class="field"><label for="h_PleskHost">Panel host or IP</label><input id="h_PleskHost" name="Hosting.PleskHost" class="mono" value="@i.PleskHost" placeholder="panel.example.com"></div>
+            <div class="field"><label for="h_PleskPort">Port</label><input id="h_PleskPort" name="Hosting.PleskPort" type="number" class="mono" value="@i.PleskPort"></div>
+            <div class="field"><label for="h_PleskSubscriptionId">Subscription (webspace) ID</label><input id="h_PleskSubscriptionId" name="Hosting.PleskSubscriptionId" type="number" class="mono" value="@i.PleskSubscriptionId"></div>
+            <div class="field"><label for="h_PleskLogin">Admin login</label><input id="h_PleskLogin" name="Hosting.PleskLogin" class="mono" value="@i.PleskLogin" autocomplete="off"></div>
+            <div class="field"><label for="h_PleskPassword">Admin password</label><input id="h_PleskPassword" name="Hosting.PleskPassword" type="password" class="mono" placeholder="@keep" autocomplete="new-password"></div>
+            <div class="field"><label for="h_PleskSecretKey">Or a secret key</label><input id="h_PleskSecretKey" name="Hosting.PleskSecretKey" type="password" class="mono" placeholder="@keep" autocomplete="new-password"></div>
+        </div>
+    </div>
+    <label class="opt"><input type="radio" name="Hosting.Kind" value="CPanel" checked="@(i.Kind == HostingKind.CPanel)"><div><b>cPanel</b><span>Uses cPanel UAPI. Not yet tested against a live cPanel account, so use Test &amp; verify.</span></div></label>
+    <div class="reveal card">
+        <div class="grid2">
+            <div class="field"><label for="h_CPanelHost">cPanel host</label><input id="h_CPanelHost" name="Hosting.CPanelHost" class="mono" value="@i.CPanelHost"></div>
+            <div class="field"><label for="h_CPanelPort">Port</label><input id="h_CPanelPort" name="Hosting.CPanelPort" type="number" class="mono" value="@i.CPanelPort"></div>
+            <div class="field"><label for="h_CPanelUsername">Account user name</label><input id="h_CPanelUsername" name="Hosting.CPanelUsername" class="mono" value="@i.CPanelUsername" autocomplete="off"></div>
+            <div class="field"><label for="h_CPanelApiToken">API token</label><input id="h_CPanelApiToken" name="Hosting.CPanelApiToken" type="password" class="mono" placeholder="@keep" autocomplete="new-password"></div>
+        </div>
+    </div>
+</div>
+<details>
+    <summary>Advanced</summary>
+    <div class="field" style="margin-top:8px"><label for="h_ConnectionHostOverride">Connection host override</label><input id="h_ConnectionHostOverride" name="Hosting.ConnectionHostOverride" class="mono" value="@i.ConnectionHostOverride"><span class="hint">Only if PayLink must reach created databases at a different host name than the panel.</span></div>
+</details>

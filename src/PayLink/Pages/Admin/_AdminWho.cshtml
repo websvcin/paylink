@@ -1,0 +1,7 @@
+<div class="who">
+    <span>@User.Get(PayLinkClaims.Email) · @(User.Get(PayLinkClaims.Access) == "admin" ? "platform admin" : "support, read-only")</span>
+    <form method="post" action="/admin/logout" class="inline">
+        @Html.AntiForgeryToken()
+        <button class="btn sm" type="submit">Sign out</button>
+    </form>
+</div>

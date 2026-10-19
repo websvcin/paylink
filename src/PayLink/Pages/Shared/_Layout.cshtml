@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>@(ViewData["Title"] is string t ? t + " · PayLink" : "PayLink")</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
+</head>
+<body>
+<header class="top">
+    <div class="top-in">
+        <a class="brand" href="/"><span class="mark">₹</span>PayLink</a>
+        @if (ViewData["Where"] is string where)
+        {
+            <span class="where">@where</span>
+        }
+        <span class="spacer"></span>
+        @await RenderSectionAsync("Who", required: false)
+    </div>
+</header>
+<main class="wrap">
+    @if (IsSectionDefined("Nav"))
+    {
+        <div class="shell">
+            <nav class="side" aria-label="Sections">@await RenderSectionAsync("Nav")</nav>
+            <div class="main">
+                <partial name="_Flash" />
+                @RenderBody()
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="main">
+            <partial name="_Flash" />
+            @RenderBody()
+        </div>
+    }
+</main>
+</body>
+</html>

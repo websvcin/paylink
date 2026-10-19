@@ -1,0 +1,130 @@
+@page "/setup"
+@model PayLink.Pages.Setup.IndexModel
+@using WebSvc.PayLink.Storage.Provisioning
+@{
+    ViewData["Title"] = "Set up PayLink";
+    ViewData["Where"] = "First-run setup";
+}
+<div class="narrow main">
+    <div class="head"><div><h1>Set up PayLink</h1><p>A few steps, once. There's no default account: the first platform admin signs in through LoginLink.</p></div></div>
+
+    <nav class="steps" aria-label="Setup steps">
+        @foreach (var (key, title) in PayLink.Pages.Setup.IndexModel.Steps)
+        {
+            var cls = key == Model.Step ? "step now" : Model.IsDone(key) ? "step done" : "step";
+            if (Model.Unlocked && (Model.IsDone(key) || key == Model.Step))
+            {
+                <a class="@cls" href="/setup?step=@key">@title</a>
+            }
+            else
+            {
+                <span class="@cls">@title</span>
+            }
+        }
+    </nav>
+
+    @if (Model.Message is not null) { <div class="notice good" role="status">@Model.Message</div> }
+    @if (Model.Error is not null) { <div class="notice bad" role="alert">@Model.Error</div> }
+
+    @switch (Model.Step)
+    {
+        case "unlock":
+            <form method="post" asp-page-handler="Unlock" class="card">
+                <h2>Enter the setup code</h2>
+                <p class="muted">PayLink printed a one-time setup code in its startup log (<code>docker logs paylink</code>). It proves that whoever finishes setup also runs the server.</p>
+                <div class="field"><label for="Code">Setup code</label><input id="Code" name="Code" class="mono" autocomplete="off" autofocus></div>
+                <dl class="kv"><dt>Data folder</dt><dd><code>@Model.DataRoot</code></dd></dl>
+                <p class="hint">bootstrap.db, the encryption keys and any SQLite databases live in this folder. Mount it as a volume so it survives restarts and upgrades.</p>
+                <div class="actions"><button class="btn pri" type="submit">Continue</button></div>
+            </form>
+            break;
+
+        case "hosting":
+            <form method="post" asp-page-handler="Hosting" class="card">
+                <h2>Database hosting <span class="chip">Optional</span></h2>
+                <p class="muted">Lets PayLink create MySQL databases on demand: for the platform database in the next step, and for tenants you approve. Without it, tenants can still use SQLite or bring their own MySQL.</p>
+                <partial name="_HostingFields" model="(Model.Hosting, false, Model.SavedHosting.Kind != HostingKind.None)" />
+                <div class="actions">
+                    <button class="btn" type="submit" name="action" value="test">Test &amp; verify</button>
+                    <button class="btn pri" type="submit" name="action" value="save">Save and continue</button>
+                    <button class="btn" type="submit" name="action" value="skip">Skip for now</button>
+                </div>
+            </form>
+            break;
+
+        case "database":
+            <form method="post" asp-page-handler="Database" class="card">
+                <h2>Platform database</h2>
+                <p class="muted">Holds the tenant registry, platform admins, developer keys and the platform audit log. Each tenant gets its own separate database later.</p>
+                <div class="opts">
+                    <label class="opt"><input type="radio" name="DbChoice" value="sqlite" checked="@(Model.DbChoice == "sqlite")"><div><b>SQLite</b><span>Nothing to set up. Creates <code>platform.db</code> in the data folder.</span></div></label>
+                    <label class="opt"><input type="radio" name="DbChoice" value="mysql" checked="@(Model.DbChoice == "mysql")"><div><b>MySQL: a server I run</b><span>An empty database, or an existing PayLink platform database to reattach.</span></div></label>
+                    <div class="reveal card"><partial name="_MySqlFields" model='("Mysql", Model.Mysql)' /></div>
+                    @if (Model.SavedHosting.Kind != HostingKind.None)
+                    {
+                        <label class="opt"><input type="radio" name="DbChoice" value="mysql-create" checked="@(Model.DbChoice == "mysql-create")"><div><b>MySQL: create it for me</b><span>Uses @Model.SavedHosting.Describe(). Named <code>paylink_platform_…</code>.</span></div></label>
+                    }
+                    else
+                    {
+                        <div class="opt disabled"><input type="radio" disabled><div><b>MySQL: create it for me</b><span>Needs database hosting (previous step).</span></div></div>
+                    }
+                    <div class="opt disabled"><input type="radio" disabled><div><b>PostgreSQL</b><span>Coming later. The storage layer is ready for it.</span></div></div>
+                </div>
+                <div class="actions">
+                    <button class="btn" type="submit" name="action" value="test">Test connection</button>
+                    <button class="btn pri" type="submit" name="action" value="save">Create tables and continue</button>
+                </div>
+            </form>
+            break;
+
+        case "loginlink":
+            <form method="post" asp-page-handler="LoginLink" class="card">
+                <h2>Connect LoginLink</h2>
+                <p class="muted">Required. PayLink stores no passwords: platform admins, tenant teams and API tokens all go through LoginLink.</p>
+                <div class="grid2">
+                    <div class="field"><label for="LL_ServerUrl">LoginLink server</label><input id="LL_ServerUrl" name="LL.ServerUrl" class="mono" value="@Model.LL.ServerUrl"></div>
+                    <div class="field"><label for="LL_PlatformOrg">Platform organization slug</label><input id="LL_PlatformOrg" name="LL.PlatformOrg" class="mono" value="@Model.LL.PlatformOrg" placeholder="e.g. websvc"><span class="hint">Whose people may sign in to /admin. Any existing organization works. Leave blank for LoginLink's platform root organization.</span></div>
+                </div>
+                <div class="field"><label for="LL_PublicBaseUrl">PayLink's public address</label><input id="LL_PublicBaseUrl" name="LL.PublicBaseUrl" class="mono" value="@Model.LL.PublicBaseUrl"><span class="hint">Sign-in returns to <code>@(Model.LL.PublicBaseUrl ?? Model.DetectedBaseUrl)/auth/callback</code>.</span></div>
+
+                <h3>The "PayLink admin" app in that organization</h3>
+                <div class="opts">
+                    <label class="opt"><input type="radio" name="LL.AppMode" value="register" checked="@(Model.LL.AppMode != "manual")"><div><b>Register it for me</b><span>Give PayLink a management credential from LoginLink (Console → API Access) with <b>Register apps</b>.</span></div></label>
+                    <div class="reveal card grid2">
+                        <div class="field"><label for="LL_MgmtClientId">Client ID</label><input id="LL_MgmtClientId" name="LL.MgmtClientId" class="mono" autocomplete="off"></div>
+                        <div class="field"><label for="LL_MgmtClientSecret">Client secret</label><input id="LL_MgmtClientSecret" name="LL.MgmtClientSecret" type="password" class="mono" autocomplete="new-password"></div>
+                    </div>
+                    <label class="opt"><input type="radio" name="LL.AppMode" value="manual" checked="@(Model.LL.AppMode == "manual")"><div><b>I registered it myself</b><span>A confidential app with the redirect URI above, and "Tenant admins" ticked under "Who can sign in".</span></div></label>
+                    <div class="reveal card grid2">
+                        <div class="field"><label for="LL_ClientId">Client ID</label><input id="LL_ClientId" name="LL.ClientId" class="mono" autocomplete="off"></div>
+                        <div class="field"><label for="LL_ClientSecret">Client secret</label><input id="LL_ClientSecret" name="LL.ClientSecret" type="password" class="mono" autocomplete="new-password"></div>
+                    </div>
+                </div>
+
+                <details>
+                    <summary>Optional: let tenants create a new LoginLink organization at signup</summary>
+                    <p class="hint" style="margin:8px 0">A LoginLink Platform API credential (Admin → Platform Settings → Platform API Access) with <b>CreateTenants</b>. Without it, tenants connect an organization they already have.</p>
+                    <div class="grid2">
+                        <div class="field"><label for="LL_PlatformApiClientId">Client ID</label><input id="LL_PlatformApiClientId" name="LL.PlatformApiClientId" class="mono" autocomplete="off"></div>
+                        <div class="field"><label for="LL_PlatformApiClientSecret">Client secret</label><input id="LL_PlatformApiClientSecret" name="LL.PlatformApiClientSecret" type="password" class="mono" autocomplete="new-password"></div>
+                    </div>
+                </details>
+                <div class="actions"><button class="btn pri" type="submit">Connect and continue</button></div>
+            </form>
+            break;
+
+        case "admin":
+            <form method="post" asp-page-handler="SignIn" class="card">
+                <h2>First platform administrator</h2>
+                <p class="muted">Sign in with LoginLink@(string.IsNullOrEmpty(Model.SavedLoginLink?.PlatformOrg) ? "" : $" ({Model.SavedLoginLink.PlatformOrg})"). Your account becomes the first platform admin, and setup finishes.</p>
+                <div class="checks">
+                    <div class="check"><span class="ok">✓</span><span>Platform database: @Model.PlatformTarget?.Describe()</span></div>
+                    <div class="check"><span class="ok">✓</span><span>LoginLink: @Model.SavedLoginLink?.ServerUrl@(string.IsNullOrEmpty(Model.SavedLoginLink?.PlatformOrg) ? "" : "/" + Model.SavedLoginLink.PlatformOrg)</span></div>
+                    <div class="check"><span class="@(Model.SavedHosting.Kind == HostingKind.None ? "w" : "ok")">@(Model.SavedHosting.Kind == HostingKind.None ? "!" : "✓")</span><span>Database hosting: @Model.SavedHosting.Describe()</span></div>
+                    <div class="check"><span class="w">!</span><span>Back up <code>@Model.DataRoot/keys</code>. Without <code>master.key</code>, stored secrets can't be read.</span></div>
+                </div>
+                <div class="actions"><button class="btn pri" type="submit">Sign in with LoginLink</button></div>
+            </form>
+            break;
+    }
+</div>

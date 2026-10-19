@@ -1,0 +1,36 @@
+@page "/admin/tenants/new"
+@model PayLink.Pages.Admin.TenantNewModel
+@{
+    ViewData["Title"] = "New tenant";
+    ViewData["Where"] = "Platform console";
+}
+@section Nav { <partial name="_AdminNav" /> }
+@section Who { <partial name="_AdminWho" /> }
+
+<div class="head"><div><h1>New tenant</h1><p>Create a PayLink account for a business that already has a LoginLink organization. Its admins are let in when they first sign in. Businesses can also do this themselves at <a href="/signup">/signup</a>.</p></div></div>
+@if (Model.Error is not null) { <div class="notice bad" role="alert">@Model.Error</div> }
+
+<form method="post" class="card">
+    <div class="grid2">
+        <div class="field"><label for="Name">Business name</label><input id="Name" name="Name" value="@Model.Name"></div>
+        <div class="field"><label for="Slug">Console address</label><div class="prefix"><span>/</span><input id="Slug" name="Slug" class="mono" value="@Model.Slug"></div></div>
+    </div>
+    <h3>Their LoginLink organization</h3>
+    <div class="grid3">
+        <div class="field"><label for="OrgSlug">Organization slug</label><input id="OrgSlug" name="OrgSlug" class="mono" value="@Model.OrgSlug"></div>
+        <div class="field"><label for="MgmtClientId">Management client ID</label><input id="MgmtClientId" name="MgmtClientId" class="mono" autocomplete="off"></div>
+        <div class="field"><label for="MgmtClientSecret">Client secret</label><input id="MgmtClientSecret" name="MgmtClientSecret" type="password" class="mono" autocomplete="new-password"></div>
+    </div>
+    <p class="hint">A credential from that organization's LoginLink console (API Access) with <b>Register apps</b> and <b>Manage APIs</b>.</p>
+    <h3>Where their data lives</h3>
+    <div class="opts">
+        <label class="opt"><input type="radio" name="DbChoice" value="sqlite" checked="@(Model.DbChoice == "sqlite")"><div><b>SQLite, managed by PayLink</b><span>Nothing to set up.</span></div></label>
+        @if (Model.HostingConfigured)
+        {
+            <label class="opt"><input type="radio" name="DbChoice" value="auto" checked="@(Model.DbChoice == "auto")"><div><b>Create a MySQL database</b><span>On this platform's database hosting. As a platform admin you don't need an approval entry.</span></div></label>
+        }
+        <label class="opt"><input type="radio" name="DbChoice" value="byo" checked="@(Model.DbChoice == "byo")"><div><b>Their own MySQL</b><span>Must be empty.</span></div></label>
+        <div class="reveal card"><partial name="_MySqlFields" model='("Byo", Model.Byo)' /></div>
+    </div>
+    <div class="actions"><button class="btn pri" type="submit">Create tenant</button></div>
+</form>

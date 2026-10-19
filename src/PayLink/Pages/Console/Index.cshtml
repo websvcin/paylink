@@ -1,0 +1,36 @@
+@page "/{slug}/console"
+@model PayLink.Pages.Console.IndexModel
+@{
+    ViewData["Title"] = Model.Tenant.Name;
+    ViewData["Where"] = Model.Tenant.Name;
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>@Model.Tenant.Name</h1><p>Your PayLink account is ready. Payments, payment methods and developer keys arrive in the next release.</p></div></div>
+
+<div class="grid2">
+    <div class="card">
+        <h3>Account</h3>
+        <dl class="kv">
+            <dt>Console address</dt><dd><code>/@Model.Tenant.Slug/console</code></dd>
+            <dt>Sign-in</dt><dd>LoginLink organization <code>@Model.Tenant.LoginlinkOrg</code> (@(Model.Tenant.LoginlinkMode == "created" ? "created by PayLink" : "connected"))</dd>
+            <dt>Your data</dt><dd>@Model.Tenant.DbDisplay <span class="hint">· @(Model.Tenant.DbMode switch { "sqlite" => "managed by PayLink", "auto" => "created for you", _ => "your own MySQL" })</span></dd>
+            <dt>Team</dt><dd>@Model.Members member(s)</dd>
+            <dt>Created</dt><dd>@Clock.Display(Model.Tenant.CreatedAt)</dd>
+        </dl>
+        @if (Model.Tenant.ApiRegistration == "failed")
+        {
+            <div class="notice warn">PayLink couldn't register itself as an API in your LoginLink organization: @Model.Tenant.ApiRegistrationError. This is only needed later, for API calls with LoginLink tokens.</div>
+        }
+    </div>
+    <div class="card">
+        <h3>What's next</h3>
+        <div class="checks">
+            <div class="check"><span class="ok">✓</span><span>Account created and your team signs in through LoginLink</span></div>
+            <div class="check"><span class="ok">✓</span><span>Choose who may sign in: <a href="/@Model.Tenant.Slug/console/team">Team &amp; sign-in</a></span></div>
+            <div class="check"><span class="w">○</span><span>Turn on payment methods: PayLink UPI, Razorpay, PhonePe and more (Phase 1–2)</span></div>
+            <div class="check"><span class="w">○</span><span>Create API keys and integrate once (Phase 1)</span></div>
+        </div>
+    </div>
+</div>

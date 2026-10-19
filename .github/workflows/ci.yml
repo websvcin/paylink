@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: paylinkroot
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppaylinkroot"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+
+    env:
+      # Turns on the tests that create, migrate and drop real MySQL databases.
+      PAYLINK_TEST_MYSQL_ADMIN: Server=127.0.0.1;Port=3306;Uid=root;Pwd=paylinkroot
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test packages
+        run: dotnet test packages/PayLink.Packages.sln -c Release
+
+      - name: Pack packages into the local feed
+        run: bash scripts/pack-packages.sh
+
+      - name: Test PayLink
+        run: dotnet test PayLink.sln -c Release
+
+      - name: Build the Docker image
+        run: docker build -t paylink:ci .

@@ -1,0 +1,15 @@
+@{
+    var tenant = (TenantRecord)ViewData["Tenant"]!;
+    var current = ViewContext.RouteData.Values["page"] as string ?? "";
+    string Cur(string page) => current == page ? "page" : "false";
+    var pending = ViewData["PendingMembers"] as int? ?? 0;
+    var root = $"/{tenant.Slug}/console";
+}
+<span class="grp">@tenant.Name</span>
+<a href="@root" aria-current="@Cur("/Console/Index")">Overview</a>
+<a href="@root/team" aria-current="@Cur("/Console/Team")">Team &amp; sign-in @if (pending > 0) { <span class="count">@pending</span> }</a>
+<a href="@root/audit" aria-current="@Cur("/Console/Audit")">Audit log</a>
+<span class="grp">Coming in Phase 1</span>
+<span class="hint" style="padding:7px 10px">Payments</span>
+<span class="hint" style="padding:7px 10px">Payment methods</span>
+<span class="hint" style="padding:7px 10px">Developers</span>

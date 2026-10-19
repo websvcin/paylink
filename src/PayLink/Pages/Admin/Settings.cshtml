@@ -1,0 +1,20 @@
+@page "/admin/settings"
+@model PayLink.Pages.Admin.SettingsModel
+@{
+    ViewData["Title"] = "Platform settings";
+    ViewData["Where"] = "Platform console";
+}
+@section Nav { <partial name="_AdminNav" /> }
+@section Who { <partial name="_AdminWho" /> }
+
+<div class="head"><div><h1>Platform settings</h1></div></div>
+<form method="post" class="card">
+    <h3>Tenant signup</h3>
+    <div class="opts">
+        <label class="opt"><input type="radio" name="signup" value="open" checked="@Model.SignupOpen"><div><b>Open</b><span>Anyone who is an admin of a LoginLink organization can create a PayLink account at /signup.</span></div></label>
+        <label class="opt"><input type="radio" name="signup" value="off" checked="@(!Model.SignupOpen)"><div><b>Closed</b><span>Only platform admins create tenants (Tenants → New tenant, or the Developer API).</span></div></label>
+    </div>
+    <h3>Public address</h3>
+    <div class="field"><label for="publicBaseUrl">PayLink's public address</label><input id="publicBaseUrl" name="publicBaseUrl" class="mono" value="@Model.PublicBaseUrl"><span class="hint">LoginLink sends people back to <code>@Model.PublicBaseUrl/auth/callback</code>. If you change this, update the redirect URI of every PayLink app in LoginLink too.</span></div>
+    @if (Model.CanChange) { <div class="actions"><button class="btn pri" type="submit">Save</button></div> }
+</form>

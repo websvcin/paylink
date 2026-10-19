@@ -1,0 +1,75 @@
+@page "/{slug}/console/team"
+@model PayLink.Pages.Console.TeamModel
+@{
+    ViewData["Title"] = "Team & sign-in";
+    ViewData["Where"] = Model.Tenant.Name;
+    var org = Model.Tenant.LoginlinkOrg;
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Team &amp; sign-in</h1><p>People sign in through the LoginLink organization <code>@org</code>. PayLink decides who is let in, and with which role.</p></div></div>
+
+<form method="post" asp-page-handler="Mode" class="card">
+    <h3>Who may sign in</h3>
+    <div class="opts">
+        <label class="opt"><input type="radio" name="mode" value="approve_only" checked="@(Model.Mode == AdmissionModes.ApproveOnly)"><div><b>Only people I approve</b><span>Every new person waits for approval.</span></div></label>
+        <label class="opt"><input type="radio" name="mode" value="auto_tenant_admins" checked="@(Model.Mode == AdmissionModes.AutoTenantAdmins)"><div><b>Auto-approve @org's LoginLink admins</b><span>Anyone whose token says <code>user_kind = tenant_admin</code> gets in as admin. Everyone else waits.</span></div></label>
+        <label class="opt"><input type="radio" name="mode" value="role" checked="@(Model.Mode == AdmissionModes.Role)"><div><b>Anyone holding a mapped role</b><span>Uses the role map below. Removing the role in LoginLink removes access at the next sign-in.</span></div></label>
+        <label class="opt"><input type="radio" name="mode" value="anyone" checked="@(Model.Mode == AdmissionModes.Anyone)"><div><b>Anyone in @org</b><span>The broadest option. Newcomers get the viewer role unless the role map says otherwise.</span></div></label>
+    </div>
+    @if (Model.CanManageTeam) { <div class="actions"><button class="btn pri" type="submit">Save</button></div> }
+</form>
+
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Person</th><th>Role</th><th>How</th><th>Last sign-in</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var m in Model.Members)
+            {
+                <tr>
+                    <td><b>@(m.Email ?? m.Subject)</b><div class="hint">@m.Name</div></td>
+                    <td>@if (m.Status == "pending") { <span class="chip warn">Waiting</span> } else { <span class="chip @(m.Role == TenantRoles.Owner ? "acc" : "")">@m.Role</span> }</td>
+                    <td class="hint">@(m.Status == "pending" ? "asked for access" : m.Source == "signup" ? "created this account" : m.Source == "auto" ? "let in automatically" : "approved by " + m.DecidedBy)</td>
+                    <td class="hint">@Clock.Display(m.LastSignInAt)</td>
+                    <td>
+                        @if (Model.CanManageTeam)
+                        {
+                            <form method="post" asp-page-handler="Member" class="actions">
+                                <input type="hidden" name="id" value="@m.Id">
+                                <select name="role" aria-label="Role" style="width:auto">
+                                    @foreach (var r in TenantRoles.All) { <option value="@r" selected="@(r == m.Role)">@r</option> }
+                                </select>
+                                <button class="btn sm pri" type="submit" name="decision" value="approve">@(m.Status == "pending" ? "Approve" : "Set role")</button>
+                                <button class="btn sm danger" type="submit" name="decision" value="remove">@(m.Status == "pending" ? "Decline" : "Remove")</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Role map: LoginLink role → PayLink role</h3>
+    <p class="hint">Used by "Anyone holding a mapped role" and "Anyone in @org". Create the roles in LoginLink and give them to people there.</p>
+    <div class="tbl">
+        <table>
+            <thead><tr><th>LoginLink role</th><th>PayLink role</th></tr></thead>
+            <tbody>
+            @foreach (var (ll, pl) in Model.RoleMap) { <tr><td class="mono">@ll</td><td><span class="chip">@pl</span></td></tr> }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.CanManageTeam)
+    {
+        <form method="post" asp-page-handler="RoleMap" class="grid3">
+            <input type="text" name="loginLinkRole" class="mono" placeholder="LoginLink role, e.g. accounts" aria-label="LoginLink role">
+            <select name="payLinkRole" aria-label="PayLink role"><option value="">Remove mapping</option>@foreach (var r in TenantRoles.All) { <option value="@r">@r</option> }</select>
+            <button class="btn" type="submit">Save mapping</button>
+        </form>
+    }
+</div>
