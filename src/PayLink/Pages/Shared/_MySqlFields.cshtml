@@ -1,0 +1,29 @@
+@model (string Prefix, PayLink.Pages.MySqlInput Input)
+@{
+    var p = Model.Prefix;
+    var i = Model.Input;
+}
+<div class="opts">
+    <label class="opt"><input type="radio" name="@(p).UseConnectionString" value="false" checked="@(!i.UseConnectionString)"><div><b>Enter details</b><span>Host, port, database, user, password and SSL mode</span></div></label>
+    <div class="reveal card">
+        <div class="grid2">
+            <div class="field"><label for="@(p)_Host">Host</label><input id="@(p)_Host" name="@(p).Host" class="mono" value="@i.Host" placeholder="db.example.com"></div>
+            <div class="field"><label for="@(p)_Port">Port</label><input id="@(p)_Port" name="@(p).Port" class="mono" type="number" value="@i.Port"></div>
+            <div class="field"><label for="@(p)_Database">Database name</label><input id="@(p)_Database" name="@(p).Database" class="mono" value="@i.Database"></div>
+            <div class="field"><label for="@(p)_User">User</label><input id="@(p)_User" name="@(p).User" class="mono" value="@i.User" autocomplete="off"></div>
+            <div class="field"><label for="@(p)_Password">Password</label><input id="@(p)_Password" name="@(p).Password" class="mono" type="password" autocomplete="new-password"></div>
+            <div class="field"><label for="@(p)_SslMode">SSL mode</label>
+                <select id="@(p)_SslMode" name="@(p).SslMode">
+                    @foreach (var mode in new[] { MySqlConnector.MySqlSslMode.Required, MySqlConnector.MySqlSslMode.Preferred, MySqlConnector.MySqlSslMode.VerifyFull, MySqlConnector.MySqlSslMode.None })
+                    {
+                        <option value="@mode" selected="@(i.SslMode == mode)">@mode</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+    <label class="opt"><input type="radio" name="@(p).UseConnectionString" value="true" checked="@i.UseConnectionString"><div><b>Paste a connection string</b><span>For example Server=db.example.com;Port=3306;Database=paylink;Uid=paylink;Pwd=…;SslMode=Required</span></div></label>
+    <div class="reveal card">
+        <div class="field"><label for="@(p)_ConnectionString">MySQL connection string</label><input id="@(p)_ConnectionString" name="@(p).ConnectionString" class="mono" autocomplete="off"></div>
+    </div>
+</div>

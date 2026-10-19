@@ -1,0 +1,21 @@
+@model IReadOnlyList<PayLink.Infrastructure.AuditEntry>
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
+            <tbody>
+            @if (Model.Count == 0) { <tr><td colspan="5" class="empty">Nothing recorded yet.</td></tr> }
+            @foreach (var e in Model)
+            {
+                <tr>
+                    <td class="hint num" style="white-space:nowrap">@Clock.Display(e.At)</td>
+                    <td>@(e.ActorName ?? e.ActorType)<div class="hint">@e.ActorType@(e.Ip is null ? "" : " · " + e.Ip)</div></td>
+                    <td><code>@e.Action</code></td>
+                    <td>@e.Target</td>
+                    <td class="hint">@e.Details</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

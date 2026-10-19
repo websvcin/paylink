@@ -1,0 +1,96 @@
+-- PayLink platform database, SQLite. Same tables as db/mysql/platform/0001_init.sql.
+-- Times are stored as ISO-8601 UTC strings so the same queries work on SQLite and MySQL.
+
+CREATE TABLE IF NOT EXISTS settings (
+    skey        VARCHAR(100) NOT NULL PRIMARY KEY,
+    svalue      TEXT         NULL,
+    updated_at  VARCHAR(40)  NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS tenants (
+    id                        INTEGER      PRIMARY KEY AUTOINCREMENT,
+    slug                      VARCHAR(40)  NOT NULL UNIQUE,
+    name                      VARCHAR(200) NOT NULL,
+    status                    VARCHAR(20)  NOT NULL DEFAULT 'active',
+    db_mode                   VARCHAR(20)  NOT NULL,
+    db_engine                 VARCHAR(20)  NOT NULL,
+    db_display                VARCHAR(300) NOT NULL,
+    db_connection_enc         TEXT         NOT NULL,
+    db_provider_ref_enc       TEXT         NULL,
+    loginlink_org             VARCHAR(100) NOT NULL UNIQUE,
+    loginlink_issuer          VARCHAR(300) NOT NULL,
+    loginlink_mode            VARCHAR(20)  NOT NULL,
+    console_app_id            VARCHAR(50)  NULL,
+    console_client_id         VARCHAR(200) NOT NULL,
+    console_client_secret_enc TEXT         NOT NULL,
+    mgmt_client_id            VARCHAR(200) NULL,
+    mgmt_client_secret_enc    TEXT         NULL,
+    api_registration          VARCHAR(20)  NOT NULL DEFAULT 'skipped',
+    api_registration_error    TEXT         NULL,
+    created_at                VARCHAR(40)  NOT NULL,
+    created_by                VARCHAR(320) NULL,
+    created_via               VARCHAR(20)  NOT NULL,
+    created_by_key_id         INTEGER      NULL
+);
+
+CREATE TABLE IF NOT EXISTS platform_admins (
+    id               INTEGER      PRIMARY KEY AUTOINCREMENT,
+    subject          VARCHAR(200) NOT NULL UNIQUE,
+    email            VARCHAR(320) NULL,
+    name             VARCHAR(200) NULL,
+    access           VARCHAR(20)  NOT NULL DEFAULT 'admin',
+    status           VARCHAR(20)  NOT NULL,
+    source           VARCHAR(20)  NOT NULL,
+    created_at       VARCHAR(40)  NOT NULL,
+    decided_by       VARCHAR(320) NULL,
+    decided_at       VARCHAR(40)  NULL,
+    last_sign_in_at  VARCHAR(40)  NULL
+);
+
+CREATE TABLE IF NOT EXISTS autoprov_approvals (
+    id          INTEGER      PRIMARY KEY AUTOINCREMENT,
+    org_slug    VARCHAR(100) NOT NULL UNIQUE,
+    note        VARCHAR(300) NULL,
+    created_at  VARCHAR(40)  NOT NULL,
+    created_by  VARCHAR(320) NULL,
+    used_at     VARCHAR(40)  NULL
+);
+
+CREATE TABLE IF NOT EXISTS developer_keys (
+    id              INTEGER       PRIMARY KEY AUTOINCREMENT,
+    name            VARCHAR(200)  NOT NULL,
+    key_prefix      VARCHAR(20)   NOT NULL,
+    key_hash        VARCHAR(64)   NOT NULL UNIQUE,
+    capabilities    VARCHAR(500)  NOT NULL,
+    reach           VARCHAR(20)   NOT NULL DEFAULT 'all',
+    tenant_ids      VARCHAR(1000) NULL,
+    creation_limit  INTEGER       NULL,
+    expires_at      VARCHAR(40)   NULL,
+    created_at      VARCHAR(40)   NOT NULL,
+    created_by      VARCHAR(320)  NULL,
+    revoked_at      VARCHAR(40)   NULL,
+    last_used_at    VARCHAR(40)   NULL
+);
+
+CREATE TABLE IF NOT EXISTS signup_sessions (
+    id           VARCHAR(64) NOT NULL PRIMARY KEY,
+    payload_enc  TEXT        NOT NULL,
+    created_at   VARCHAR(40) NOT NULL,
+    expires_at   VARCHAR(40) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id          INTEGER      PRIMARY KEY AUTOINCREMENT,
+    at          VARCHAR(40)  NOT NULL,
+    actor_type  VARCHAR(20)  NOT NULL,
+    actor_id    VARCHAR(200) NULL,
+    actor_name  VARCHAR(320) NULL,
+    ip          VARCHAR(64)  NULL,
+    action      VARCHAR(100) NOT NULL,
+    target      VARCHAR(300) NULL,
+    details     TEXT         NULL,
+    prev_hash   VARCHAR(64)  NOT NULL,
+    hash        VARCHAR(64)  NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_audit_at ON audit_log (at);
+CREATE INDEX IF NOT EXISTS ix_audit_action ON audit_log (action);

@@ -1,0 +1,23 @@
+@page "/admin/hosting"
+@model PayLink.Pages.Admin.HostingModel
+@using WebSvc.PayLink.Storage.Provisioning
+@{
+    ViewData["Title"] = "Database hosting";
+    ViewData["Where"] = "Platform console";
+}
+@section Nav { <partial name="_AdminNav" /> }
+@section Who { <partial name="_AdminWho" /> }
+
+<div class="head"><div><h1>Database hosting</h1><p>Where PayLink creates MySQL databases on demand. Each one gets its own user and generated password, stored encrypted. Currently: <b>@Model.Saved.Describe()</b>.</p></div></div>
+
+<form method="post" class="card">
+    <partial name="_HostingFields" model="(Model.Hosting, true, Model.Saved.Kind != HostingKind.None)" />
+    @if (Model.CanChange)
+    {
+        <div class="actions">
+            <button class="btn" type="submit" name="action" value="test">Test &amp; verify</button>
+            <button class="btn pri" type="submit" name="action" value="save">Save</button>
+        </div>
+    }
+</form>
+<p class="hint">Test &amp; verify creates a throwaway database and user, connects as that user, and removes both. New databases are named <code>paylink_&lt;address&gt;_&lt;random&gt;</code>.</p>

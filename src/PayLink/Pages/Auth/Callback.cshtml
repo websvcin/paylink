@@ -1,0 +1,15 @@
+@page "/auth/callback"
+@model PayLink.Pages.Auth.CallbackModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+<div class="narrow main">
+    <div class="card">
+        <h1>@Model.Title</h1>
+        @if (Model.Message is not null)
+        {
+            <p>@Model.Message</p>
+        }
+        <div class="actions"><a class="btn pri" href="@(Model.BackUrl ?? "/")">Back</a></div>
+    </div>
+</div>

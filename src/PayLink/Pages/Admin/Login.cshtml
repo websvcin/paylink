@@ -1,0 +1,12 @@
+@page "/admin/login"
+@model PayLink.Pages.Admin.LoginModel
+@{
+    ViewData["Title"] = "Platform sign-in";
+}
+<div class="narrow main">
+    <div class="card">
+        <h1>Platform sign-in</h1>
+        <p class="notice bad">@Model.Error</p>
+        <div class="actions"><a class="btn pri" href="/admin/login">Try again</a></div>
+    </div>
+</div>

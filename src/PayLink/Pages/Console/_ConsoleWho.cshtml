@@ -1,0 +1,10 @@
+@{
+    var tenant = (TenantRecord)ViewData["Tenant"]!;
+}
+<div class="who">
+    <span>@ViewData["MyEmail"] · @ViewData["Role"]</span>
+    <form method="post" action="/@tenant.Slug/logout" class="inline">
+        @Html.AntiForgeryToken()
+        <button class="btn sm" type="submit">Sign out</button>
+    </form>
+</div>

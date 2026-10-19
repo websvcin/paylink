@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/App_Data/
+artifacts/
+legacy/
+tests/
+packages/tests/
+.git/
+.github/
+*.md
