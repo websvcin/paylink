@@ -26,6 +26,7 @@ builder.Services.AddSingleton<OidcSignIn>();
 builder.Services.AddScoped<AdmissionService>();
 builder.Services.AddScoped<OrgConnector>();
 builder.Services.AddScoped<TenantProvisioning>();
+builder.Services.AddScoped<DatabaseMoves>();
 builder.Services.AddScoped<PayLink.Pages.Signup.SignupSessions>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<HealthState>();
@@ -33,6 +34,9 @@ builder.Services.AddHostedService<StartupMigrations>();
 
 // Payments (Phase 1)
 builder.Services.AddSingleton<ConnectorRegistry>();
+builder.Services.AddSingleton<ConnectorCatalog>();
+builder.Services.AddSingleton<ConnectorPackages>();
+builder.Services.AddSingleton<PlatformPayments>();
 builder.Services.AddSingleton<ConnectorSettingsService>();
 builder.Services.AddSingleton<WebhookService>();
 builder.Services.AddSingleton<PaymentService>();
@@ -42,6 +46,7 @@ builder.Services.AddSingleton<FileStore>();
 builder.Services.AddSingleton<PaymentJobs>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<PaymentJobs>());
 builder.Services.AddHttpClient(ConnectorRegistry.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHttpClient(ConnectorPackages.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(60));
 builder.Services.AddHttpClient(WebhookService.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(10))
     .ConfigurePrimaryHttpMessageHandler(() => WebhookService.CreateHandler(builder.Configuration.GetValue<bool>("PayLink:Webhooks:AllowPrivateNetworks")));
 
@@ -103,6 +108,7 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStaticFiles();
 app.UseMiddleware<SetupGate>();
+app.UseMiddleware<TenantHosts>();
 app.UseRouting();
 // Wraps the API so failed sign-ins are logged too; the key handler leaves the tenant in HttpContext.Items.
 app.UseMiddleware<ApiRequestLogging>();

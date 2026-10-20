@@ -26,8 +26,11 @@ public sealed class LoginModel(PlatformRepository repo, PlatformSettings setting
         if (ll is null) { Error = "LoginLink isn't connected on this platform."; return Page(); }
         try
         {
+            // On the tenant's own host the sign-in returns there, so the console cookie belongs to that host.
+            var onOwnHost = HttpContext.Items[PayLink.Tenancy.TenantHosts.HostItem] as string == Tenant.Slug;
+            var callback = (onOwnHost ? $"{Request.Scheme}://{Request.Host}" : await settings.GetPublicBaseUrlAsync()) + "/auth/callback";
             var url = await oidc.BeginAsync(HttpContext, ll.ServerUrl, LoginLinkClient.DiscoveryUrl(ll.ServerUrl, Tenant.LoginlinkOrg),
-                Tenant.ConsoleClientId, await settings.GetPublicBaseUrlAsync() + "/auth/callback", "tenant:" + Tenant.Slug, $"/{Tenant.Slug}/login");
+                Tenant.ConsoleClientId, callback, "tenant:" + Tenant.Slug, $"/{Tenant.Slug}/login");
             return Redirect(url);
         }
         catch (LoginLinkException ex)

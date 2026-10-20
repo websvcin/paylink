@@ -1,0 +1,42 @@
+@page "/admin/tenants/{slug}"
+@model PayLink.Pages.Admin.TenantModel
+@{
+    var t = Model.Tenant;
+    ViewData["Title"] = t.Name;
+    ViewData["Where"] = "Platform console";
+}
+@section Nav { <partial name="_AdminNav" /> }
+@section Who { <partial name="_AdminWho" /> }
+
+<div class="head"><div><p><a href="/admin/tenants">← Tenants</a></p><h1 style="margin-top:6px">@t.Name</h1><p class="mono">@t.Slug · @t.Status</p></div></div>
+
+<div class="card">
+    <dl class="kv">
+        <dt>Console</dt><dd>@(t.ConsoleMode == "subdomain" ? Model.SubdomainUrl : $"/{t.Slug}/console")</dd>
+        <dt>LoginLink</dt><dd><code>@t.LoginlinkOrg</code> (@(t.LoginlinkMode == "created" ? "created by PayLink" : "connected"))@(t.MgmtClientId is null ? " · no management credential stored" : "")</dd>
+        <dt>Data</dt><dd>@t.DbDisplay · @(t.DbMode switch { "sqlite" => "SQLite, managed by PayLink", "auto" => "MySQL, auto-provisioned", _ => "MySQL, their own" })</dd>
+        <dt>Created</dt><dd>@Clock.Display(t.CreatedAt) via @t.CreatedVia</dd>
+    </dl>
+</div>
+
+<form method="post" asp-page-handler="Console" class="card">
+    <h3>Console address</h3>
+    <div class="opts">
+        <label class="opt"><input type="radio" name="mode" value="path" checked="@(t.ConsoleMode != "subdomain")"><div><b>Path</b><span><code>@Model.PublicBaseUrl/@t.Slug/console</code></span></div></label>
+        <label class="opt @(Model.TenantDomain.Length == 0 ? "disabled" : "")"><input type="radio" name="mode" value="subdomain" checked="@(t.ConsoleMode == "subdomain")" disabled="@(Model.TenantDomain.Length == 0)"><div><b>Subdomain</b>
+            <span>@(Model.TenantDomain.Length == 0 ? "Set a tenant domain in Platform settings first (needs wildcard DNS and a wildcard TLS certificate)." : $"{Model.SubdomainUrl}. The path address keeps working too.")</span></div></label>
+    </div>
+    @if (Model.CanChange) { <div class="actions"><button class="btn pri" type="submit">Save</button></div> }
+</form>
+
+<form method="post" asp-page-handler="Move" class="card">
+    <h3>Move this tenant's data</h3>
+    <p class="hint">PayLink creates the new database, copies and counts every row, then switches. The tenant is paused for the copy (seconds for most tenants). The current database is kept untouched; remove it yourself later.</p>
+    <div class="opts">
+        <label class="opt"><input type="radio" name="to" value="sqlite"><div><b>SQLite, managed by PayLink</b><span>A new file in the data folder.</span></div></label>
+        <label class="opt @(Model.HostingReady ? "" : "disabled")"><input type="radio" name="to" value="auto" disabled="@(!Model.HostingReady)"><div><b>MySQL, auto-provisioned</b><span>@(Model.HostingReady ? "A new database on the platform's hosting." : "Set up database hosting first.")</span></div></label>
+        <label class="opt"><input type="radio" name="to" value="byo"><div><b>A MySQL database you give</b><span>It must be empty.</span></div></label>
+        <div class="reveal card"><partial name="_MySqlFields" model='("Byo", Model.Byo)' /></div>
+    </div>
+    @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Move the data</button></div> }
+</form>

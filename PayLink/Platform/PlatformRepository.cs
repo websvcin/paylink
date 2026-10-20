@@ -52,6 +52,19 @@ public sealed class PlatformRepository(PlatformDb db)
         return await c.ExecuteScalarAsync<long>(dialect.LastInsertId);
     }
 
+    public async Task SetTenantConsoleModeAsync(long id, string mode)
+    {
+        await using var c = await db.OpenAsync();
+        await c.ExecuteAsync("UPDATE tenants SET console_mode = @mode WHERE id = @id;", new { id, mode });
+    }
+
+    public async Task SetTenantDatabaseAsync(long id, string mode, string engine, string display, string connectionEnc, string? providerRefEnc)
+    {
+        await using var c = await db.OpenAsync();
+        await c.ExecuteAsync("UPDATE tenants SET db_mode = @mode, db_engine = @engine, db_display = @display, db_connection_enc = @connectionEnc, db_provider_ref_enc = @providerRefEnc WHERE id = @id;",
+            new { id, mode, engine, display, connectionEnc, providerRefEnc });
+    }
+
     public async Task SetTenantStatusAsync(long id, string status)
     {
         await using var c = await db.OpenAsync();

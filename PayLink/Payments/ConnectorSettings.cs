@@ -12,7 +12,7 @@ namespace PayLink.Payments;
 /// A tenant's payment methods: which connectors are on, separately for Test and Live, and their settings.
 /// Settings are stored encrypted; secrets are never shown again. A method can only be turned on once its settings pass the connector's check.
 /// </summary>
-public sealed class ConnectorSettingsService(TenantDb tenantDb, ConnectorRegistry registry, SecretProtector secrets, PlatformSettings platform)
+public sealed class ConnectorSettingsService(TenantDb tenantDb, ConnectorRegistry registry, SecretProtector secrets, PlatformSettings platform, ConnectorCatalog catalog)
 {
     public static string ModeKey(PaymentMode mode) => mode == PaymentMode.Live ? "live" : "test";
 
@@ -48,6 +48,8 @@ public sealed class ConnectorSettingsService(TenantDb tenantDb, ConnectorRegistr
     {
         if (mode == PaymentMode.Live && connector.Manifest.TestOnly)
             return new ConnectionCheck(false, $"{connector.Manifest.Name} works in Test mode only.");
+        if (enable && !(await catalog.GetAsync(connector.Manifest.Id)).Allows(mode == PaymentMode.Live))
+            return new ConnectionCheck(false, $"The platform hasn't allowed {connector.Manifest.Name} in {ModeKey(mode)}. Ask your platform administrator.");
 
         var existing = await GetAsync(tenant, connector.Manifest.Id, mode);
         var values = Values(existing);
@@ -105,6 +107,7 @@ public sealed class ConnectorSettingsService(TenantDb tenantDb, ConnectorRegistr
         foreach (var connector in registry.All)
         {
             if (!ConnectorRegistry.Supports(connector.Manifest, payment.Currency)) continue;
+            if (!await catalog.OffersAsync(connector.Manifest.Id, payment.Livemode, payment.Amount)) continue;   // gate 1: the platform
             var setting = settings.FirstOrDefault(s => s.ConnectorId == connector.Manifest.Id);
             var on = connector.Manifest.Id == SimulatorConnector.Id
                 ? !payment.Livemode && setting?.Enabled != false
@@ -115,8 +118,12 @@ public sealed class ConnectorSettingsService(TenantDb tenantDb, ConnectorRegistr
     }
 
     /// <summary>Live payments need at least one live method whose settings passed the connector's check.</summary>
-    public async Task<bool> IsLiveReadyAsync(TenantRecord tenant) =>
-        (await ListAsync(tenant)).Any(s => s.Mode == "live" && s.Enabled && s.CheckOk == true && registry.Get(s.ConnectorId) is { Manifest.TestOnly: false });
+    public async Task<bool> IsLiveReadyAsync(TenantRecord tenant)
+    {
+        foreach (var s in (await ListAsync(tenant)).Where(s => s.Mode == "live" && s.Enabled && s.CheckOk == true))
+            if (registry.Get(s.ConnectorId) is { Manifest.TestOnly: false } && (await catalog.GetAsync(s.ConnectorId)).Allows(true)) return true;
+        return false;
+    }
 
     private static string Trim(string value, int max) => value.Length <= max ? value : value[..max];
 }

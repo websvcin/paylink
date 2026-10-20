@@ -149,6 +149,10 @@ public sealed class LoginLinkClient(IHttpClientFactory httpFactory, IConfigurati
         return app;
     }
 
+    /// <summary>Replaces an app's redirect URIs (needs Register apps / Manage apps), e.g. to add a tenant's subdomain callback.</summary>
+    public async Task SetAppRedirectUrisAsync(string serverUrl, string token, string appId, IEnumerable<string> redirectUris, CancellationToken ct = default) =>
+        await CallAsync(HttpMethod.Patch, $"{NormalizeServer(serverUrl)}/api/v1/apps/{appId}", token, new { redirectUris = redirectUris.Distinct().ToArray() }, ct);
+
     /// <summary>Registers PayLink as an API (resource server) so apps can request tokens addressed to it. Needs ManageApis.</summary>
     public async Task EnsureApiAsync(string serverUrl, string token, string identifier, CancellationToken ct = default)
     {

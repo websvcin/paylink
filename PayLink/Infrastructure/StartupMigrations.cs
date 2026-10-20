@@ -30,6 +30,10 @@ public sealed class StartupMigrations(IServiceProvider services, HealthState hea
         var platformDb = scope.ServiceProvider.GetRequiredService<PlatformDb>();
         await platformDb.MigrateAsync();
 
+        // Connector packages installed at runtime (Admin → Connector catalog) are loaded again on every start.
+        var catalog = scope.ServiceProvider.GetRequiredService<PayLink.Payments.ConnectorCatalog>();
+        scope.ServiceProvider.GetRequiredService<PayLink.Payments.ConnectorPackages>().LoadInstalled((await catalog.EntriesAsync()).Values);
+
         if (!await bootstrap.IsSetupCompleteAsync()) return;
         var repo = scope.ServiceProvider.GetRequiredService<PlatformRepository>();
         var tenantDb = scope.ServiceProvider.GetRequiredService<TenantDb>();

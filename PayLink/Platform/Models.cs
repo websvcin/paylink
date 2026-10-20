@@ -25,6 +25,8 @@ public sealed class TenantRecord
     public string? CreatedBy { get; set; }
     public string CreatedVia { get; set; } = "";
     public long? CreatedByKeyId { get; set; }
+    /// <summary>"path" (/{slug}/console) or "subdomain" ({slug}.{tenant domain}).</summary>
+    public string ConsoleMode { get; set; } = "path";
 
     public bool IsActive => Status == "active";
 }

@@ -52,6 +52,9 @@ public sealed class PlatformSettings(PlatformDb db, SecretProtector secrets)
     public const string KeyAutoProvisionMode = "autoprov_mode";
     public const string KeyAutoProvisionLimit = "autoprov_limit";
     public const string KeyTenantDbOptions = "tenant_db_options";
+    public const string KeyLimitMaxAmount = "limit_max_amount";
+    public const string KeyLimitCurrencies = "limit_currencies";
+    public const string KeyTenantDomain = "tenant_domain";
 
     public async Task<string?> GetAsync(string key)
     {
@@ -89,4 +92,16 @@ public sealed class PlatformSettings(PlatformDb db, SecretProtector secrets)
     public Task SetTenantDbOptionsAsync(IEnumerable<string> options) => SetAsync(KeyTenantDbOptions, string.Join(",", options));
 
     public async Task<int> GetAutoProvisionLimitAsync() => int.TryParse(await GetAsync(KeyAutoProvisionLimit), out var n) ? n : 1;
+
+    /// <summary>Platform limits (floors tenants can only tighten): the largest payment, in minor units, and the currencies allowed.</summary>
+    public async Task<(long? MaxAmount, IReadOnlySet<string>? Currencies)> GetLimitsAsync()
+    {
+        var max = long.TryParse(await GetAsync(KeyLimitMaxAmount), out var m) && m > 0 ? m : (long?)null;
+        var cur = (await GetAsync(KeyLimitCurrencies))?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(c => c.ToUpperInvariant()).ToHashSet();
+        return (max, cur is { Count: > 0 } ? cur : null);
+    }
+
+    /// <summary>The wildcard domain tenants' consoles can live under, e.g. "paylink.websvc.in" for acme.paylink.websvc.in. Empty: subdomains are off.</summary>
+    public async Task<string> GetTenantDomainAsync() => (await GetAsync(KeyTenantDomain))?.Trim().TrimStart('.').ToLowerInvariant() ?? "";
 }

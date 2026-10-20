@@ -1,0 +1,54 @@
+@page "/admin/connectors"
+@model PayLink.Pages.Admin.ConnectorsModel
+@{
+    ViewData["Title"] = "Connector catalog";
+    ViewData["Where"] = "Platform console";
+}
+@section Nav { <partial name="_AdminNav" /> }
+@section Who { <partial name="_AdminWho" /> }
+
+<div class="head"><div><h1>Connector catalog</h1><p>Payment methods pass three gates: the platform installs and allows them here (per mode, with an optional limit), each tenant turns them on with its own settings, and the checkout offers what's left. Turned off here means off for every tenant.</p></div></div>
+
+@foreach (var (c, e) in Model.Rows)
+{
+    var m = c.Manifest;
+    <div class="card">
+        <div class="actions" style="justify-content:space-between">
+            <div><h3 style="display:inline">@m.Name</h3> <span class="hint mono">@m.Id · @c.GetType().Assembly.GetName().Name @m.Version · @(e.Source == "package" ? "installed package" : "ships with PayLink")</span></div>
+            <span class="chip @(e.State == "installed" ? "good" : e.State == "draining" ? "warn" : "")">@e.State</span>
+        </div>
+        <p class="hint">@string.Join(", ", m.Methods) · @(m.Currencies.Contains("*") ? "any currency" : string.Join(", ", m.Currencies)) · refunds: @(m.Capabilities.Refunds ? (m.Capabilities.PartialRefunds ? "full and partial" : "full") : "no") · webhooks: @(m.Capabilities.Webhooks ? "yes" : "no")@(m.TestOnly ? " · test only" : "")</p>
+        @if (Model.CanChange)
+        {
+            <form method="post" asp-page-handler="Allow" class="actions">
+                <input type="hidden" name="id" value="@m.Id">
+                <label class="check"><input type="checkbox" name="test" value="true" checked="@e.AllowTest"><span>Allow in Test</span></label>
+                <label class="check"><input type="checkbox" name="live" value="true" checked="@(e.AllowLive && !m.TestOnly)" disabled="@m.TestOnly"><span>Allow in Live</span></label>
+                <input name="maxAmount" placeholder="Max per payment (₹), optional" value="@(e.MaxAmount is { } max ? (max / 100m).ToString("0.##") : "")" style="width:16em" aria-label="Maximum amount">
+                <button class="btn sm" type="submit">Save</button>
+            </form>
+            <div class="actions">
+                @if (e.State != "draining") { <form method="post" asp-page-handler="State" class="inline"><input type="hidden" name="id" value="@m.Id"><input type="hidden" name="state" value="draining"><button class="btn sm" type="submit">Drain</button></form> }
+                @if (e.State != "installed") { <form method="post" asp-page-handler="State" class="inline"><input type="hidden" name="id" value="@m.Id"><input type="hidden" name="state" value="installed"><button class="btn sm" type="submit">Install again</button></form> }
+                @if (e.State == "draining") { <form method="post" asp-page-handler="State" class="inline"><input type="hidden" name="id" value="@m.Id"><input type="hidden" name="state" value="uninstalled"><button class="btn sm danger" type="submit">Uninstall</button></form> }
+                @if (e.Source == "package" && e.PreviousVersion is not null) { <form method="post" asp-page-handler="Rollback" class="inline"><input type="hidden" name="id" value="@m.Id"><button class="btn sm" type="submit">Roll back to @e.PreviousVersion</button></form> }
+                @if (e.Source == "package") { <form method="post" asp-page-handler="BuiltIn" class="inline"><input type="hidden" name="id" value="@m.Id"><button class="btn sm" type="submit">Use the built-in version</button></form> }
+            </div>
+        }
+        @if (e.UpdatedBy is not null) { <p class="hint">Changed @Clock.Short(e.UpdatedAt) by @e.UpdatedBy</p> }
+    </div>
+}
+
+@if (Model.CanChange)
+{
+    <form method="post" asp-page-handler="Install" enctype="multipart/form-data" class="card">
+        <h3>Install or update a connector package</h3>
+        <p class="hint">Downloaded from nuget.org (or uploaded) and loaded without a restart, each in its own load context. A package with the id of a built-in connector replaces it; a failed install leaves the current version running. Only ids starting with <code>@string.Join("</code> or <code>", Model.AllowedPrefixes)</code> are accepted (<code>PayLink__Connectors__AllowedPackagePrefixes</code>), because a package is code that runs inside PayLink.</p>
+        <div class="grid3">
+            <div class="field"><label for="packageId">Package id</label><input id="packageId" name="packageId" class="mono" placeholder="WebSvc.PayLink.Connector.Razorpay"></div>
+            <div class="field"><label for="version">Version</label><input id="version" name="version" class="mono" placeholder="latest"></div>
+            <div class="field"><label for="package">Or a .nupkg file</label><input id="package" name="package" type="file" accept=".nupkg"></div>
+        </div>
+        <div class="actions"><button class="btn pri" type="submit">Install</button></div>
+    </form>
+}

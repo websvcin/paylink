@@ -47,6 +47,35 @@
     </div>
 </div>
 
+<form method="post" asp-page-handler="Domain" class="card">
+    <h3>Tenant subdomains</h3>
+    <p class="hint">Give tenants their own console address, <code>acme.@(Model.TenantDomain.Length == 0 ? "paylink.example.com" : Model.TenantDomain)</code>. Point wildcard DNS (<code>*.your-domain</code>) at PayLink and serve a wildcard TLS certificate, then switch each tenant on its page. Leave blank to keep everyone on <code>/{slug}/console</code>.</p>
+    <div class="field"><label for="tenantDomain">Tenant domain</label><input id="tenantDomain" name="tenantDomain" class="mono" value="@Model.TenantDomain" placeholder="paylink.websvc.in"></div>
+    @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Save</button></div> }
+</form>
+
+<form method="post" asp-page-handler="MovePlatform" class="card">
+    <h3>Move the platform database</h3>
+    <p class="hint">Now: @Model.PlatformDescription. PayLink creates the new database, copies and counts every row, then switches; the current one is kept untouched. Tenants' own databases don't move.</p>
+    <div class="opts">
+        <label class="opt"><input type="radio" name="to" value="sqlite"><div><b>SQLite</b><span>A new file in the data folder.</span></div></label>
+        <label class="opt"><input type="radio" name="to" value="auto"><div><b>MySQL, auto-provisioned</b><span>On the platform's database hosting.</span></div></label>
+        <label class="opt"><input type="radio" name="to" value="byo"><div><b>A MySQL database you give</b><span>It must be empty.</span></div></label>
+        <div class="reveal card"><partial name="_MySqlFields" model='("Platform", new PayLink.Pages.MySqlInput())' /></div>
+    </div>
+    @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Move the platform database</button></div> }
+</form>
+
+<form method="post" asp-page-handler="Limits" class="card">
+    <h3>Platform limits</h3>
+    <p class="hint">Floors every tenant works within: they can tighten them with their own risk rules, never loosen them. Per-connector limits are in the <a href="/admin/connectors">connector catalog</a>.</p>
+    <div class="grid2">
+        <div class="field"><label for="maxAmount">Largest payment (₹)</label><input id="maxAmount" name="maxAmount" inputmode="decimal" value="@Model.LimitMax" placeholder="No limit"></div>
+        <div class="field"><label for="currencies">Currencies allowed</label><input id="currencies" name="currencies" class="mono" value="@Model.LimitCurrencies" placeholder="Any, e.g. INR, USD"></div>
+    </div>
+    @if (Model.CanChange) { <div class="actions"><button class="btn pri" type="submit">Save limits</button></div> }
+</form>
+
 <div class="card">
     <h3>Payment connectors in this version</h3>
     <p class="hint">Each is its own NuGet package and depends only on WebSvc.PayLink.Abstractions, so updating one can't break another. Tenants turn them on in their console. Installing, allowing and draining connectors from here arrives with the connector catalog (Phase 3).</p>

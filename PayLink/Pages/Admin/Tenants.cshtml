@@ -24,7 +24,7 @@
             @foreach (var t in Model.Tenants)
             {
                 <tr>
-                    <td><b>@t.Name</b><div class="hint mono"><a href="/@t.Slug/console">/@t.Slug/console</a></div></td>
+                    <td><b><a href="/admin/tenants/@t.Slug">@t.Name</a></b><div class="hint mono"><a href="/@t.Slug/console">/@t.Slug/console</a></div></td>
                     <td><span class="chip">@(t.DbMode switch { "sqlite" => "SQLite", "auto" => "MySQL · auto", _ => "MySQL · their own" })</span><div class="hint mono">@t.DbDisplay</div></td>
                     <td class="mono">@t.LoginlinkOrg<div class="hint">@(t.LoginlinkMode == "created" ? "created by PayLink" : "connected")@(t.ApiRegistration == "failed" ? " · API registration failed" : "")</div></td>
                     <td class="hint">@Clock.Display(t.CreatedAt)<div>via @t.CreatedVia</div></td>

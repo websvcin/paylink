@@ -77,6 +77,11 @@ public sealed partial class PaymentService(
             return PaymentResult.Fail(400, "live_not_ready", "Live payments need at least one payment method with Live settings that passed their check. Use a test key until then.");
 
         var currency = (r.Currency ?? "INR").ToUpperInvariant();
+        var (maxAmount, currencies) = await platform.GetLimitsAsync();
+        if (maxAmount is { } max && r.Amount > max)
+            return PaymentResult.Fail(400, "amount_too_large", $"This platform takes payments up to {Money.Format(max, currency)}.");
+        if (currencies is not null && !currencies.Contains(currency))
+            return PaymentResult.Fail(400, "currency_not_allowed", $"This platform takes payments in {string.Join(", ", currencies)}.");
         var hash = Hash(JsonSerializer.Serialize(r with { Currency = currency }));
         await using var c = await tenantDb.OpenAsync(tenant);
 

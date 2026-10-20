@@ -5,8 +5,10 @@ using WebSvc.PayLink.Storage.Provisioning;
 
 namespace PayLink.Pages.Admin;
 
-public sealed class IndexModel(PlatformRepository repo, PlatformSettings settings, PlatformDb platformDb, BootstrapStore bootstrap, HealthState health) : AdminPage
+public sealed class IndexModel(PlatformRepository repo, PlatformSettings settings, PlatformDb platformDb, BootstrapStore bootstrap, HealthState health,
+    PayLink.Payments.PlatformPayments payments) : AdminPage
 {
+    public PayLink.Payments.PlatformPayments.Dashboard Live { get; private set; } = null!;
     public (long Active, long Suspended, long Admins, long PendingAdmins, long Approvals, long Keys) Counts { get; private set; }
     public LoginLinkSettings? LoginLink { get; private set; }
     public HostingSettings Hosting { get; private set; } = new();
@@ -18,6 +20,7 @@ public sealed class IndexModel(PlatformRepository repo, PlatformSettings setting
     public async Task OnGetAsync()
     {
         Counts = await repo.CountsAsync();
+        Live = await payments.DashboardAsync();
         LoginLink = await settings.GetLoginLinkAsync();
         Hosting = await bootstrap.GetHostingAsync();
         PlatformTarget = await bootstrap.GetPlatformDatabaseAsync();

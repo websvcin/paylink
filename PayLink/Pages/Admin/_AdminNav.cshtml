@@ -6,6 +6,7 @@
 <span class="grp">Platform</span>
 <a href="/admin" aria-current="@Cur("/Admin/Index")">Dashboard</a>
 <a href="/admin/tenants" aria-current="@(current.StartsWith("/Admin/Tenant") ? "page" : "false")">Tenants</a>
+<a href="/admin/connectors" aria-current="@Cur("/Admin/Connectors")">Connector catalog</a>
 <span class="grp">Access</span>
 <a href="/admin/access" aria-current="@Cur("/Admin/Access")">Sign-in access @if (pending > 0) { <span class="count">@pending</span> }</a>
 <a href="/admin/developer-api" aria-current="@Cur("/Admin/DeveloperApi")">Developer API</a>

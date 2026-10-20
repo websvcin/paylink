@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <Description>Engine-neutral storage for PayLink: SQLite and MySQL connections, SQL-script migrations, connection probes, and database provisioning through a MySQL server, Plesk or cPanel.</Description>
   </PropertyGroup>
 

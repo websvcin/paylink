@@ -29,9 +29,25 @@ public sealed class ConnectorRegistry(IHttpClientFactory httpFactory, ILogger<Co
         new SimulatorConnector(),
     ];
 
-    public IReadOnlyList<IPaymentConnector> All => Connectors;
+    // Connectors installed at runtime from a package (Admin → Connector catalog). One with the id of a built-in replaces it.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IPaymentConnector> _installed = new();
 
-    public IPaymentConnector? Get(string id) => Connectors.FirstOrDefault(c => c.Manifest.Id == id);
+    public IReadOnlyList<IPaymentConnector> All =>
+        Connectors.Select(c => _installed.GetValueOrDefault(c.Manifest.Id) ?? c)
+            .Concat(_installed.Values.Where(i => Connectors.All(c => c.Manifest.Id != i.Manifest.Id)))
+            .ToList();
+
+    public IPaymentConnector? Get(string id) => _installed.GetValueOrDefault(id) ?? Connectors.FirstOrDefault(c => c.Manifest.Id == id);
+
+    public bool IsBuiltIn(string id) => Connectors.Any(c => c.Manifest.Id == id);
+
+    public IPaymentConnector? BuiltIn(string id) => Connectors.FirstOrDefault(c => c.Manifest.Id == id);
+
+    public HttpClient CreateHttpClient() => httpFactory.CreateClient(HttpClientName);
+
+    public void Install(IPaymentConnector connector) => _installed[connector.Manifest.Id] = connector;
+
+    public void Remove(string id) => _installed.TryRemove(id, out _);
 
     public static bool Supports(ConnectorManifest manifest, string currency) =>
         manifest.Currencies.Contains("*") || manifest.Currencies.Contains(currency, StringComparer.OrdinalIgnoreCase);

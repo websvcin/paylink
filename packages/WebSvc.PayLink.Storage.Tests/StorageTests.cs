@@ -149,4 +149,26 @@ public sealed class StorageTests : IDisposable
         var gone = await DatabaseProbe.TestAsync(db.Target);
         Assert.False(gone.Ok, gone.Message);
     }
+
+    [Fact]
+    public async Task Copier_moves_every_row_and_replaces_seeded_ones()
+    {
+        var schema = new[] { Script("0001", "CREATE TABLE a (id INTEGER PRIMARY KEY, name TEXT, amount BIGINT); CREATE TABLE b (k VARCHAR(10) PRIMARY KEY, v TEXT); INSERT INTO b (k, v) VALUES ('seed', 'x');") };
+        var source = DatabaseTarget.ForSqliteFile(Path.Combine(_dir, "src.db"));
+        var target = DatabaseTarget.ForSqliteFile(Path.Combine(_dir, "dst.db"));
+        await SqlMigrator.ApplyAsync(source, schema);
+        await SqlMigrator.ApplyAsync(target, schema);
+        await using (var c = await Db.OpenAsync(source))
+        {
+            for (var i = 1; i <= 1203; i++) await c.ExecuteAsync("INSERT INTO a (id, name, amount) VALUES (@i, @n, @m);", new { i, n = "row" + i, m = i * 100L });
+            await c.ExecuteAsync("UPDATE b SET v = 'from source';");
+        }
+        var result = await DatabaseCopier.CopyAsync(source, target, batchSize: 250);
+        Assert.Equal(1203, result.Rows["a"]);
+        Assert.Equal(1, result.Rows["b"]);
+        await using var d = await Db.OpenAsync(target);
+        Assert.Equal(120300L, await d.ExecuteScalarAsync<long>("SELECT amount FROM a WHERE id = 1203;"));
+        Assert.Equal("from source", await d.ExecuteScalarAsync<string>("SELECT v FROM b WHERE k = 'seed';"));
+        Assert.Equal("0001", await SqlMigrator.CurrentVersionAsync(target));
+    }
 }

@@ -16,6 +16,31 @@
     <div class="notice bad">These tenants couldn't be migrated at startup and may not work: @string.Join(", ", Model.Degraded). Check the server log.</div>
 }
 
+<h3>Live payments, last 7 days</h3>
+<div class="stats">
+    <div class="stat"><span>Received</span><b>@Money.Format(Model.Live.Amount, "INR")</b><small class="hint">@Model.Live.Succeeded payment(s)@(Model.Live.Refunded > 0 ? $" · {Money.Format(Model.Live.Refunded, "INR")} refunded" : "")</small></div>
+    <div class="stat"><span>Open</span><b>@Model.Live.Open</b><small class="hint">@Model.Live.UpiWaiting UPI waiting for merchants</small></div>
+    <div class="stat"><span>Failed or expired</span><b>@Model.Live.Failed</b></div>
+    <div class="stat"><span>By method</span><b style="font-size:1rem">@(Model.Live.ByConnector.Count == 0 ? "—" : string.Join(" · ", Model.Live.ByConnector.OrderByDescending(kv => kv.Value.Amount).Select(kv => $"{kv.Key} {kv.Value.Count}")))</b></div>
+</div>
+@if (Model.Live.Tenants.Any(t => t.Succeeded > 0))
+{
+    <div class="card flush">
+        <div class="tbl">
+            <table>
+                <thead><tr><th>Tenant</th><th>Received</th><th>Payments</th><th>Failed</th><th>UPI waiting</th></tr></thead>
+                <tbody>
+                @foreach (var t in Model.Live.Tenants.Where(t => t.Succeeded > 0 || t.Failed > 0))
+                {
+                    <tr><td><a href="/admin/tenants?q=@t.Tenant.Slug">@t.Tenant.Name</a> <span class="hint mono">@t.Tenant.Slug</span></td><td class="num">@Money.Format(t.Amount, "INR")</td><td class="num">@t.Succeeded</td><td class="num">@t.Failed</td><td class="num">@t.UpiWaiting</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<h3>Platform</h3>
 <div class="stats">
     <div class="stat"><span>Active tenants</span><b>@Model.Counts.Active</b><small class="hint">@Model.Counts.Suspended suspended</small></div>
     <div class="stat"><span>Platform admins</span><b>@Model.Counts.Admins</b><small class="hint">@Model.Counts.PendingAdmins waiting for approval</small></div>
