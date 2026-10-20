@@ -19,7 +19,11 @@ public sealed class StartupMigrations(IServiceProvider services, HealthState hea
         var code = await bootstrap.GetOrCreateSetupCodeAsync();
         if (!await bootstrap.IsSetupCompleteAsync())
         {
-            logger.LogWarning("PayLink isn't set up yet. Open /setup and enter this setup code: {SetupCode}", code);
+            if (bootstrap.SetupCodeIsConfigured)
+                logger.LogWarning("PayLink isn't set up yet. Open /setup and enter the setup code from PayLink__SetupCode.");
+            else
+                logger.LogWarning("PayLink isn't set up yet. Open /setup and enter this setup code: {SetupCode} (also saved in {File})",
+                    code, scope.ServiceProvider.GetRequiredService<AppPaths>().SetupCodeFile);
             if (await bootstrap.GetPlatformDatabaseAsync() is null) return;
         }
 

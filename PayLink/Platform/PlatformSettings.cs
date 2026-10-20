@@ -51,6 +51,7 @@ public sealed class PlatformSettings(PlatformDb db, SecretProtector secrets)
     public const string KeySignupMode = "signup_mode";
     public const string KeyAutoProvisionMode = "autoprov_mode";
     public const string KeyAutoProvisionLimit = "autoprov_limit";
+    public const string KeyTenantDbOptions = "tenant_db_options";
 
     public async Task<string?> GetAsync(string key)
     {
@@ -76,6 +77,16 @@ public sealed class PlatformSettings(PlatformDb db, SecretProtector secrets)
     public async Task<bool> IsSignupOpenAsync() => (await GetAsync(KeySignupMode) ?? "open") == "open";
 
     public async Task<string> GetAutoProvisionModeAsync() => await GetAsync(KeyAutoProvisionMode) ?? AutoProvisionModes.Approved;
+
+    /// <summary>Which database choices tenants see at signup (sqlite, byo, auto). All of them unless an admin narrowed it.</summary>
+    public async Task<IReadOnlySet<string>> GetTenantDbOptionsAsync()
+    {
+        var raw = await GetAsync(KeyTenantDbOptions);
+        var all = TenantDbOptions.All.Select(o => o.Key);
+        return (raw is null ? all : raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Intersect(all)).ToHashSet();
+    }
+
+    public Task SetTenantDbOptionsAsync(IEnumerable<string> options) => SetAsync(KeyTenantDbOptions, string.Join(",", options));
 
     public async Task<int> GetAutoProvisionLimitAsync() => int.TryParse(await GetAsync(KeyAutoProvisionLimit), out var n) ? n : 1;
 }

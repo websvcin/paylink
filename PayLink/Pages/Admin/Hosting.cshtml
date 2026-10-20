@@ -8,10 +8,10 @@
 @section Nav { <partial name="_AdminNav" /> }
 @section Who { <partial name="_AdminWho" /> }
 
-<div class="head"><div><h1>Database hosting</h1><p>Where PayLink creates MySQL databases on demand. Each one gets its own user and generated password, stored encrypted. Currently: <b>@Model.Saved.Describe()</b>.</p></div></div>
+<div class="head"><div><h1>Database hosting</h1><p>Auto-provisioning: where PayLink creates MySQL databases on demand. Each one gets its own user and generated password, stored encrypted. Currently: <b>@Model.Saved.Describe()</b>. Who may use it for tenant databases is set in <a href="/admin/auto-provisioning">Auto-provisioning</a>.</p></div></div>
 
 <form method="post" class="card">
-    <partial name="_HostingFields" model="(Model.Hosting, true, Model.Saved.Kind != HostingKind.None)" />
+    <partial name="_HostingFields" model="(Model.Hosting, true, Model.DraftExists || Model.Saved.Kind != HostingKind.None)" />
     @if (Model.CanChange)
     {
         <div class="actions">

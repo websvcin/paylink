@@ -12,19 +12,26 @@ public sealed class BootstrapStore
 {
     private readonly DatabaseTarget _target;
     private readonly SecretProtector _secrets;
+    private readonly AppPaths _paths;
+    private readonly string? _configuredSetupCode;
     private readonly object _initLock = new();
     private bool _initialized;
 
-    public BootstrapStore(AppPaths paths, SecretProtector secrets)
+    public BootstrapStore(AppPaths paths, SecretProtector secrets, IConfiguration configuration)
     {
         _target = DatabaseTarget.ForSqliteFile(paths.BootstrapFile);
         _secrets = secrets;
+        _paths = paths;
+        var code = configuration["PayLink:SetupCode"];
+        _configuredSetupCode = string.IsNullOrWhiteSpace(code) ? null : code.Trim().ToUpperInvariant();
     }
 
     private const string SetupComplete = "setup_complete";
     private const string SetupCode = "setup_code";
     private const string PlatformDb = "platform_db";
     private const string Hosting = "hosting";
+    private const string HostingDraft = "hosting_draft";
+    private const string InitialTenantAutoProvision = "autoprov_mode_initial";
 
     private void EnsureCreated()
     {
@@ -56,21 +63,56 @@ public sealed class BootstrapStore
     }
 
     public async Task<bool> IsSetupCompleteAsync() => await Get(SetupComplete) == "true";
-    public Task MarkSetupCompleteAsync() => Set(SetupComplete, "true");
 
-    /// <summary>A one-time code printed in the startup log; whoever runs setup must know it, so a fresh install exposed to the internet can't be claimed by a stranger.</summary>
+    public async Task MarkSetupCompleteAsync()
+    {
+        await Set(SetupComplete, "true");
+        await Set(HostingDraft, null);
+        try { File.Delete(_paths.SetupCodeFile); } catch (IOException) { }
+    }
+
+    /// <summary>
+    /// A one-time code whoever runs setup must know, so a fresh install exposed to the internet can't be claimed by a stranger.
+    /// It's printed in the startup log and written to App_Data/setup-code.txt; PayLink__SetupCode sets it instead.
+    /// </summary>
     public async Task<string> GetOrCreateSetupCodeAsync()
     {
-        var code = await Get(SetupCode);
-        if (code is not null) return code;
-        code = ProvisioningNames.RandomToken(10).ToUpperInvariant();
-        await Set(SetupCode, code);
+        var code = _configuredSetupCode ?? await Get(SetupCode);
+        if (code is null)
+        {
+            code = ProvisioningNames.RandomToken(10).ToUpperInvariant();
+            await Set(SetupCode, code);
+        }
+        if (_configuredSetupCode is null && !await IsSetupCompleteAsync() && !File.Exists(_paths.SetupCodeFile))
+        {
+            try { await File.WriteAllTextAsync(_paths.SetupCodeFile, code + Environment.NewLine); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
         return code;
     }
+
+    public bool SetupCodeIsConfigured => _configuredSetupCode is not null;
 
     public async Task<DatabaseTarget?> GetPlatformDatabaseAsync() => _secrets.UnprotectJson<DatabaseTarget>(await Get(PlatformDb));
     public Task SetPlatformDatabaseAsync(DatabaseTarget target) => Set(PlatformDb, _secrets.ProtectJson(target));
 
     public async Task<HostingSettings> GetHostingAsync() => _secrets.UnprotectJson<HostingSettings>(await Get(Hosting)) ?? new HostingSettings();
-    public Task SetHostingAsync(HostingSettings settings) => Set(Hosting, _secrets.ProtectJson(settings));
+
+    public async Task SetHostingAsync(HostingSettings settings)
+    {
+        await Set(Hosting, _secrets.ProtectJson(settings));
+        await Set(HostingDraft, null);
+    }
+
+    /// <summary>
+    /// The last settings someone tested but hasn't saved yet. Password fields come back empty after a test,
+    /// so saving falls back to these secrets instead of storing blanks.
+    /// </summary>
+    public async Task<HostingSettings?> GetHostingDraftAsync() => _secrets.UnprotectJson<HostingSettings>(await Get(HostingDraft));
+    public Task SetHostingDraftAsync(HostingSettings settings) => Set(HostingDraft, _secrets.ProtectJson(settings));
+
+    /// <summary>The tenant auto-provisioning rule chosen during setup, before the platform database exists to hold it.</summary>
+    public Task<string?> GetInitialTenantAutoProvisionAsync() => Get(InitialTenantAutoProvision);
+    public Task SetInitialTenantAutoProvisionAsync(string mode) => Set(InitialTenantAutoProvision, mode);
 }

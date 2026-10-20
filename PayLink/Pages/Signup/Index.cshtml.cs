@@ -39,6 +39,7 @@ public sealed class IndexModel(
     public string LoginLinkServer { get; private set; } = "";
     public SignupSession? Session { get; private set; }
     public (bool Allowed, string Reason) AutoProvision { get; private set; }
+    public IReadOnlySet<string> DbOptions { get; private set; } = new HashSet<string>();
     public string? Error { get; private set; }
     public string? Message { get; private set; }
     public string Step => Session?.Org is null ? "org" : !Session.Verified ? "verify" : "details";
@@ -50,6 +51,8 @@ public sealed class IndexModel(
         CanCreateOrganizations = ll?.CanCreateOrganizations == true;
         LoginLinkServer = ll?.ServerUrl ?? "";
         Session = (await signups.CurrentAsync())?.Session;
+        DbOptions = await settings.GetTenantDbOptionsAsync();
+        if (Request.Method == "GET" && !DbOptions.Contains(DbChoice)) DbChoice = DbOptions.FirstOrDefault() ?? TenantDbOptions.Sqlite;
         if (Session?.Org is { } org)
         {
             AutoProvision = await provisioning.CanAutoProvisionAsync(org.OrgSlug);
@@ -128,6 +131,7 @@ public sealed class IndexModel(
         var current = await signups.CurrentAsync();
         if (current is not { } c || c.Session is not { Verified: true, Org: { } org } session) return Redirect("/signup");
 
+        if (!DbOptions.Contains(DbChoice)) { Error = "That database option isn't offered on this platform. Choose another."; return Page(); }
         var mode = DbChoice switch { "auto" => DatabaseMode.Auto, "byo" => DatabaseMode.Byo, _ => DatabaseMode.Sqlite };
         DatabaseTarget? byo = null;
         if (mode == DatabaseMode.Byo && !Byo.TryBuild(out byo, out var parseError)) { Error = parseError; return Page(); }

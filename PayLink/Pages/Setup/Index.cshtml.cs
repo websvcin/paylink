@@ -44,7 +44,7 @@ public sealed class IndexModel(
 
     public static readonly (string Key, string Title)[] Steps =
     [
-        ("unlock", "Unlock"), ("hosting", "Database hosting"), ("database", "Platform database"), ("loginlink", "LoginLink"), ("admin", "First admin"),
+        ("unlock", "Data folder & code"), ("hosting", "Auto-provisioning"), ("database", "Platform database"), ("loginlink", "LoginLink"), ("admin", "First admin"),
     ];
 
     [BindProperty(SupportsGet = true)] public string? Step { get; set; }
@@ -53,9 +53,20 @@ public sealed class IndexModel(
     [BindProperty] public string DbChoice { get; set; } = "sqlite";
     [BindProperty] public MySqlInput Mysql { get; set; } = new();
     [BindProperty] public LoginLinkInput LL { get; set; } = new();
+    [BindProperty] public string TenantAutoProvision { get; set; } = AutoProvisionModes.Approved;
+    [BindProperty] public string? PlatformDbName { get; set; }
 
     public bool Unlocked { get; private set; }
     public string DataRoot => paths.DataRoot;
+    public bool DataRootConfigured => paths.IsDataRootConfigured;
+    public bool InsideAppFolder => paths.IsInsideAppFolder;
+    public bool InContainer => RuntimeEnvironment.InContainer;
+    public bool? OnMountedVolume { get; private set; }
+    public string? DockerHost { get; private set; }
+    public bool IsLocalRequest => RuntimeEnvironment.IsLocalRequest(HttpContext);
+    public bool SetupCodeConfigured => bootstrap.SetupCodeIsConfigured;
+    public string SetupCodeFile => paths.SetupCodeFile;
+    public bool HostingDraftExists { get; private set; }
     public HostingSettings SavedHosting { get; private set; } = new();
     public bool HostingCompleted { get; private set; }
     public DatabaseTarget? PlatformTarget { get; private set; }
@@ -79,7 +90,14 @@ public sealed class IndexModel(
     {
         var code = await bootstrap.GetOrCreateSetupCodeAsync();
         Unlocked = Request.Cookies.TryGetValue(UnlockCookie, out var raw) && TryUnprotect(raw) == code;
+        // On the server itself (not through a proxy) the code is filled in; from anywhere else it must be typed.
+        if (Request.Method == "GET" && IsLocalRequest && !SetupCodeConfigured) Code ??= code;
+        OnMountedVolume = RuntimeEnvironment.IsOnMountedVolume(paths.DataRoot);
+        DockerHost = RuntimeEnvironment.DockerHostAddress();
+        ViewData["DockerHost"] = DockerHost;
         SavedHosting = await bootstrap.GetHostingAsync();
+        var draft = await bootstrap.GetHostingDraftAsync();
+        HostingDraftExists = draft is not null;
         HostingCompleted = await bootstrap.GetValueAsync(HostingDone) == "true";
         PlatformTarget = await bootstrap.GetPlatformDatabaseAsync();
         if (PlatformTarget is not null)
@@ -94,7 +112,13 @@ public sealed class IndexModel(
         // Steps can be revisited, but not skipped ahead of an unfinished one.
         if (index < 0 || index > firstIndex || (!Unlocked && Step != "unlock")) Step = Unlocked ? first : "unlock";
 
-        if (Step == "hosting" && Hosting.Kind == HostingKind.None && Request.Method == "GET") Hosting = HostingInput.From(SavedHosting);
+        if (Step == "hosting" && Request.Method == "GET")
+        {
+            Hosting = HostingInput.From(draft ?? SavedHosting);
+            TenantAutoProvision = await bootstrap.GetInitialTenantAutoProvisionAsync() ?? AutoProvisionModes.Approved;
+        }
+        if (Step == "database" && Request.Method == "GET" && DatabaseProvisioners.Create(SavedHosting, httpFactory.CreateClient("hosting")) is { } p)
+            PlatformDbName ??= p.ProposeName("paylink_", "platform");
         if (Step == "loginlink" && Request.Method == "GET")
         {
             LL.ServerUrl ??= SavedLoginLink?.ServerUrl ?? "https://loginlink.websvc.in";
@@ -123,7 +147,9 @@ public sealed class IndexModel(
         if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes((Code ?? "").Trim().ToUpperInvariant()), Encoding.UTF8.GetBytes(code)))
         {
             await LoadAsync();
-            Error = "That setup code doesn't match. It's printed in PayLink's startup log.";
+            Error = SetupCodeConfigured
+                ? "That setup code doesn't match the one set in PayLink__SetupCode."
+                : $"That setup code doesn't match. It's in PayLink's startup log and in {paths.SetupCodeFile}.";
             return Page();
         }
         Response.Cookies.Append(UnlockCookie, Protector.Protect(code), new CookieOptions
@@ -139,24 +165,31 @@ public sealed class IndexModel(
         if (!Unlocked) return Redirect("/setup");
         Step = "hosting";
 
-        if (action == "skip")
+        if (action == "skip" || (action == "save" && Hosting.Kind == HostingKind.None))
         {
             await bootstrap.SetHostingAsync(new HostingSettings());
             await bootstrap.SetValueAsync(HostingDone, "true");
             return Redirect("/setup?step=database");
         }
         if (Hosting.Validate() is { } problem) { Error = problem; return Page(); }
+        if (TenantAutoProvision is not (AutoProvisionModes.Off or AutoProvisionModes.Approved or AutoProvisionModes.Everyone))
+            TenantAutoProvision = AutoProvisionModes.Approved;
 
-        var next = Hosting.ToSettings(SavedHosting);
+        // Password fields come back empty after a test; fall back to what was just tested, then to what was saved.
+        var next = Hosting.ToSettings(await bootstrap.GetHostingDraftAsync() ?? SavedHosting);
         if (action == "test")
         {
             var provisioner = DatabaseProvisioners.Create(next, httpFactory.CreateClient("hosting"));
             var check = provisioner is null ? new ProvisioningCheck(false, "Choose a hosting environment.") : await provisioner.TestAsync();
-            if (check.Ok) Message = check.Message; else Error = check.Message;
+            await bootstrap.SetHostingDraftAsync(next);
+            HostingDraftExists = true;
+            if (check.Ok) Message = check.Message + " Your secrets are kept for saving; you don't need to type them again.";
+            else Error = check.Message;
             return Page();
         }
 
         await bootstrap.SetHostingAsync(next);
+        await bootstrap.SetInitialTenantAutoProvisionAsync(TenantAutoProvision);
         await bootstrap.SetValueAsync(HostingDone, "true");
         return Redirect("/setup?step=database");
     }
@@ -181,7 +214,13 @@ public sealed class IndexModel(
                 var provisioner = DatabaseProvisioners.Create(SavedHosting, httpFactory.CreateClient("hosting"));
                 if (provisioner is null) { Error = "Set up database hosting first, or choose another option."; return Page(); }
                 if (action == "test") { var c = await provisioner.TestAsync(); if (c.Ok) Message = c.Message; else Error = c.Message; return Page(); }
-                try { created = await provisioner.CreateAsync("paylink_", "platform"); }
+                var name = (PlatformDbName ?? "").Trim().ToLowerInvariant();
+                if (name.Length == 0) name = provisioner.ProposeName("paylink_", "platform");
+                try
+                {
+                    ProvisioningNames.EnsureSafeIdentifier(name, "database name");
+                    created = await provisioner.CreateNamedAsync(name);
+                }
                 catch (ProvisioningException ex) { Error = ex.Message; return Page(); }
                 target = created.Target;
                 break;
@@ -216,6 +255,9 @@ public sealed class IndexModel(
         }
         await bootstrap.SetPlatformDatabaseAsync(target!);
         platformDb.Reset();
+        // Carry the tenant auto-provisioning rule chosen in the previous step, unless an attached database already has one.
+        if (await settings.GetAsync(PlatformSettings.KeyAutoProvisionMode) is null && await bootstrap.GetInitialTenantAutoProvisionAsync() is { } initialMode)
+            await settings.SetAsync(PlatformSettings.KeyAutoProvisionMode, initialMode);
         await platformDb.AuditAsync(Actor.System, existingVersion is null ? "setup.platform_database_created" : "setup.platform_database_attached", target!.Describe());
         return Redirect("/setup?step=loginlink");
     }

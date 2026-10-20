@@ -1,0 +1,8 @@
+@* Shown under a host field when PayLink runs in a container: "localhost" there means the container itself. *@
+@model string
+@if (ViewData["DockerHost"] is string dockerHost)
+{
+    <span class="hint">PayLink is running in a container. For a server on the same machine, use the Docker host's address
+        <button type="button" class="btn sm" onclick="document.getElementById('@Model').value='@dockerHost'">Use @dockerHost</button>
+        instead of <code>localhost</code>.</span>
+}

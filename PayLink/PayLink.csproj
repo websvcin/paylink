@@ -13,15 +13,17 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PayLinkPackagesVersion>0.1.0</PayLinkPackagesVersion>
+    <!-- Each package has its own version; bump the one you changed. -->
+    <PayLinkAbstractionsVersion>0.1.0</PayLinkAbstractionsVersion>
+    <PayLinkStorageVersion>0.2.0</PayLinkStorageVersion>
     <PayLinkPackagesSource>$(MSBuildThisFileDirectory)..\packages</PayLinkPackagesSource>
     <PayLinkLocalFeed>$(MSBuildThisFileDirectory)..\artifacts\packages</PayLinkLocalFeed>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Built from ../packages into ../artifacts/packages today; from nuget.org once published. -->
-    <PackageReference Include="WebSvc.PayLink.Abstractions" Version="$(PayLinkPackagesVersion)" />
-    <PackageReference Include="WebSvc.PayLink.Storage" Version="$(PayLinkPackagesVersion)" />
+    <PackageReference Include="WebSvc.PayLink.Abstractions" Version="$(PayLinkAbstractionsVersion)" />
+    <PackageReference Include="WebSvc.PayLink.Storage" Version="$(PayLinkStorageVersion)" />
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.1.2" />
   </ItemGroup>
 
@@ -32,8 +34,8 @@
   -->
   <Target Name="PackLocalPayLinkPackages"
           BeforeTargets="Restore;_GenerateRestoreGraph;_GenerateRestoreGraphProjectEntry;_GenerateProjectRestoreGraph"
-          Condition="Exists('$(PayLinkPackagesSource)') And !Exists('$(PayLinkLocalFeed)\WebSvc.PayLink.Storage.$(PayLinkPackagesVersion).nupkg')">
-    <Message Importance="high" Text="PayLink: packing WebSvc.PayLink.* from ../packages into ../artifacts/packages (first build only)" />
+          Condition="Exists('$(PayLinkPackagesSource)') And (!Exists('$(PayLinkLocalFeed)\WebSvc.PayLink.Abstractions.$(PayLinkAbstractionsVersion).nupkg') Or !Exists('$(PayLinkLocalFeed)\WebSvc.PayLink.Storage.$(PayLinkStorageVersion).nupkg'))">
+    <Message Importance="high" Text="PayLink: packing WebSvc.PayLink.* from ../packages into ../artifacts/packages (missing or new version)" />
     <MakeDir Directories="$(PayLinkLocalFeed)" />
     <Exec Command="dotnet pack &quot;$(PayLinkPackagesSource)\WebSvc.PayLink.Abstractions\WebSvc.PayLink.Abstractions.csproj&quot; -c Release -o &quot;$(PayLinkLocalFeed)&quot; --nologo -v quiet" />
     <Exec Command="dotnet pack &quot;$(PayLinkPackagesSource)\WebSvc.PayLink.Storage\WebSvc.PayLink.Storage.csproj&quot; -c Release -o &quot;$(PayLinkLocalFeed)&quot; --nologo -v quiet" />

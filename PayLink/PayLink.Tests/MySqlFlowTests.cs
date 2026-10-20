@@ -45,12 +45,24 @@ public sealed class MySqlFlowTests
             await using (var app = new PayLinkApp(dataRoot, keepData: true))
             {
                 var platformAdmin = new Browser(app);
-                await SetupAsync(app, platformAdmin, ll, hosting, F(("DbChoice", "mysql-create"), ("action", "save")));
+                // "Test & verify" first, then "Save" with the password fields blank, as a browser re-renders them:
+                // the tested secrets must be kept (this used to store a blank password, so Plesk answered 401 later).
+                var unlocked = await platformAdmin.SubmitAsync("/setup", "Unlock", F(("Code", await app.SetupCodeAsync())));
+                Assert.Equal("/setup?step=hosting", unlocked.Headers.Location?.OriginalString);
+                var tested = await platformAdmin.FollowAsync(await platformAdmin.SubmitAsync("/setup?step=hosting", "Hosting",
+                    new Dictionary<string, string?>(hosting) { ["action"] = "test" }));
+                Assert.Contains("Your secrets are kept", await platformAdmin.TextAsync(tested));
+                var blank = new Dictionary<string, string?>(hosting) { ["Hosting.MySqlAdminPassword"] = "" };
+
+                // A custom, full database name for the platform database.
+                var platformName = "paylink_platform_t" + Guid.NewGuid().ToString("N")[..8];
+                await SetupAsync(app, platformAdmin, ll, blank, F(("DbChoice", "mysql-create"), ("PlatformDbName", platformName), ("action", "save")));
 
                 var platformTarget = (await app.Get<BootstrapStore>().GetPlatformDatabaseAsync())!;
                 created.Add(platformTarget);
                 Assert.Equal(DbEngine.MySql, platformTarget.Engine);
                 Assert.StartsWith("MySQL", platformTarget.Describe());
+                Assert.Equal(platformName, new MySqlConnectionStringBuilder(platformTarget.ConnectionString).Database);
 
                 // Approve "delta" for auto-provisioning, then Delta signs up and gets its own MySQL database.
                 var r = await platformAdmin.SubmitAsync("/admin/auto-provisioning", "Add", F(("orgSlug", "delta"), ("note", "pilot")));

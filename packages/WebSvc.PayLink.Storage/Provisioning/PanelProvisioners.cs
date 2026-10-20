@@ -34,6 +34,8 @@ public sealed class PleskProvisioner(PleskHosting hosting, HttpClient http, stri
     {
         using var response = await http.SendAsync(Request(method, path, body), ct);
         var text = await response.Content.ReadAsStringAsync(ct);
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            throw new ProvisioningException($"Plesk refused the sign-in (401) for {path}. Check the admin login and password, or the secret key, and that the API is enabled for this account.");
         if (!response.IsSuccessStatusCode)
             throw new ProvisioningException($"Plesk answered {(int)response.StatusCode} for {path}: {Trim(text)}");
         return string.IsNullOrWhiteSpace(text) ? null : JsonNode.Parse(text);
@@ -57,8 +59,14 @@ public sealed class PleskProvisioner(PleskHosting hosting, HttpClient http, stri
         }
     }
 
-    public async Task<ProvisionedDatabase> CreateAsync(string prefix, string label, CancellationToken ct = default)
+    public string ProposeName(string prefix, string label) => ProvisioningNames.DatabaseName(prefix, label);
+
+    public Task<ProvisionedDatabase> CreateAsync(string prefix, string label, CancellationToken ct = default) =>
+        CreateNamedAsync(ProposeName(prefix, label), ct);
+
+    public async Task<ProvisionedDatabase> CreateNamedAsync(string dbName, CancellationToken ct = default)
     {
+        ProvisioningNames.EnsureSafeIdentifier(dbName, "database name");
         var servers = await Send(HttpMethod.Get, "dbservers", null, ct) as JsonArray
             ?? throw new ProvisioningException("Plesk returned no database servers.");
         var server = servers.FirstOrDefault(s => string.Equals((string?)s?["type"], "mysql", StringComparison.OrdinalIgnoreCase))
@@ -66,9 +74,9 @@ public sealed class PleskProvisioner(PleskHosting hosting, HttpClient http, stri
         var serverId = (int)server!["id"]!;
         var serverHost = (string?)server["host"] ?? hosting.Host;
         var serverPort = (uint?)(int?)server["port"] ?? 3306;
-        if (serverHost is "localhost" or "127.0.0.1") serverHost = hosting.Host;
+        // Plesk reports its local MySQL as "localhost"; from PayLink (often another machine or a container) that means the panel's server.
+        if (serverHost is "localhost" or "127.0.0.1" or "::1") serverHost = hosting.Host;
 
-        var dbName = ProvisioningNames.DatabaseName(prefix, label);
         var created = await Send(HttpMethod.Post, "databases",
             new { name = dbName, type = "mysql", parent_domain = new { id = hosting.SubscriptionId }, server_id = serverId }, ct);
         var databaseId = (int?)created?["id"] ?? throw new ProvisioningException("Plesk didn't return the new database's id.");
@@ -121,6 +129,8 @@ public sealed class CPanelProvisioner(CPanelHosting hosting, HttpClient http, st
         request.Headers.TryAddWithoutValidation("Authorization", $"cpanel {hosting.Username}:{hosting.ApiToken}");
         using var response = await http.SendAsync(request, ct);
         var text = await response.Content.ReadAsStringAsync(ct);
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            throw new ProvisioningException("cPanel refused the sign-in (401). Check the account user name and API token.");
         if (!response.IsSuccessStatusCode)
             throw new ProvisioningException($"cPanel answered {(int)response.StatusCode} for {function}.");
         var json = JsonNode.Parse(text);
@@ -149,11 +159,20 @@ public sealed class CPanelProvisioner(CPanelHosting hosting, HttpClient http, st
         }
     }
 
-    public async Task<ProvisionedDatabase> CreateAsync(string prefix, string label, CancellationToken ct = default)
+    private string Account => hosting.Username.ToLowerInvariant() + "_";
+
+    public string ProposeName(string prefix, string label) => ProvisioningNames.DatabaseName(Account + prefix, label);
+
+    public Task<ProvisionedDatabase> CreateAsync(string prefix, string label, CancellationToken ct = default) =>
+        CreateNamedAsync(ProposeName(prefix, label), ct);
+
+    public async Task<ProvisionedDatabase> CreateNamedAsync(string dbName, CancellationToken ct = default)
     {
-        var account = hosting.Username.ToLowerInvariant() + "_";
-        var dbName = ProvisioningNames.DatabaseName(account + prefix, label);
-        var user = ProvisioningNames.UserName(account);
+        // cPanel only accepts names that start with the account name and an underscore.
+        if (!dbName.StartsWith(Account, StringComparison.Ordinal)) dbName = Account + dbName;
+        if (dbName.Length > 64) dbName = dbName[..64];
+        ProvisioningNames.EnsureSafeIdentifier(dbName, "database name");
+        var user = ProvisioningNames.UserName(Account);
         if (user.Length > 32) user = user[..32];
         var password = ProvisioningNames.Password();
 

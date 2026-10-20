@@ -22,8 +22,17 @@ public interface IDatabaseProvisioner
     /// <summary>Confirms PayLink can reach the environment and create a database, by creating and removing a throwaway one.</summary>
     Task<ProvisioningCheck> TestAsync(CancellationToken ct = default);
 
-    /// <summary>Creates a database named <c>{prefix}{label}_{random}</c> with its own user and generated password.</summary>
+    /// <summary>
+    /// The name <see cref="CreateAsync"/> would use: <c>{prefix}{label}_{random}</c>, plus any prefix the panel requires
+    /// (cPanel's <c>account_</c>). Shown to people before creating, so they can see or change it.
+    /// </summary>
+    string ProposeName(string prefix, string label);
+
+    /// <summary>Creates a database with a proposed name, with its own user and generated password.</summary>
     Task<ProvisionedDatabase> CreateAsync(string prefix, string label, CancellationToken ct = default);
+
+    /// <summary>Creates a database with exactly this name (lowercase letters, digits and underscores), with its own user and generated password.</summary>
+    Task<ProvisionedDatabase> CreateNamedAsync(string databaseName, CancellationToken ct = default);
 
     /// <summary>Removes a database (and its user) created by <see cref="CreateAsync"/>. Used to clean up after a failed attempt.</summary>
     Task DropAsync(ProvisionedDatabase database, CancellationToken ct = default);

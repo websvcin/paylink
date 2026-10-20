@@ -29,21 +29,82 @@
     @switch (Model.Step)
     {
         case "unlock":
+            <div class="card">
+                <h2>Where PayLink keeps its data</h2>
+                <dl class="kv">
+                    <dt>Data folder</dt><dd><code>@Model.DataRoot</code></dd>
+                    <dt>Set by</dt><dd>@(Model.DataRootConfigured ? "the PayLink__DataRoot setting" : "default: App_Data next to PayLink (PayLink__DataRoot isn't set)")</dd>
+                    <dt>Holds</dt><dd>bootstrap.db, the encryption keys (<code>keys/</code>) and any SQLite databases</dd>
+                </dl>
+                @if (Model.InContainer && Model.OnMountedVolume == false)
+                {
+                    <div class="notice bad">
+                        <p><b>This folder is inside the container.</b> Removing or upgrading the container deletes it, including the encryption keys. Stop here and re-create the container with a volume:</p>
+                        <pre class="secret" style="margin-top:8px;white-space:pre-wrap">docker run -d --name paylink -p 8080:8080 -v /srv/paylink/App_Data:/app/App_Data websvcin/paylink:latest</pre>
+                        <p class="hint">With docker compose, keep <code>volumes: - ./App_Data:/app/App_Data</code> under the paylink service.</p>
+                    </div>
+                }
+                else if (Model.InContainer && Model.OnMountedVolume == true)
+                {
+                    <div class="notice good">Stored on a mounted volume, so it survives container restarts and image upgrades.</div>
+                }
+                else if (Model.InsideAppFolder)
+                {
+                    <div class="notice warn">This folder is inside PayLink's own folder. Publishing a new version over it (Plesk, IIS, a copy) can overwrite it. Set <code>PayLink__DataRoot</code> to a folder outside it and restart PayLink. Fine for trying PayLink out.</div>
+                }
+                <details>
+                    <summary>How to put the data folder somewhere else</summary>
+                    <p class="hint" style="margin:8px 0">Set <code>PayLink__DataRoot</code> to an absolute path and restart PayLink. It can't be changed from this page, because PayLink needs it before it can read anything.</p>
+                    <div class="tbl">
+                        <table>
+                            <tbody>
+                                <tr><td>Docker</td><td><code>-v /srv/paylink/App_Data:/app/App_Data</code> (the image already uses /app/App_Data)</td></tr>
+                                <tr><td>docker compose</td><td><code>volumes: - ./App_Data:/app/App_Data</code></td></tr>
+                                <tr><td>Windows (PowerShell)</td><td><code>$env:PayLink__DataRoot = "D:\PayLinkData"; dotnet PayLink.dll</code></td></tr>
+                                <tr><td>IIS / Plesk on Windows</td><td>web.config: <code>&lt;environmentVariable name="PayLink__DataRoot" value="D:\PayLinkData" /&gt;</code></td></tr>
+                                <tr><td>Linux (systemd)</td><td><code>Environment=PayLink__DataRoot=/var/lib/paylink</code></td></tr>
+                                <tr><td>appsettings.json</td><td><code>"PayLink": { "DataRoot": "D:\\PayLinkData" }</code></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            </div>
             <form method="post" asp-page-handler="Unlock" class="card">
-                <h2>Enter the setup code</h2>
-                <p class="muted">PayLink printed a one-time setup code in its startup log (<code>docker logs paylink</code>). It proves that whoever finishes setup also runs the server.</p>
-                <div class="field"><label for="Code">Setup code</label><input id="Code" name="Code" class="mono" autocomplete="off" autofocus></div>
-                <dl class="kv"><dt>Data folder</dt><dd><code>@Model.DataRoot</code></dd></dl>
-                <p class="hint">bootstrap.db, the encryption keys and any SQLite databases live in this folder. Mount it as a volume so it survives restarts and upgrades.</p>
+                <h2>Setup code</h2>
+                @if (Model.SetupCodeConfigured)
+                {
+                    <p class="muted">Enter the code you set in <code>PayLink__SetupCode</code>.</p>
+                }
+                else if (Model.IsLocalRequest)
+                {
+                    <p class="muted">You're on the PayLink server itself, so the code is filled in for you. It proves that whoever finishes setup also runs the server.</p>
+                }
+                else
+                {
+                    <p class="muted">A one-time code that proves whoever finishes setup also runs the server, so a fresh install on the internet can't be claimed by a stranger. Find it in any of these:</p>
+                    <ul class="hint" style="margin:0;padding-left:1.2em">
+                        <li>the startup log: <code>docker logs paylink</code>, <code>docker compose logs paylink</code>, or the console window</li>
+                        <li>the file <code>@Model.SetupCodeFile</code> (deleted when setup finishes)</li>
+                        <li>or choose your own: set <code>PayLink__SetupCode</code> and restart</li>
+                    </ul>
+                }
+                <div class="field"><label for="Code">Setup code</label><input id="Code" name="Code" class="mono" value="@Model.Code" autocomplete="off" autofocus></div>
                 <div class="actions"><button class="btn pri" type="submit">Continue</button></div>
             </form>
             break;
 
         case "hosting":
             <form method="post" asp-page-handler="Hosting" class="card">
-                <h2>Database hosting <span class="chip">Optional</span></h2>
-                <p class="muted">Lets PayLink create MySQL databases on demand: for the platform database in the next step, and for tenants you approve. Without it, tenants can still use SQLite or bring their own MySQL.</p>
-                <partial name="_HostingFields" model="(Model.Hosting, false, Model.SavedHosting.Kind != HostingKind.None)" />
+                <h2>Auto-provisioning <span class="chip">Optional</span></h2>
+                <p class="muted">Lets PayLink create MySQL databases on demand, each with its own user and password. Use it for the platform database (next step) and, if you allow it, for tenants' databases. You can turn it on or change it later in Admin → Database hosting.</p>
+                <partial name="_HostingFields" model="(Model.Hosting, true, Model.HostingDraftExists || Model.SavedHosting.Kind != HostingKind.None)" />
+                <h3>Tenant databases</h3>
+                <p class="hint">Who may have a MySQL database created for them when they sign up. Admins can change this in Admin → Auto-provisioning.</p>
+                <div class="opts">
+                    <label class="opt"><input type="radio" name="TenantAutoProvision" value="approved" checked="@(Model.TenantAutoProvision == AutoProvisionModes.Approved)"><div><b>Approved LoginLink organizations only</b><span>You add organizations to an approval list first. Recommended.</span></div></label>
+                    <label class="opt"><input type="radio" name="TenantAutoProvision" value="everyone" checked="@(Model.TenantAutoProvision == AutoProvisionModes.Everyone)"><div><b>Every new tenant</b><span>Each one creates a database on your hosting, with its limits and costs.</span></div></label>
+                    <label class="opt"><input type="radio" name="TenantAutoProvision" value="off" checked="@(Model.TenantAutoProvision == AutoProvisionModes.Off)"><div><b>Platform database only</b><span>Tenants use SQLite or their own MySQL.</span></div></label>
+                </div>
                 <div class="actions">
                     <button class="btn" type="submit" name="action" value="test">Test &amp; verify</button>
                     <button class="btn pri" type="submit" name="action" value="save">Save and continue</button>
@@ -62,13 +123,19 @@
                     <div class="reveal card"><partial name="_MySqlFields" model='("Mysql", Model.Mysql)' /></div>
                     @if (Model.SavedHosting.Kind != HostingKind.None)
                     {
-                        <label class="opt"><input type="radio" name="DbChoice" value="mysql-create" checked="@(Model.DbChoice == "mysql-create")"><div><b>MySQL: create it for me</b><span>Uses @Model.SavedHosting.Describe(). Named <code>paylink_platform_…</code>.</span></div></label>
+                        <label class="opt"><input type="radio" name="DbChoice" value="mysql-create" checked="@(Model.DbChoice == "mysql-create")"><div><b>MySQL: create it for me (auto-provision)</b><span>On @Model.SavedHosting.Describe(), with its own user and generated password.</span></div></label>
+                        <div class="reveal card">
+                            <div class="field"><label for="PlatformDbName">Database name</label><input id="PlatformDbName" name="PlatformDbName" class="mono" value="@Model.PlatformDbName"><span class="hint">Proposed for you; change it if you like. Lowercase letters, digits and underscores.</span></div>
+                        </div>
                     }
                     else
                     {
-                        <div class="opt disabled"><input type="radio" disabled><div><b>MySQL: create it for me</b><span>Needs database hosting (previous step).</span></div></div>
+                        <div class="opt disabled"><input type="radio" disabled><div><b>MySQL: create it for me (auto-provision)</b><span>Turn on auto-provisioning in the previous step to use this.</span></div></div>
                     }
-                    <div class="opt disabled"><input type="radio" disabled><div><b>PostgreSQL</b><span>Coming later. The storage layer is ready for it.</span></div></div>
+                    @foreach (var engine in EngineCatalog.All.Where(e => !e.Available))
+                    {
+                        <div class="opt disabled"><input type="radio" disabled><div><b>@engine.Name</b><span>@engine.Note</span></div></div>
+                    }
                 </div>
                 <div class="actions">
                     <button class="btn" type="submit" name="action" value="test">Test connection</button>

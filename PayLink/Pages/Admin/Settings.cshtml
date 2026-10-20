@@ -18,3 +18,31 @@
     <div class="field"><label for="publicBaseUrl">PayLink's public address</label><input id="publicBaseUrl" name="publicBaseUrl" class="mono" value="@Model.PublicBaseUrl"><span class="hint">LoginLink sends people back to <code>@Model.PublicBaseUrl/auth/callback</code>. If you change this, update the redirect URI of every PayLink app in LoginLink too.</span></div>
     @if (Model.CanChange) { <div class="actions"><button class="btn pri" type="submit">Save</button></div> }
 </form>
+
+<form method="post" asp-page-handler="DbOptions" class="card">
+    <h3>Tenant database options</h3>
+    <p class="hint">Which choices new tenants see at /signup. As a platform admin you can always use any of them (Tenants → New tenant).</p>
+    <div class="caps">
+        @foreach (var (key, label, help) in TenantDbOptions.All)
+        {
+            <label><input type="checkbox" name="options" value="@key" checked="@Model.TenantDbOptionsAllowed.Contains(key)"><div><b>@label</b><span>@help</span></div></label>
+        }
+    </div>
+    @if (Model.CanChange) { <div class="actions"><button class="btn pri" type="submit">Save</button></div> }
+</form>
+
+<div class="card">
+    <h3>Database engines in this version</h3>
+    <p class="hint">Which engines this build of PayLink can use, for the platform database and tenant databases. An engine becomes available when the storage package supports it; there's nothing to turn on here.</p>
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Engine</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var e in EngineCatalog.All)
+            {
+                <tr><td><b>@e.Name</b></td><td>@if (e.Available) { <span class="chip good">Available</span> } else { <span class="chip">Not in this version</span> }</td><td class="hint">@e.Note</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

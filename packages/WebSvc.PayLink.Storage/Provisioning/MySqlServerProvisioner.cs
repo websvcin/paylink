@@ -39,9 +39,13 @@ public sealed class MySqlServerProvisioner(MySqlServerHosting hosting, string? c
         }
     }
 
-    public async Task<ProvisionedDatabase> CreateAsync(string prefix, string label, CancellationToken ct = default)
+    public string ProposeName(string prefix, string label) => ProvisioningNames.DatabaseName(prefix, label);
+
+    public Task<ProvisionedDatabase> CreateAsync(string prefix, string label, CancellationToken ct = default) =>
+        CreateNamedAsync(ProposeName(prefix, label), ct);
+
+    public async Task<ProvisionedDatabase> CreateNamedAsync(string dbName, CancellationToken ct = default)
     {
-        var dbName = ProvisioningNames.DatabaseName(prefix, label);
         var user = ProvisioningNames.UserName();
         var password = ProvisioningNames.Password();
         ProvisioningNames.EnsureSafeIdentifier(dbName, "database name");

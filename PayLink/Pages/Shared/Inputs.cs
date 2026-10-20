@@ -53,6 +53,8 @@ public sealed class HostingInput
     public string? PleskHost { get; set; }
     public int PleskPort { get; set; } = 8443;
     public int PleskSubscriptionId { get; set; }
+    /// <summary>"login" (admin login and password) or "key" (a secret key generated over SSH).</summary>
+    public string PleskAuth { get; set; } = "login";
     public string? PleskLogin { get; set; }
     public string? PleskPassword { get; set; }
     public string? PleskSecretKey { get; set; }
@@ -69,6 +71,7 @@ public sealed class HostingInput
         MySqlHost = s.MySqlServer?.Host, MySqlPort = s.MySqlServer?.Port ?? 3306, MySqlAdminUser = s.MySqlServer?.AdminUser,
         MySqlSslMode = s.MySqlServer?.SslMode ?? MySqlSslMode.Preferred, MySqlUserHost = s.MySqlServer?.UserHost ?? "%",
         PleskHost = s.Plesk?.Host, PleskPort = s.Plesk?.Port ?? 8443, PleskSubscriptionId = s.Plesk?.SubscriptionId ?? 0, PleskLogin = s.Plesk?.Login,
+        PleskAuth = string.IsNullOrEmpty(s.Plesk?.SecretKey) ? "login" : "key",
         CPanelHost = s.CPanel?.Host, CPanelPort = s.CPanel?.Port ?? 2083, CPanelUsername = s.CPanel?.Username,
     };
 
@@ -88,7 +91,10 @@ public sealed class HostingInput
             Plesk = Kind != HostingKind.Plesk ? null : new PleskHosting
             {
                 Host = (PleskHost ?? "").Trim(), Port = PleskPort == 0 ? 8443 : PleskPort, SubscriptionId = PleskSubscriptionId,
-                Login = PleskLogin?.Trim(), Password = Keep(PleskPassword, saved.Plesk?.Password), SecretKey = Keep(PleskSecretKey, saved.Plesk?.SecretKey),
+                // Only the chosen sign-in method is kept, so a stale key can't override a new password or the reverse.
+                Login = PleskAuth == "key" ? null : PleskLogin?.Trim(),
+                Password = PleskAuth == "key" ? null : Keep(PleskPassword, saved.Plesk?.Password),
+                SecretKey = PleskAuth == "key" ? Keep(PleskSecretKey, saved.Plesk?.SecretKey) : null,
             },
             CPanel = Kind != HostingKind.CPanel ? null : new CPanelHosting
             {
@@ -102,6 +108,7 @@ public sealed class HostingInput
     {
         HostingKind.MySqlServer when string.IsNullOrWhiteSpace(MySqlHost) || string.IsNullOrWhiteSpace(MySqlAdminUser) => "Enter the MySQL host and an admin user.",
         HostingKind.Plesk when string.IsNullOrWhiteSpace(PleskHost) || PleskSubscriptionId <= 0 => "Enter the Plesk host and subscription ID.",
+        HostingKind.Plesk when PleskAuth != "key" && string.IsNullOrWhiteSpace(PleskLogin) => "Enter the Plesk admin login, or choose \"Secret key\".",
         HostingKind.CPanel when string.IsNullOrWhiteSpace(CPanelHost) || string.IsNullOrWhiteSpace(CPanelUsername) => "Enter the cPanel host and account user name.",
         _ => null,
     };

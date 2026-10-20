@@ -24,6 +24,7 @@ public abstract class AdminPage : PageModel
         }
         var repo = HttpContext.RequestServices.GetRequiredService<PlatformRepository>();
         ViewData["PendingAdmins"] = await repo.CountPendingAdminsAsync();
+        ViewData["DockerHost"] = RuntimeEnvironment.DockerHostAddress();
         await next();
     }
 

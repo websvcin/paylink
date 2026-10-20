@@ -7,7 +7,7 @@
     <label class="opt"><input type="radio" name="@(p).UseConnectionString" value="false" checked="@(!i.UseConnectionString)"><div><b>Enter details</b><span>Host, port, database, user, password and SSL mode</span></div></label>
     <div class="reveal card">
         <div class="grid2">
-            <div class="field"><label for="@(p)_Host">Host</label><input id="@(p)_Host" name="@(p).Host" class="mono" value="@i.Host" placeholder="db.example.com"></div>
+            <div class="field"><label for="@(p)_Host">Host</label><input id="@(p)_Host" name="@(p).Host" class="mono" value="@i.Host" placeholder="db.example.com"><partial name="_HostHint" model="@(p + "_Host")" /></div>
             <div class="field"><label for="@(p)_Port">Port</label><input id="@(p)_Port" name="@(p).Port" class="mono" type="number" value="@i.Port"></div>
             <div class="field"><label for="@(p)_Database">Database name</label><input id="@(p)_Database" name="@(p).Database" class="mono" value="@i.Database"></div>
             <div class="field"><label for="@(p)_User">User</label><input id="@(p)_User" name="@(p).User" class="mono" value="@i.User" autocomplete="off"></div>

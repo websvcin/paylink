@@ -219,4 +219,31 @@ public sealed class PlatformFlowTests
         var r = await new Browser(app).GetAsync("/signup");
         Assert.Contains("Signup is closed", await r.Content.ReadAsStringAsync());
     }
+
+    [Fact]
+    public async Task Admins_choose_which_database_options_tenants_see()
+    {
+        await using var ll = await FakeLoginLink.StartAsync();
+        await using var app = new PayLinkApp();
+        var admin = new Browser(app);
+        await SetupAsync(app, admin, ll);
+
+        // At least one option must stay on.
+        var r = await admin.FollowAsync(await admin.SubmitAsync("/admin/settings", "DbOptions", F()));
+        Assert.Contains("Leave at least one option", await admin.TextAsync(r));
+
+        r = await admin.SubmitAsync("/admin/settings", "DbOptions", F(("options", "byo")));
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Equal(["byo"], await app.Get<PlatformSettings>().GetTenantDbOptionsAsync());
+
+        // Signup offers only bring-your-own MySQL, and refuses SQLite even when posted directly.
+        var priya = new Browser(app);
+        var html = await ConnectExistingAsync(priya, ll, "acme", Priya);
+        Assert.DoesNotContain("value=\"sqlite\"", html);
+        Assert.Contains("value=\"byo\"", html);
+        r = await priya.FollowAsync(await priya.SubmitAsync("/signup", "Create",
+            F(("TenantName", "Acme Learning"), ("TenantSlug", "acme"), ("DbChoice", "sqlite"), ("action", "create"))));
+        Assert.Contains("isn&#x27;t offered on this platform", await priya.TextAsync(r));
+        Assert.Null(await app.Get<PlatformRepository>().TenantBySlugAsync("acme"));
+    }
 }

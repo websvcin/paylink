@@ -7,11 +7,22 @@ public sealed class SettingsModel(PlatformSettings settings, PlatformDb platform
 {
     public bool SignupOpen { get; private set; }
     public string PublicBaseUrl { get; private set; } = "";
+    public IReadOnlySet<string> TenantDbOptionsAllowed { get; private set; } = new HashSet<string>();
 
     public async Task OnGetAsync()
     {
         SignupOpen = await settings.IsSignupOpenAsync();
         PublicBaseUrl = await settings.GetPublicBaseUrlAsync();
+        TenantDbOptionsAllowed = await settings.GetTenantDbOptionsAsync();
+    }
+
+    public async Task<IActionResult> OnPostDbOptionsAsync(List<string> options)
+    {
+        var chosen = options.Intersect(TenantDbOptions.All.Select(o => o.Key)).ToList();
+        if (chosen.Count == 0) return Failed("Leave at least one option, or close signup instead.");
+        await settings.SetTenantDbOptionsAsync(chosen);
+        await platformDb.AuditAsync(Me, "settings.tenant_db_options_changed", string.Join(",", chosen));
+        return Done("Saved. New signups see only these options.");
     }
 
     public async Task<IActionResult> OnPostAsync(string signup, string? publicBaseUrl)
