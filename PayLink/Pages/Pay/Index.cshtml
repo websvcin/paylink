@@ -35,7 +35,7 @@
                 <h2>Paid</h2>
                 <p class="muted">@Model.Tenant.Name has received your payment@(p.Utr is null ? "" : $" (UPI reference {p.Utr})").</p>
                 <p class="hint mono">@p.Id</p>
-                @if (p.ReturnUrl is not null) { <a class="btn pri" href="@Model.ReturnUrl">Back to @Model.Tenant.Name</a> }
+                @if (p.ReturnUrl is not null) { <a class="btn pri" href="@Model.ReturnUrl" data-return>Back to @Model.Tenant.Name</a> }
             </div>
         }
         else if (p.IsFinal)
@@ -44,7 +44,7 @@
                 <div class="big bad" aria-hidden="true">✕</div>
                 <h2>@(p.Status == PaymentStatuses.Expired ? "This payment has expired" : p.Status == PaymentStatuses.Cancelled ? "This payment was cancelled" : "This payment didn't go through")</h2>
                 <p class="muted">No money was taken by PayLink. @(p.FailureReason == FailureReasons.Rejected ? $"{Model.Tenant.Name} couldn't find your UPI payment. If money left your account, contact them with your UPI reference." : $"Ask {Model.Tenant.Name} for a new payment link if you still want to pay.")</p>
-                @if (p.ReturnUrl is not null) { <a class="btn" href="@Model.ReturnUrl">Back to @Model.Tenant.Name</a> }
+                @if (p.ReturnUrl is not null) { <a class="btn" href="@Model.ReturnUrl" data-return>Back to @Model.Tenant.Name</a> }
             </div>
         }
         else if (p.Status == PaymentStatuses.OnHold)
@@ -143,3 +143,4 @@
     }
     <p class="hint" style="text-align:center">Secured by PayLink · <span class="mono">@p.Id</span></p>
 </div>
+<partial name="_Embed" model="(Model.Payment.Id, Model.Payment.Status, Model.Payment.IsFinal)" />

@@ -148,6 +148,8 @@ public sealed class Payment
     public string? SettledAt { get; set; }
     public string? SettlementRef { get; set; }
     public long? SettlementFee { get; set; }
+    /// <summary>The payment link it came from, if any.</summary>
+    public string? LinkId { get; set; }
 
     public bool IsFinal => PaymentStatuses.IsFinal(Status);
     public string? RefundLabel => AmountRefunded <= 0 ? null : AmountRefunded >= Amount ? "Refunded" : "Partly refunded";

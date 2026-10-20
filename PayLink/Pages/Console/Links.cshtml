@@ -1,0 +1,81 @@
+@page "/{slug}/console/links"
+@model PayLink.Pages.Console.LinksModel
+@{
+    ViewData["Title"] = "Payment links";
+    ViewData["Where"] = Model.Tenant.Name;
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Payment links</h1><p>A page you can share for payments without building anything: send it in a message, print its QR code at the counter, or put a Pay button on your site. Each payment from a link is an ordinary payment, with the same webhooks and reports. Links made here are @Model.ModeName links.</p></div></div>
+
+<div class="card flush">
+    <div class="tbl"><table><thead><tr><th>Link</th><th>Amount</th><th class="num">Paid</th><th class="num">Collected</th><th>Status</th><th></th></tr></thead><tbody>
+        @foreach (var l in Model.Links)
+        {
+            var url = $"{Model.BaseUrl}/l/{l.Code}";
+            var closed = PaymentLinkService.Closed(Model.Tenant, l);
+            <tr>
+                <td><b>@l.Title</b><div class="hint mono"><a href="@url" target="_blank" rel="noopener">@url</a></div></td>
+                <td>@(l.Amount is { } a ? Money.Format(a, l.Currency) : "Payer chooses")</td>
+                <td class="num">@l.Paid@(l.MaxPayments is { } m ? $" / {m}" : "")</td>
+                <td class="num">@Money.Format(l.Collected, l.Currency)</td>
+                <td>@if (closed is null) { <span class="chip good">Open</span> } else { <span class="chip">@(l.Active ? "Closed" : "Off")</span> }</td>
+                <td><div class="actions">
+                    <a class="btn sm" href="?handler=Qr&id=@l.Id">QR code</a>
+                    @if (Model.CanOperate)
+                    {
+                        <form method="post" asp-page-handler="Active" class="inline"><input type="hidden" name="id" value="@l.Id"><input type="hidden" name="active" value="@(l.Active ? "false" : "true")"><button class="btn sm" type="submit">@(l.Active ? "Turn off" : "Turn on")</button></form>
+                    }
+                </div></td>
+            </tr>
+        }
+        @if (Model.Links.Count == 0) { <tr><td colspan="6" class="empty">No @Model.ModeName links yet</td></tr> }
+    </tbody></table></div>
+</div>
+
+@if (Model.CanOperate)
+{
+    <form method="post" asp-page-handler="Add" class="card">
+        <h3>New link</h3>
+        <div class="field"><label for="title">What it's for</label><input id="title" name="title" required maxlength="200" placeholder="e.g. Term fees, Class 6"></div>
+        <div class="field"><label for="description">Description <span class="hint">(optional, shown to the payer)</span></label><textarea id="description" name="description" rows="2" maxlength="1000"></textarea></div>
+        <div class="field"><span class="label">Amount</span>
+            <label><input type="radio" name="amountMode" value="fixed" checked> Fixed</label>
+            <label><input type="radio" name="amountMode" value="payer"> The payer enters it (donations, part payments)</label>
+        </div>
+        <div class="grid3">
+            <div class="field" data-amount="fixed"><label for="amount">Amount (₹)</label><input id="amount" name="amount" inputmode="decimal" placeholder="e.g. 1,499.00"></div>
+            <div class="field" data-amount="payer" hidden><label for="minAmount">Minimum (₹)</label><input id="minAmount" name="minAmount" inputmode="decimal" placeholder="optional"></div>
+            <div class="field" data-amount="payer" hidden><label for="maxAmount">Maximum (₹)</label><input id="maxAmount" name="maxAmount" inputmode="decimal" placeholder="optional"></div>
+        </div>
+        <script>
+            document.querySelectorAll('input[name=amountMode]').forEach(r => r.addEventListener('change', () =>
+                document.querySelectorAll('[data-amount]').forEach(f => f.hidden = f.dataset.amount !== r.value)));
+        </script>
+        <div class="field"><span class="label">Ask the payer for</span>
+            <label><input type="checkbox" name="askEmail" value="true"> Email</label>
+            <label><input type="checkbox" name="askPhone" value="true"> Phone</label>
+        </div>
+        <div class="grid3">
+            <div class="field"><label for="maxPayments">Stop after this many payments</label><input id="maxPayments" name="maxPayments" type="number" min="1" placeholder="no limit (1 = one-time link)"></div>
+            <div class="field"><label for="expiresOn">Last day</label><input id="expiresOn" name="expiresOn" type="date"></div>
+            <div class="field"><label for="code">Link code <span class="hint">(optional)</span></label><input id="code" name="code" maxlength="60" pattern="[a-z0-9][a-z0-9\-]{1,58}[a-z0-9]" placeholder="e.g. term-fees-2026"></div>
+        </div>
+        <div class="field"><label for="returnUrl">After paying, send the payer to <span class="hint">(optional)</span></label><input id="returnUrl" name="returnUrl" type="url" placeholder="https://"></div>
+        <div class="actions"><button class="btn pri" type="submit">Create link</button></div>
+    </form>
+}
+
+<div class="card">
+    <h3>A Pay button on your site</h3>
+    <p class="muted">Add this to any page. The button opens the link in a small window, and your page hears the result. Always confirm a payment from the webhook or the API before you deliver anything.</p>
+    <pre class="secret" style="white-space:pre-wrap;user-select:text">&lt;script src="@Model.BaseUrl/js/paylink.js" defer&gt;&lt;/script&gt;
+&lt;button data-paylink="@Model.BaseUrl/l/<i>your-code</i>"&gt;Pay now&lt;/button&gt;
+&lt;script&gt;
+  document.addEventListener("paylink:result", e =&gt; {
+    // e.detail = { payment_id, status }: tell your server to check payment_id
+  });
+&lt;/script&gt;</pre>
+    <p class="hint">For a payment your server created with the API, use <code>data-paylink="pay_…"</code> or <code>PayLink.open(checkout_url)</code>. See the Payments API guide.</p>
+</div>

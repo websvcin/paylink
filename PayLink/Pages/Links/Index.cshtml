@@ -1,0 +1,53 @@
+@page "/l/{code}"
+@model PayLink.Pages.Links.IndexModel
+@{
+    var l = Model.Link;
+    ViewData["Title"] = $"{l.Title} · {Model.Tenant.Name}";
+    var error = ViewData.ModelState[""]?.Errors.FirstOrDefault()?.ErrorMessage;
+}
+<div class="pay">
+    @if (!l.Livemode) { <div class="testbar">TEST MODE · NO REAL MONEY MOVES</div> }
+    <div class="card">
+        <div class="merchant">
+            <div class="logo" aria-hidden="true">@Model.Tenant.Name[..1].ToUpperInvariant()</div>
+            <div><b>@Model.Tenant.Name</b><div class="hint">@l.Title</div></div>
+        </div>
+        @if (l.Amount is { } fixedAmount) { <div class="amount">@Money.Format(fixedAmount, l.Currency)</div> }
+        @if (l.Description is not null) { <p class="muted" style="white-space:pre-line">@l.Description</p> }
+    </div>
+
+    @if (Model.Closed is not null)
+    {
+        <div class="card result">
+            <div class="big warn" aria-hidden="true">…</div>
+            <h2>@Model.Closed</h2>
+            <p class="muted">Ask @Model.Tenant.Name for a new link if you still want to pay.</p>
+        </div>
+    }
+    else
+    {
+        @if (error is not null) { <div class="notice bad" role="alert">@error</div> }
+        <form method="post" class="card">
+            @if (l.Amount is null)
+            {
+                var range = (l.MinAmount, l.MaxAmount) switch
+                {
+                    ({ } min, { } max) => $"From {Money.Format(min, l.Currency)} to {Money.Format(max, l.Currency)}",
+                    ({ } min, null) => $"At least {Money.Format(min, l.Currency)}",
+                    (null, { } max) => $"Up to {Money.Format(max, l.Currency)}",
+                    _ => null,
+                };
+                <div class="field"><label for="amount">Amount (@l.Currency)</label>
+                    <input id="amount" name="Amount" value="@Model.Amount" inputmode="decimal" autocomplete="off" required placeholder="e.g. 1,499.00">
+                    @if (range is not null) { <span class="hint">@range</span> }
+                </div>
+            }
+            <div class="field"><label for="name">Your name <span class="hint">(optional)</span></label><input id="name" name="Name" value="@Model.Name" autocomplete="name" maxlength="200"></div>
+            @if (l.AskEmail) { <div class="field"><label for="email">Email</label><input id="email" name="Email" type="email" value="@Model.Email" autocomplete="email" required maxlength="320"></div> }
+            @if (l.AskPhone) { <div class="field"><label for="phone">Phone</label><input id="phone" name="Phone" type="tel" value="@Model.Phone" autocomplete="tel" required maxlength="40"></div> }
+            <div class="actions"><button class="btn pri" type="submit">@(l.Amount is { } a ? $"Pay {Money.Format(a, l.Currency)}" : "Continue to pay")</button></div>
+        </form>
+    }
+    <p class="hint" style="text-align:center">Secured by PayLink</p>
+</div>
+<partial name="_Embed" model="((string?)null, (string?)null, false)" />

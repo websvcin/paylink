@@ -10,7 +10,7 @@
 
 | Works today | Coming next (Phase 4) |
 |---|---|
-| **Gateways**: Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form); signed callbacks and webhooks; status polling; full and partial refunds | Payment links (`/l/{code}`) and a JS drop-in button |
+| **Gateways**: Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form); signed callbacks and webhooks; status polling; full and partial refunds | |
 | **Payments API** (`/api/v1`): create, get, list, cancel, refund; `Idempotency-Key`; test and live keys. See [docs/payments-api.md](../docs/payments-api.md) | Routing and failover between gateways |
 | **Hosted checkout** at `/pay/{id}`: the merchant's methods, retry with another method, return to the merchant | PayPal and Stripe connectors |
 | **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds | UPI bank-statement matching |
@@ -20,6 +20,7 @@
 | **Reports**: funnel, success rate, failure reasons, methods, daily volume; CSV export | |
 | **Alerts**: low success rate, UPI waiting, large refunds, risk blocks, gateway errors; by webhook (`alert.triggered`) and email (Admin → Settings → Email) | |
 | **Reconciliation**: upload a gateway's settlement CSV, map its columns (guessed for you), match lines to payments, see mismatches and unknown lines, daily close and unsettled payments | |
+| **Payment links** at `/l/{code}` (fixed or payer-chosen amount, one-time or limited, QR code) and a **Pay button** for any site (`js/paylink.js`) | |
 | **Simulator** for Test; payment journey (append-only events), statuses that only move forward, signed webhooks with retries | |
 | Tenant developer keys (`tdk_`) and API; API request log; console with Test/Live switch | |
 | Setup: new or restore (backup .zip or bootstrap.db), encryption key inside bootstrap.db (or `PayLink__MasterKey`), SQLite/MySQL platform and tenant databases, auto-provisioning (tested before saving), LoginLink with clear credential checks | |

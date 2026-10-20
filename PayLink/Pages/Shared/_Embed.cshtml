@@ -1,0 +1,22 @@
+@model (string? PaymentId, string? Status, bool Final)
+@* For the drop-in (js/paylink.js): checkout opened with ?embed=1 remembers it for this window, across gateway pages, and tells
+   the page that opened it the payment id and, at the end, the result. Only id and status, nothing the merchant must trust. *@
+<script>
+(function () {
+  var embedded = false;
+  try {
+    if (new URLSearchParams(location.search).get("embed") === "1") sessionStorage.setItem("paylink.embed", "1");
+    embedded = sessionStorage.getItem("paylink.embed") === "1";
+  } catch (e) { }
+  if (!embedded || !window.opener) return;
+  var id = @Json.Serialize(Model.PaymentId), status = @Json.Serialize(Model.Status), final = @Json.Serialize(Model.Final);
+  if (!id) return;
+  window.opener.postMessage({ source: "paylink", type: final ? "result" : "opened", payment_id: id, status: status }, "*");
+  if (!final) return;
+  document.querySelectorAll("[data-return]").forEach(function (a) {
+    a.textContent = "Close this window";
+    a.addEventListener("click", function (e) { e.preventDefault(); window.close(); });
+  });
+  setTimeout(function () { window.close(); }, 2500);
+})();
+</script>

@@ -41,6 +41,7 @@ builder.Services.AddSingleton<ConnectorPackages>();
 builder.Services.AddSingleton<PlatformPayments>();
 builder.Services.AddSingleton<Reports>();
 builder.Services.AddSingleton<AlertService>();
+builder.Services.AddSingleton<PaymentLinkService>();
 builder.Services.AddSingleton<Settlements>();
 builder.Services.AddSingleton<SmtpEmailSender>();
 builder.Services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<SmtpEmailSender>());
@@ -155,6 +156,20 @@ app.MapMethods("/pay/{id}/return", ["GET", "POST"], async (string id, string? at
         await payments.ReturnAsync(tenant, id, attempt, http.Request, EventSource.Payer(http));
     return Results.Redirect($"/pay/{Uri.EscapeDataString(id)}");
 }).DisableAntiforgery();
+
+// The drop-in (js/paylink.js) asks here when its window closes without saying how it ended. Only the id and status, which
+// whoever holds the (unguessable) payment id already knows; the merchant's server still confirms through the API or webhook.
+app.MapGet("/pay/{id}/status", async (string id, HttpContext http, PlatformDb platformDb, PlatformRepository repo, PaymentService payments) =>
+{
+    http.Response.Headers.AccessControlAllowOrigin = "*";
+    http.Response.Headers.CacheControl = "no-store";
+    long? tenantId;
+    await using (var c = await platformDb.OpenAsync())
+        tenantId = await c.ExecuteScalarAsync<long?>("SELECT tenant_id FROM payment_routes WHERE payment_id = @id;", new { id });
+    if (tenantId is null || await repo.TenantByIdAsync(tenantId.Value) is not { } tenant || await payments.GetAsync(tenant, id) is not { } p)
+        return Results.NotFound(new { error = "not_found" });
+    return Results.Json(new { payment_id = p.Id, status = p.Status, livemode = p.Livemode });
+});
 
 app.MapRazorPages();
 app.MapControllers();

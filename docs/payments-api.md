@@ -86,6 +86,42 @@ Response `201`:
 
 A refund goes back through the gateway that took the payment, in full or in part, as many times as you like up to the payment's amount. Most gateways answer `pending` first; PayLink then follows it (their webhook, or by asking) and sends `refund.succeeded` or `refund.failed`. The payment stays `succeeded`; `amount_refunded` grows. PayLink UPI and the Simulator can't send money back: refund the payer yourself and record it in the console (**Record a manual refund**, with a note saying how), or with the tenant developer API (`"manual": true`).
 
+## Payment links
+
+A payment link is a reusable page at `/l/{code}`: payers see what it's for, enter the amount if you left it open, and go to checkout. Every press of **Pay** creates an ordinary payment with `link_id` set, so webhooks and reports work as usual. Make them in **Console → Payment links** or here:
+
+```bash
+curl https://paylink.example.in/api/v1/links \
+  -H "Authorization: Bearer sk_test_…" -H "Content-Type: application/json" \
+  -d '{ "title": "Term fees, Class 6", "amount": 149900, "code": "term-fees", "ask_email": true, "max_payments": 1 }'
+```
+
+| Field | |
+|---|---|
+| `title` | Required. Shown to the payer and used as the payment's description. |
+| `amount` | A fixed amount in minor units. Leave it out to let the payer choose, optionally within `min_amount` and `max_amount`. |
+| `code` | Optional, `a-z`, `0-9` and `-`, unique across the platform. Generated if left out. |
+| `ask_email`, `ask_phone` | Ask the payer for these (required when asked). |
+| `max_payments` | Stop after this many succeeded payments; `1` makes a one-time link. |
+| `expires_at`, `return_url`, `description`, `currency` | Optional. |
+
+Answers `201` with the link, including its `url`, `open` (taking payments now), `payments_succeeded` and `amount_collected`. Also: `GET /api/v1/links`, `GET /api/v1/links/{id or code}`, `POST /api/v1/links/{id}/deactivate` and `/activate`, and `GET /api/v1/payments?link_id=lnk_…`. A taken code answers `409 code_taken`. Test keys make and see test links; live keys, live ones.
+
+## Pay button (drop-in)
+
+```html
+<script src="https://paylink.example.in/js/paylink.js" defer></script>
+<button data-paylink="https://paylink.example.in/l/term-fees">Pay fees</button>   <!-- a link -->
+<button data-paylink="pay_8f2kQ…">Pay</button>                                     <!-- a payment from the API -->
+<script>
+  document.addEventListener("paylink:result", e => {
+    // e.detail = { payment_id, status }: ask your server to check payment_id, then show the result
+  });
+</script>
+```
+
+Or call `PayLink.open(checkout_url, { onResult: r => … })`. Checkout opens in a small window, since gateway pages refuse to load inside frames, and the result comes back to your page when it ends, even after a gateway's own pages. If the browser blocks the window, the page goes to checkout instead, and `return_url` brings the payer back. The event is a convenience for your page, not proof of payment: confirm with `GET /api/v1/payments/{id}` or the webhook before you deliver anything. When the window closes early, the drop-in asks `GET /pay/{id}/status`, which answers only the id and status.
+
 ## Statuses
 
 `created` → `requires_action` (payer chose a method) → `processing` (waiting for confirmation) → `succeeded` | `failed` | `cancelled` | `expired`.

@@ -89,7 +89,7 @@ public sealed partial class PaymentService(
     }
 
     public async Task<PaymentResult> CreateAsync(TenantRecord tenant, CreatePaymentRequest r, bool livemode, string? idempotencyKey,
-        EventSource source, string via, long? apiKeyId = null)
+        EventSource source, string via, long? apiKeyId = null, string? linkId = null)
     {
         if (Validate(r) is { } problem) return PaymentResult.Fail(400, "invalid_request", problem);
         if (idempotencyKey?.Length > 200) return PaymentResult.Fail(400, "invalid_request", "Idempotency-Key can be at most 200 characters.");
@@ -134,7 +134,7 @@ public sealed partial class PaymentService(
             CustomerPhone = Blank(r.CustomerPhone), CustomerId = Blank(r.CustomerId), ReturnUrl = Blank(r.ReturnUrl),
             Metadata = r.Metadata is { Count: > 0 } ? JsonSerializer.Serialize(r.Metadata) : null,
             IdempotencyKey = Blank(idempotencyKey), RequestHash = hash, CreatedVia = via, CreatedBy = source.Actor.Name, ApiKeyId = apiKeyId,
-            TraceId = Ids.New("trc", 12), CreatedAt = Clock.Format(now), UpdatedAt = Clock.Format(now),
+            LinkId = linkId, TraceId = Ids.New("trc", 12), CreatedAt = Clock.Format(now), UpdatedAt = Clock.Format(now),
             ExpiresAt = Clock.Format(now + (r.ExpiresInSeconds is { } s ? TimeSpan.FromSeconds(s) : DefaultExpiry)),
         };
 
@@ -146,9 +146,9 @@ public sealed partial class PaymentService(
         {
             await c.ExecuteAsync(
                 "INSERT INTO payments (id, livemode, status, amount, currency, reference, description, customer_name, customer_email, customer_phone, customer_id, " +
-                "return_url, metadata, idempotency_key, request_hash, created_via, created_by, api_key_id, trace_id, created_at, updated_at, expires_at, attempt_count) " +
+                "return_url, metadata, idempotency_key, request_hash, created_via, created_by, api_key_id, link_id, trace_id, created_at, updated_at, expires_at, attempt_count) " +
                 "VALUES (@Id, @Livemode, @Status, @Amount, @Currency, @Reference, @Description, @CustomerName, @CustomerEmail, @CustomerPhone, @CustomerId, " +
-                "@ReturnUrl, @Metadata, @IdempotencyKey, @RequestHash, @CreatedVia, @CreatedBy, @ApiKeyId, @TraceId, @CreatedAt, @UpdatedAt, @ExpiresAt, 0);", p);
+                "@ReturnUrl, @Metadata, @IdempotencyKey, @RequestHash, @CreatedVia, @CreatedBy, @ApiKeyId, @LinkId, @TraceId, @CreatedAt, @UpdatedAt, @ExpiresAt, 0);", p);
         }
         catch (DbException) when (idempotencyKey is not null)
         {
@@ -482,10 +482,11 @@ public sealed partial class PaymentService(
         return await AttemptsAsync(c, paymentId);
     }
 
-    public async Task<IReadOnlyList<Payment>> SearchAsync(TenantRecord tenant, bool livemode, string? status, string? q, int take = 50, int skip = 0, string? reference = null)
+    public async Task<IReadOnlyList<Payment>> SearchAsync(TenantRecord tenant, bool livemode, string? status, string? q, int take = 50, int skip = 0, string? reference = null, string? linkId = null)
     {
         var where = new List<string> { "livemode = @livemode" };
         if (!string.IsNullOrEmpty(reference)) where.Add("reference = @reference");
+        if (!string.IsNullOrEmpty(linkId)) where.Add("link_id = @linkId");
         if (!string.IsNullOrEmpty(status) && PaymentStatuses.All.Contains(status)) where.Add("status = @status");
         if (!string.IsNullOrWhiteSpace(q))
             where.Add("(id = @q OR reference = @q OR utr = @q OR customer_email = @q OR customer_phone = @q OR customer_id = @q " +
@@ -493,7 +494,7 @@ public sealed partial class PaymentService(
         await using var c = await tenantDb.OpenAsync(tenant);
         return (await c.QueryAsync<Payment>(
             $"SELECT * FROM payments WHERE {string.Join(" AND ", where)} ORDER BY created_at DESC LIMIT {Math.Clamp(take, 1, 200)} OFFSET {Math.Max(0, skip)};",
-            new { livemode, status, q = q?.Trim(), like = $"%{q?.Trim()}%", reference })).ToList();
+            new { livemode, status, q = q?.Trim(), like = $"%{q?.Trim()}%", reference, linkId })).ToList();
     }
 
     /// <summary>UPI payments whose payer entered a UTR, waiting for the merchant to check them.</summary>

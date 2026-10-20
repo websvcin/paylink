@@ -26,7 +26,7 @@ public static class PaymentJson
         string Id, string Object, bool Livemode, string Status, long Amount, string Currency, string? Reference, string? Description,
         CustomerDto? Customer, string? ReturnUrl, IReadOnlyDictionary<string, string>? Metadata, string CheckoutUrl,
         string CreatedAt, string ExpiresAt, string? PaidAt, PaidWithDto? PaidWith, FailureDto? Failure, string? HoldReason,
-        IReadOnlyList<AttemptDto>? Attempts, long AmountRefunded = 0, IReadOnlyList<RefundDto>? Refunds = null);
+        IReadOnlyList<AttemptDto>? Attempts, long AmountRefunded = 0, IReadOnlyList<RefundDto>? Refunds = null, string? LinkId = null);
 
     public static PaymentDto From(Payment p, string baseUrl, IEnumerable<Attempt>? attempts = null, IEnumerable<Refund>? refunds = null) => new(
         p.Id, "payment", p.Livemode, p.Status, p.Amount, p.Currency, p.Reference, p.Description,
@@ -37,7 +37,7 @@ public static class PaymentJson
         string.IsNullOrEmpty(p.FailureReason) ? null : new FailureDto(p.FailureReason, p.FailureMessage),
         p.HoldReason,
         attempts?.Select(a => new AttemptDto(a.Id, a.Connector, a.PaidMethod ?? a.Method, a.Status, a.CreatedAt, a.FailureReason, a.GatewayRef)).ToList(),
-        p.AmountRefunded, refunds?.Select(From).ToList());
+        p.AmountRefunded, refunds?.Select(From).ToList(), p.LinkId);
 
     public static IReadOnlyDictionary<string, string>? Metadata(string? json) =>
         string.IsNullOrEmpty(json) ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(json);

@@ -84,6 +84,7 @@ tr:last-child td { border-bottom: 0; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 form.inline { display: inline; }
 
+[hidden] { display: none !important; }
 .field { display: grid; gap: 5px; align-content: start; }
 .field > label, .label { font-size: .82rem; font-weight: 600; color: var(--muted); }
 input:not([type]), input[type=text], input[type=password], input[type=email], input[type=url], input[type=number], input[type=date], select, textarea {

@@ -67,9 +67,9 @@ public sealed class PaymentsApiController(PaymentService payments, PlatformSetti
     }
 
     [HttpGet("payments")]
-    public async Task<IActionResult> List(string? status, string? reference, int limit = 20, int offset = 0)
+    public async Task<IActionResult> List(string? status, string? reference, [FromQuery(Name = "link_id")] string? linkId, int limit = 20, int offset = 0)
     {
-        var list = await payments.SearchAsync(Tenant, Key.Livemode, status, null, Math.Clamp(limit, 1, 100), offset, reference);
+        var list = await payments.SearchAsync(Tenant, Key.Livemode, status, null, Math.Clamp(limit, 1, 100), offset, reference, linkId);
         var baseUrl = await settings.GetPublicBaseUrlAsync();
         return new JsonResult(new { @object = "list", data = list.Select(p => PaymentJson.From(p, baseUrl)) }, PaymentJson.Options);
     }
