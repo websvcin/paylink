@@ -36,6 +36,18 @@ public sealed class SettingsModel(PlatformSettings settings, PlatformDb platform
     public string PlatformDescription { get; private set; } = "";
 
     public SmtpSettings? Smtp { get; private set; }
+    public PayLink.Payments.FileStorageSettings Files { get; private set; } = new();
+
+    public async Task<IActionResult> OnPostFilesAsync(string kind, string? server, string? key)
+    {
+        var store = HttpContext.RequestServices.GetRequiredService<PayLink.Payments.FileStore>();
+        var next = new PayLink.Payments.FileStorageSettings { Kind = kind, Server = server?.Trim().TrimEnd('/'), Key = string.IsNullOrWhiteSpace(key) ? null : key.Trim() };
+        if (await store.SaveSettingsAsync(next) is { } problem) return Failed(problem);
+        await platformDb.AuditAsync(Me, "settings.file_storage_changed", kind == PayLink.Payments.FileStorageSettings.FileLink ? next.Server : "local");
+        return Done(kind == PayLink.Payments.FileStorageSettings.FileLink
+            ? "FileLink answered. New files go there; files already in the data folder stay readable."
+            : "New files go to the data folder. Files already in FileLink stay readable while its settings are kept here.");
+    }
 
     public async Task<IActionResult> OnPostSmtpAsync(string? host, int port, bool ssl, string? user, string? password, string? from, string? testTo)
     {
@@ -96,6 +108,7 @@ public sealed class SettingsModel(PlatformSettings settings, PlatformDb platform
         LimitCurrencies = cur is null ? "" : string.Join(", ", cur);
         TenantDomain = await settings.GetTenantDomainAsync();
         Smtp = await HttpContext.RequestServices.GetRequiredService<SmtpEmailSender>().GetAsync();
+        Files = await HttpContext.RequestServices.GetRequiredService<PayLink.Payments.FileStore>().GetSettingsAsync();
         PlatformDescription = (await platformDb.TargetAsync()).Describe();
         SignupOpen = await settings.IsSignupOpenAsync();
         PublicBaseUrl = await settings.GetPublicBaseUrlAsync();

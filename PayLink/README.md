@@ -6,29 +6,24 @@
 
 ## Status
 
-**Phase 3 (this release): platform operations and insight.** On top of the Phase 2 gateways: a connector catalog the platform controls, limits, subdomain consoles, moving databases, a live dashboard, and for merchants a risk score with location rules, reports, alerts and settlement reconciliation.
+**Phase 4 (this release): all planned phases are in.** Everything below works and is covered by tests on SQLite, MySQL and PostgreSQL. Still open: a decision on the legacy ResellerClub code (see `legacy/README.md`), and FileLink itself, which is a separate product; PayLink already speaks the [contract](../docs/filelink-contract.md) it needs.
 
-| Works today | Coming next (Phase 4) |
+| Area | What works |
 |---|---|
-| **Gateways**: Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form), **Stripe** (Checkout), **PayPal** (Orders, captured on return); signed callbacks and webhooks; status polling; full and partial refunds; **disputes** from Razorpay, Stripe and PayPal (Console → Disputes, `dispute.*` webhooks) | |
-| **Payments API** (`/api/v1`): create, get, list, cancel, refund; `Idempotency-Key`; test and live keys. See [docs/payments-api.md](../docs/payments-api.md) | |
-| **Hosted checkout** at `/pay/{id}`: the merchant's methods, retry with another method, return to the merchant | |
-| **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds; **bank statement matching** (upload the CSV, matching UTR and amount approve automatically) | |
-| **Connector catalog** (Admin): install, allow, drain, uninstall; install connector packages from nuget.org at runtime (allowed ID prefixes only) | |
-| **Platform**: amount and currency limits, tenant consoles on subdomains, move a tenant's or the platform's database, live dashboard, backup download | |
-| **Risk**: rules by amount, velocity, country (block/allow), Tor, phone country vs. location, and a 0–100 score from those signals; review holds. Location from an optional MaxMind-format database (Admin → Location data) | FileLink file storage |
-| **Reports**: funnel, success rate, failure reasons, methods, daily volume; CSV export | |
-| **Alerts**: low success rate, UPI waiting, large refunds, risk blocks, gateway errors; by webhook (`alert.triggered`) and email (Admin → Settings → Email) | |
-| **Reconciliation**: upload a gateway's settlement CSV, map its columns (guessed for you), match lines to payments, see mismatches and unknown lines, daily close and unsettled payments | |
-| **Payment links** at `/l/{code}` (fixed or payer-chosen amount, one-time or limited, QR code) and a **Pay button** for any site (`js/paylink.js`) | |
-| **Routing**: method order and amount ranges per mode, a circuit breaker that rests a gateway after repeated errors, automatic failover to the next gateway | |
-| **PostgreSQL** (13+) for the platform and tenant databases, next to SQLite and MySQL; move a tenant between any of them | |
-| **Custom domains**: a tenant proves its own domain (e.g. pay.acme.in) with a TXT record; console, links and checkout then answer there | |
-| **Reporting API** (`/api/v1/reporting`): payments, attempts, refunds, disputes, links and the journey, with CrudApi's filter language, grouping and paging | |
-| **Connect CrudApi** (Console → Data access): a SELECT-only MySQL user (made by PayLink on an auto-provisioned database, or yours, checked by trying to write), registered in a CrudApi workspace with a Reader client, or the details to register by hand; disconnect removes both | |
-| **Simulator** for Test; payment journey (append-only events), statuses that only move forward, signed webhooks with retries | |
-| Tenant developer keys (`tdk_`) and API; API request log; console with Test/Live switch | |
-| Setup: new or restore (backup .zip or bootstrap.db), encryption key inside bootstrap.db (or `PayLink__MasterKey`), SQLite/MySQL/PostgreSQL platform and tenant databases, auto-provisioning (tested before saving), LoginLink with clear credential checks | |
+| **Setup** | New or restore (backup .zip or bootstrap.db); encryption key inside bootstrap.db (or `PayLink__MasterKey`); SQLite, MySQL or PostgreSQL platform and tenant databases; auto-provisioning (tested before saving); LoginLink with clear credential checks |
+| **Payments API** (`/api/v1`) | Create, get, list, cancel, refund; `Idempotency-Key`; test and live keys; links; disputes. See [docs/payments-api.md](../docs/payments-api.md) |
+| **Hosted checkout** at `/pay/{id}` | The merchant's methods in their order, retry with another method, return to the merchant; a test bar in Test |
+| **Gateways** | Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form), Stripe (Checkout), PayPal (Orders, captured on return); signed callbacks and webhooks; status polling; full and partial refunds; disputes from Razorpay, Stripe and PayPal |
+| **PayLink UPI** (free) | QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds; bank statement matching (matching UTR and amount approve automatically) |
+| **Simulator** | Test payments without a gateway |
+| **Payment links and Pay button** | `/l/{code}` (fixed or payer-chosen amount, one-time or limited, QR code); `js/paylink.js` opens checkout in a window and tells your page the result |
+| **Routing** | Method order and amount ranges per mode, a circuit breaker that rests a gateway after repeated errors, automatic failover to the next gateway |
+| **Risk** | Rules by amount, velocity, country (block/allow), Tor, phone country vs. location, and a 0–100 score; review holds. Location from an optional MaxMind-format database (Admin → Location data) |
+| **Insight** | Reports (funnel, success rate, failure reasons, methods, daily volume, CSV); alerts by webhook and email; settlement reconciliation (CSV, guessed columns, mismatches, daily close); disputes |
+| **Data access** | Reporting API (`/api/v1/reporting`, CrudApi's filter language); Connect CrudApi with a SELECT-only user |
+| **Journey and webhooks** | Append-only payment journey, statuses that only move forward, signed webhooks with retries and redelivery |
+| **Platform** | Connector catalog (install, allow, drain, uninstall; packages from nuget.org at runtime); amount and currency limits; subdomain consoles and tenants' own domains (TXT verified); move a tenant's or the platform's database between engines; live dashboard; backup download; file storage in the data folder or FileLink |
+| **Developers** | Tenant developer keys (`tdk_`) and API; platform developer API; API request log; console with a Test/Live switch |
 
 ## Run it
 

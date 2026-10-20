@@ -85,9 +85,9 @@ public sealed class PaymentModel(PaymentService payments, WebhookService webhook
     public async Task<IActionResult> OnGetProofAsync(string attemptId)
     {
         var attempt = (await payments.AttemptsAsync(Tenant, Id)).FirstOrDefault(a => a.Id == attemptId);
-        if (attempt?.ProofFile is null || files.Resolve(attempt.ProofFile) is not { } path || !System.IO.File.Exists(path)) return NotFound();
+        if (attempt?.ProofFile is null || await files.OpenAsync(attempt.ProofFile) is not { } file) return NotFound();
         await TenantDb.AuditAsync(Tenant, Me, "file.viewed", Id, $"UPI screenshot for {attemptId}");
         Response.Headers.CacheControl = "private, no-store";
-        return PhysicalFile(path, FileStore.ContentType(path));
+        return File(file.Content, file.ContentType);
     }
 }

@@ -68,6 +68,7 @@ builder.Services.AddHttpClient(WebhookService.HttpClientName, c => c.Timeout = T
 builder.Services.AddHttpClient("loginlink", c => c.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient("hosting", c => c.Timeout = TimeSpan.FromSeconds(60));
 builder.Services.AddHttpClient(CrudApiClient.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddHttpClient(FileLinkBackend.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(30));
 
 // Cookie and form-signing keys live in bootstrap.db with the secret key, so the data folder is self-contained.
 var dataRoot = builder.Configuration["PayLink:DataRoot"] is { Length: > 0 } configured
