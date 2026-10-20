@@ -1,0 +1,16 @@
+@using PayLink.Infrastructure
+@model IReadOnlyList<DataFolderItem>
+<table class="table">
+    <thead><tr><th>In the data folder</th><th>What it is</th><th>Status</th></tr></thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td><code>@item.Name</code>@if (item.Secret) { <br><span class="chip warn">Keep private · back up</span> }</td>
+            <td>@item.Purpose</td>
+            <td>@if (item.Exists) { <span class="chip good">Present</span> @if (item.Bytes is { } b) { <span class="hint">@DataFolder.Size(b)</span> } }
+                else { <span class="hint">Not yet. @item.CreatedWhen</span> }</td>
+        </tr>
+    }
+    </tbody>
+</table>

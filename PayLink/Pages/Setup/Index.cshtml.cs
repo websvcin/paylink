@@ -37,8 +37,11 @@ public sealed class IndexModel(
     OidcSignIn oidc,
     AppPaths paths,
     IHttpClientFactory httpFactory,
-    IDataProtectionProvider dataProtection) : PageModel
+    IDataProtectionProvider dataProtection,
+    IConfiguration configuration) : PageModel
 {
+    /// <summary>The LoginLink most installs use; PayLink__LoginLink__DefaultServer changes what setup fills in.</summary>
+    public const string PublicLoginLink = "https://loginlink.websvc.in";
     public const string UnlockCookie = "paylink.setup";
     private const string HostingDone = "setup_hosting_done";
 
@@ -57,6 +60,7 @@ public sealed class IndexModel(
     [BindProperty] public string? PlatformDbName { get; set; }
 
     public bool Unlocked { get; private set; }
+    public IReadOnlyList<DataFolderItem> DataFolderItems => DataFolder.Describe(paths);
     public string DataRoot => paths.DataRoot;
     public bool DataRootConfigured => paths.IsDataRootConfigured;
     public bool InsideAppFolder => paths.IsInsideAppFolder;
@@ -121,7 +125,7 @@ public sealed class IndexModel(
             PlatformDbName ??= p.ProposeName("paylink_", "platform");
         if (Step == "loginlink" && Request.Method == "GET")
         {
-            LL.ServerUrl ??= SavedLoginLink?.ServerUrl ?? "https://loginlink.websvc.in";
+            LL.ServerUrl ??= SavedLoginLink?.ServerUrl ?? configuration["PayLink:LoginLink:DefaultServer"]?.TrimEnd('/') ?? PublicLoginLink;
             LL.PlatformOrg ??= SavedLoginLink?.PlatformOrg;
             LL.PublicBaseUrl ??= await SafeBaseUrl() ?? DetectedBaseUrl;
         }

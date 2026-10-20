@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
+using PayLink.Infrastructure;
 using PayLink.Platform;
 
 namespace PayLink.Pages.Admin;
 
-public sealed class SettingsModel(PlatformSettings settings, PlatformDb platformDb) : AdminPage
+public sealed class SettingsModel(PlatformSettings settings, PlatformDb platformDb, AppPaths paths) : AdminPage
 {
+    public string DataRoot => paths.DataRoot;
+    public IReadOnlyList<DataFolderItem> DataFolderItems => DataFolder.Describe(paths);
     public bool SignupOpen { get; private set; }
     public string PublicBaseUrl { get; private set; } = "";
     public IReadOnlySet<string> TenantDbOptionsAllowed { get; private set; } = new HashSet<string>();

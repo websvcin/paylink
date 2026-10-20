@@ -1,0 +1,7 @@
+@* A prefilled value shown read-only; the pencil makes it editable. For defaults most people keep. *@
+@model (string Id, string Name, string? Value)
+<div class="locked">
+    <input id="@Model.Id" name="@Model.Name" class="mono" value="@Model.Value" readonly>
+    <button type="button" class="btn sm" title="Edit" aria-label="Edit" aria-controls="@Model.Id"
+            onclick="var i=document.getElementById('@Model.Id');i.readOnly=false;i.focus();i.select();this.hidden=true">✎ Edit</button>
+</div>

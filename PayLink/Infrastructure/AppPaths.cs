@@ -20,7 +20,7 @@ public sealed class AppPaths
         DbScriptsRoot = Path.Combine(AppContext.BaseDirectory, "db");
         Directory.CreateDirectory(DataRoot);
         Directory.CreateDirectory(KeysDirectory);
-        Directory.CreateDirectory(TenantsDirectory);
+        // tenants/ is created with the first SQLite tenant, so the folder only holds what's in use.
     }
 
     public string DataRoot { get; }

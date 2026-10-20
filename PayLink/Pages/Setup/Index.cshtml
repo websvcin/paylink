@@ -34,8 +34,9 @@
                 <dl class="kv">
                     <dt>Data folder</dt><dd><code>@Model.DataRoot</code></dd>
                     <dt>Set by</dt><dd>@(Model.DataRootConfigured ? "the PayLink__DataRoot setting" : "default: App_Data next to PayLink (PayLink__DataRoot isn't set)")</dd>
-                    <dt>Holds</dt><dd>bootstrap.db, the encryption keys (<code>keys/</code>) and any SQLite databases</dd>
                 </dl>
+                <p class="muted">PayLink has already created the first files here; nothing else is written without a setup step or a tenant asking for it:</p>
+                <div class="tbl"><partial name="_DataFolderContents" model="Model.DataFolderItems" /></div>
                 @if (Model.InContainer && Model.OnMountedVolume == false)
                 {
                     <div class="notice bad">
@@ -149,10 +150,10 @@
                 <h2>Connect LoginLink</h2>
                 <p class="muted">Required. PayLink stores no passwords: platform admins, tenant teams and API tokens all go through LoginLink.</p>
                 <div class="grid2">
-                    <div class="field"><label for="LL_ServerUrl">LoginLink server</label><input id="LL_ServerUrl" name="LL.ServerUrl" class="mono" value="@Model.LL.ServerUrl"></div>
+                    <div class="field"><label for="LL_ServerUrl">LoginLink server</label><partial name="_LockedInput" model='("LL_ServerUrl", "LL.ServerUrl", Model.LL.ServerUrl)' /><span class="hint">Filled in from <code>PayLink__LoginLink__DefaultServer</code> (or the public LoginLink). Press Edit to use your own LoginLink.</span></div>
                     <div class="field"><label for="LL_PlatformOrg">Platform organization slug</label><input id="LL_PlatformOrg" name="LL.PlatformOrg" class="mono" value="@Model.LL.PlatformOrg" placeholder="e.g. websvc"><span class="hint">Whose people may sign in to /admin. Any existing organization works. Leave blank for LoginLink's platform root organization.</span></div>
                 </div>
-                <div class="field"><label for="LL_PublicBaseUrl">PayLink's public address</label><input id="LL_PublicBaseUrl" name="LL.PublicBaseUrl" class="mono" value="@Model.LL.PublicBaseUrl"><span class="hint">Sign-in returns to <code>@(Model.LL.PublicBaseUrl ?? Model.DetectedBaseUrl)/auth/callback</code>.</span></div>
+                <div class="field"><label for="LL_PublicBaseUrl">PayLink's public address</label><partial name="_LockedInput" model='("LL_PublicBaseUrl", "LL.PublicBaseUrl", Model.LL.PublicBaseUrl)' /><span class="hint">Sign-in returns to <code>@(Model.LL.PublicBaseUrl ?? Model.DetectedBaseUrl)/auth/callback</code>.</span></div>
 
                 <h3>The "PayLink admin" app in that organization</h3>
                 <div class="opts">

@@ -145,3 +145,8 @@ details > summary { cursor: pointer; color: var(--accent); font-size: .9rem; }
   .top .where { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* A prefilled, read-only value with an edit button (_LockedInput). */
+.locked { display: flex; gap: 8px; align-items: center; }
+.locked input { flex: 1; min-width: 0; }
+.locked input[readonly] { background: var(--sunk); color: var(--muted); }

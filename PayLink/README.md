@@ -100,6 +100,7 @@ For local testing against a LoginLink on `http://localhost`, plain HTTP is accep
 | Setting | Meaning |
 |---|---|
 | `PayLink__DataRoot` | Data folder (default `App_Data` next to the app; `/app/App_Data` in Docker) |
+| `PayLink__LoginLink__DefaultServer` | LoginLink address setup fills in (default `https://loginlink.websvc.in`; editable on the page) |
 | `PayLink__SetupCode` | Choose the setup code instead of a generated one |
 | `PayLink__MasterKey` | Base64 32-byte key instead of `keys/master.key` |
 | `PayLink__TrustedProxies` | Comma-separated proxy IPs whose `X-Forwarded-For`/`-Proto` are trusted |

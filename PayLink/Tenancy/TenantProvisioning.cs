@@ -194,6 +194,7 @@ public sealed class TenantProvisioning(
         switch (request.Database.Mode)
         {
             case DatabaseMode.Sqlite:
+                Directory.CreateDirectory(paths.TenantsDirectory);
                 target = DatabaseTarget.ForSqliteFile(Path.Combine(paths.TenantsDirectory, $"tenant_{slug}_{ProvisioningNames.RandomToken(4)}.db"));
                 break;
 
