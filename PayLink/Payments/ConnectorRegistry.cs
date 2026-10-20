@@ -1,4 +1,8 @@
 using WebSvc.PayLink.Abstractions;
+using WebSvc.PayLink.Connector.CCAvenue;
+using WebSvc.PayLink.Connector.PayU;
+using WebSvc.PayLink.Connector.PhonePe;
+using WebSvc.PayLink.Connector.Razorpay;
 using WebSvc.PayLink.Connector.Simulator;
 using WebSvc.PayLink.Connector.Upi;
 
@@ -8,15 +12,26 @@ namespace PayLink.Payments;
 /// The payment connectors in this build. Each comes from its own NuGet package and depends only on WebSvc.PayLink.Abstractions.
 /// Every call goes through <see cref="CallAsync{T}"/>, so a slow or broken connector only fails its own attempts.
 /// </summary>
-public sealed class ConnectorRegistry(ILogger<ConnectorRegistry> logger)
+public sealed class ConnectorRegistry(IHttpClientFactory httpFactory, ILogger<ConnectorRegistry> logger)
 {
+    public const string HttpClientName = "gateways";
     public static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(20);
 
-    private readonly IReadOnlyList<IPaymentConnector> _connectors = [new UpiConnector(), new SimulatorConnector()];
+    private IReadOnlyList<IPaymentConnector>? _connectors;
 
-    public IReadOnlyList<IPaymentConnector> All => _connectors;
+    private IReadOnlyList<IPaymentConnector> Connectors => _connectors ??=
+    [
+        new UpiConnector(),
+        new RazorpayConnector(httpFactory.CreateClient(HttpClientName)),
+        new PhonePeConnector(httpFactory.CreateClient(HttpClientName)),
+        new PayUConnector(httpFactory.CreateClient(HttpClientName)),
+        new CCAvenueConnector(httpFactory.CreateClient(HttpClientName)),
+        new SimulatorConnector(),
+    ];
 
-    public IPaymentConnector? Get(string id) => _connectors.FirstOrDefault(c => c.Manifest.Id == id);
+    public IReadOnlyList<IPaymentConnector> All => Connectors;
+
+    public IPaymentConnector? Get(string id) => Connectors.FirstOrDefault(c => c.Manifest.Id == id);
 
     public static bool Supports(ConnectorManifest manifest, string currency) =>
         manifest.Currencies.Contains("*") || manifest.Currencies.Contains(currency, StringComparer.OrdinalIgnoreCase);

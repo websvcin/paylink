@@ -9,7 +9,7 @@ using PayLink.Infrastructure;
 namespace PayLink.Tests.Fakes;
 
 /// <summary>PayLink running in-process with its own temporary data folder.</summary>
-public sealed class PayLinkApp(string? dataRoot = null, bool keepData = false) : WebApplicationFactory<Program>
+public sealed class PayLinkApp(string? dataRoot = null, bool keepData = false, HttpMessageHandler? gateways = null) : WebApplicationFactory<Program>
 {
     public string DataRoot { get; } = dataRoot ?? Path.Combine(Path.GetTempPath(), "paylink-test-" + Guid.NewGuid().ToString("N"));
 
@@ -21,6 +21,9 @@ public sealed class PayLinkApp(string? dataRoot = null, bool keepData = false) :
         builder.UseSetting("PayLink:Webhooks:AllowPrivateNetworks", "true");
         builder.UseEnvironment("Development");
         builder.ConfigureLogging(l => l.SetMinimumLevel(LogLevel.Warning));
+        // Calls to payment gateways go to a fake when a test provides one.
+        if (gateways is not null)
+            builder.ConfigureServices(s => s.AddHttpClient(PayLink.Payments.ConnectorRegistry.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => gateways));
     }
 
     public T Get<T>() where T : notnull => Services.GetRequiredService<T>();

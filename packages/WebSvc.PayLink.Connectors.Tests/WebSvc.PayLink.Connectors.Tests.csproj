@@ -14,6 +14,10 @@
   <ItemGroup>
     <ProjectReference Include="..\WebSvc.PayLink.Connector.Simulator\WebSvc.PayLink.Connector.Simulator.csproj" />
     <ProjectReference Include="..\WebSvc.PayLink.Connector.Upi\WebSvc.PayLink.Connector.Upi.csproj" />
+    <ProjectReference Include="..\WebSvc.PayLink.Connector.CCAvenue\WebSvc.PayLink.Connector.CCAvenue.csproj" />
+    <ProjectReference Include="..\WebSvc.PayLink.Connector.PayU\WebSvc.PayLink.Connector.PayU.csproj" />
+    <ProjectReference Include="..\WebSvc.PayLink.Connector.PhonePe\WebSvc.PayLink.Connector.PhonePe.csproj" />
+    <ProjectReference Include="..\WebSvc.PayLink.Connector.Razorpay\WebSvc.PayLink.Connector.Razorpay.csproj" />
   </ItemGroup>
 
 </Project>

@@ -62,14 +62,18 @@ public sealed class GatewayHooksController(
             return BadRequest(new { error = "verification_failed" });
         }
 
+        var source = new EventSource(new Actor("gateway", connectorId, connector.Manifest.Name, HttpContext.Connection.RemoteIpAddress?.ToString()));
+        if (ev.RefundState is not null || ev.RefundId is not null || ev.RefundGatewayReference is not null)
+            return Ok(new { received = true, matched = await payments.ApplyRefundEventAsync(c, connectorId, ev, source) });
+
         var attempt = await c.QueryFirstOrDefaultAsync<Attempt>(
             "SELECT * FROM attempts WHERE connector = @connectorId AND (id = @attemptId OR gateway_ref = @gatewayRef) LIMIT 1;",
             new { connectorId, attemptId = ev.AttemptId ?? "", gatewayRef = ev.GatewayReference });
         var payment = attempt is null ? null : await c.QueryFirstOrDefaultAsync<Payment>("SELECT * FROM payments WHERE id = @id;", new { id = attempt.PaymentId });
         if (attempt is null || payment is null || payment.Mode != paymentMode) return Ok(new { received = true, matched = false });
 
-        var source = new EventSource(new Actor("gateway", connectorId, connector.Manifest.Name, HttpContext.Connection.RemoteIpAddress?.ToString()));
-        await payments.ApplyAsync(c, payment, attempt, new AttemptStatusResult(ev.Status, ev.Reason, ev.GatewayCode, ev.GatewayMessage), source, "gateway.notified");
+        await payments.ApplyAsync(c, payment, attempt, new AttemptStatusResult(ev.Status, ev.Reason, ev.GatewayCode, ev.GatewayMessage) { ProviderPaymentId = ev.ProviderPaymentId },
+            source, "gateway.notified");
         return Ok(new { received = true, matched = true });
     }
 }

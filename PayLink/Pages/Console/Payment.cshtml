@@ -21,14 +21,15 @@
     <div class="card">
         <div class="actions" style="justify-content:space-between">
             <span class="amount">@Money.Format(p.Amount, p.Currency)</span>
-            <span class="chip @PaymentStatuses.Tone(p.Status)">@PaymentStatuses.Label(p.Status)</span>
+            <span><span class="chip @PaymentStatuses.Tone(p.Status)">@PaymentStatuses.Label(p.Status)</span>@if (p.RefundLabel is { } rl) { <text> </text><span class="chip warn">@rl</span> }</span>
         </div>
         <dl class="kv">
             @if (p.Description is not null) { <dt>For</dt><dd>@p.Description</dd> }
             @if (p.Reference is not null) { <dt>Your reference</dt><dd class="mono">@p.Reference</dd> }
             <dt>Customer</dt><dd>@(string.Join(" · ", new[] { p.CustomerName, p.CustomerEmail, p.CustomerPhone, p.CustomerId }.Where(x => x is not null)) is { Length: > 0 } c ? c : "—")</dd>
             <dt>Mode</dt><dd>@(p.Livemode ? "Live" : "Test")</dd>
-            @if (p.Connector is not null) { <dt>Method</dt><dd>@p.Connector@(p.Utr is null ? "" : $" · UTR {p.Utr}")</dd> }
+            @if (p.Connector is not null) { <dt>Method</dt><dd>@p.Connector@(p.Method is { } m && m != p.Connector ? $" · {m}" : "")@(p.Utr is null ? "" : $" · UTR {p.Utr}")</dd> }
+            @if (p.AmountRefunded > 0) { <dt>Refunded</dt><dd>@Money.Format(p.AmountRefunded, p.Currency) of @Money.Format(p.Amount, p.Currency)</dd> }
             @if (p.FailureReason is not null) { <dt>Why</dt><dd>@p.FailureReason@(p.FailureMessage is null ? "" : $" · {p.FailureMessage}")</dd> }
             @if (p.HoldReason is not null) { <dt>Held because</dt><dd>@p.HoldReason</dd> }
             <dt>Created</dt><dd>@Clock.Display(p.CreatedAt) · @(p.CreatedVia == "console" ? "console" : "API") · @p.CreatedBy</dd>
@@ -70,6 +71,26 @@
             <form method="post" asp-page-handler="Cancel" class="actions">
                 <input name="note" placeholder="Reason (optional)" aria-label="Reason" style="flex:1 1 200px;width:auto">
                 <button class="btn danger" type="submit">Cancel payment</button>
+            </form>
+        }
+        @if (p.Status == PaymentStatuses.Succeeded && Model.Refundable > 0 && Model.CanOperate)
+        {
+            <form method="post" asp-page-handler="Refund" class="opts">
+                <h4>Refund</h4>
+                <div class="grid2">
+                    <div class="field"><label for="ramount">Amount (₹)</label><input id="ramount" name="amount" inputmode="decimal" placeholder="@((Model.Refundable / 100m).ToString("0.00")) (all that's left)"></div>
+                    <div class="field"><label for="rreason">Reason</label><input id="rreason" name="reason" placeholder="Customer returned the course"></div>
+                </div>
+                @if (Model.GatewayRefunds)
+                {
+                    <div class="actions"><button class="btn danger" type="submit">Refund through @p.Connector</button>
+                        <button class="btn" type="submit" name="manual" value="true">I refunded it myself: record it</button></div>
+                }
+                else
+                {
+                    <p class="hint">@p.Connector can't send money back through PayLink. Refund the payer from your bank or UPI app, then record it here (say how, e.g. "IMPS ref 1234").</p>
+                    <div class="actions"><button class="btn" type="submit" name="manual" value="true">Record a manual refund</button></div>
+                }
             </form>
         }
         @if (p.IsFinal && waitingUpi is null)
@@ -121,6 +142,29 @@
         </table>
     </div>
 </div>
+
+@if (Model.Refunds.Count > 0)
+{
+    <div class="card flush">
+        <div class="tbl">
+            <table>
+                <thead><tr><th>Refund</th><th>Amount</th><th>Status</th><th>Reason</th><th>By</th></tr></thead>
+                <tbody>
+                @foreach (var r in Model.Refunds)
+                {
+                    <tr>
+                        <td class="mono">@r.Id@if (r.GatewayRef is not null) { <br><span class="hint">@r.GatewayRef</span> }</td>
+                        <td class="num">@Money.Format(r.Amount, r.Currency)</td>
+                        <td><span class="chip @(r.Status == "succeeded" ? "good" : r.Status == "failed" ? "bad" : "warn")">@r.Status</span>@if (r.Manual) { <br><span class="hint">recorded by hand</span> }@if (r.GatewayMessage is not null && r.Status == "failed") { <br><span class="hint">@r.GatewayMessage</span> }</td>
+                        <td>@r.Reason</td>
+                        <td class="hint">@r.CreatedBy · @Clock.Short(r.CreatedAt)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
 
 <div class="card flush">
     <div class="tbl">

@@ -4,7 +4,7 @@ using PayLink.Platform;
 
 namespace PayLink.Pages.Console;
 
-public sealed class PaymentModel(PaymentService payments, WebhookService webhooks, PlatformSettings settings, FileStore files) : ConsolePage
+public sealed class PaymentModel(PaymentService payments, WebhookService webhooks, PlatformSettings settings, FileStore files, ConnectorRegistry registry) : ConsolePage
 {
     [FromRoute] public string Id { get; set; } = "";
 
@@ -13,6 +13,10 @@ public sealed class PaymentModel(PaymentService payments, WebhookService webhook
     public IReadOnlyList<PaymentEvent> Events { get; private set; } = [];
     public IReadOnlyList<WebhookDelivery> Deliveries { get; private set; } = [];
     public string CheckoutUrl { get; private set; } = "";
+    public IReadOnlyList<Refund> Refunds { get; private set; } = [];
+    /// <summary>Whether the paying connector can refund through PayLink (otherwise only a manual refund can be recorded).</summary>
+    public bool GatewayRefunds { get; private set; }
+    public long Refundable { get; private set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -20,6 +24,9 @@ public sealed class PaymentModel(PaymentService payments, WebhookService webhook
         (Payment, Attempts, Events) = d;
         if (Payment.Livemode != Livemode) ViewData["Livemode"] = Payment.Livemode;   // show this payment's own mode
         Deliveries = await webhooks.DeliveriesAsync(Tenant, Id);
+        Refunds = await payments.RefundsAsync(Tenant, Id);
+        GatewayRefunds = Payment.Connector is { } c && registry.Get(c) is { Manifest.Capabilities.Refunds: true };
+        Refundable = Payment.Amount - Payment.AmountRefunded - Refunds.Where(r => r.Status == RefundStatuses.Pending).Sum(r => r.Amount);
         CheckoutUrl = $"{await settings.GetPublicBaseUrlAsync()}/pay/{Id}";
         return Page();
     }
@@ -43,6 +50,26 @@ public sealed class PaymentModel(PaymentService payments, WebhookService webhook
         if (!CanOperate) return NotAllowed("verify UPI payments");
         var r = await payments.VerifyUpiAsync(Tenant, attemptId, decision == "approve", note, Source);
         return r.Error is { } e ? Failed(e.Message) : Done(decision == "approve" ? "Approved. The payment succeeded." : "Rejected. The payment failed.");
+    }
+
+    public async Task<IActionResult> OnPostRefundAsync(string? amount, string? reason, bool manual)
+    {
+        if (!CanOperate) return NotAllowed("refund payments");
+        long? minor = null;
+        if (!string.IsNullOrWhiteSpace(amount))
+        {
+            if (Money.ParseMajor(amount) is not { } m) return Failed("Enter the amount to refund in rupees, or leave it blank to refund everything left.");
+            minor = m;
+        }
+        var outcome = await payments.RefundAsync(Tenant, Id, minor, reason, null, Source, manual);
+        if (outcome.Error is { } e) return Failed(e.Message);
+        var r = outcome.Refund!;
+        return r.Status switch
+        {
+            RefundStatuses.Succeeded => Done($"Refunded {Money.Format(r.Amount, r.Currency)}."),
+            RefundStatuses.Failed => Failed($"The refund failed: {r.GatewayMessage}"),
+            _ => Done($"Refund of {Money.Format(r.Amount, r.Currency)} requested. The gateway confirms it later; it shows here."),
+        };
     }
 
     public async Task<IActionResult> OnPostRedeliverAsync(long deliveryId)

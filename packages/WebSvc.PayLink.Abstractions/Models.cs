@@ -21,7 +21,11 @@ public sealed record ConnectorCapabilities(
     bool StatusPolling);
 
 /// <summary>One field the tenant fills in, separately for Test and Live.</summary>
-public sealed record ConfigField(string Key, string Label, ConfigFieldType Type, bool Required, string? Help = null);
+public sealed record ConfigField(string Key, string Label, ConfigFieldType Type, bool Required, string? Help = null)
+{
+    /// <summary>For <see cref="ConfigFieldType.Choice"/>: the allowed values (the first is the default).</summary>
+    public IReadOnlyList<string>? Options { get; init; }
+}
 
 public enum ConfigFieldType { Text, Secret, Url, Boolean, Choice }
 
@@ -65,9 +69,21 @@ public enum FailureReason
     UpiTimeout, GatewayError, RiskBlocked, Expired, LimitExceeded, Unknown
 }
 
-public sealed record AttemptReference(string AttemptId, string GatewayReference);
+public sealed record AttemptReference(string AttemptId, string GatewayReference)
+{
+    /// <summary>The gateway's id for the actual payment (e.g. Razorpay's pay_…, PayU's mihpayid), once known. Refunds use it.</summary>
+    public string? ProviderPaymentId { get; init; }
+    public long Amount { get; init; }
+    public string Currency { get; init; } = "INR";
+}
 
-public sealed record AttemptStatusResult(AttemptStatus Status, FailureReason Reason, string GatewayCode, string GatewayMessage);
+public sealed record AttemptStatusResult(AttemptStatus Status, FailureReason Reason, string GatewayCode, string GatewayMessage)
+{
+    /// <summary>The gateway's id for the payment, when the gateway has one (needed later for refunds).</summary>
+    public string? ProviderPaymentId { get; init; }
+    /// <summary>How the payer paid, as the gateway reports it (e.g. "upi", "card", "netbanking"), when known.</summary>
+    public string? Method { get; init; }
+}
 
 public sealed record GatewayEvent(
     string GatewayReference,
@@ -76,8 +92,22 @@ public sealed record GatewayEvent(
     FailureReason Reason,
     string GatewayCode,
     string GatewayMessage,
-    string RawBody);
+    string RawBody)
+{
+    public string? ProviderPaymentId { get; init; }
+    /// <summary>Set when the notification is about a refund rather than a payment attempt.</summary>
+    public string? RefundGatewayReference { get; init; }
+    /// <summary>PayLink's refund id, when the gateway echoes it back.</summary>
+    public string? RefundId { get; init; }
+    public RefundState? RefundState { get; init; }
+}
 
 public sealed record RefundRequest(string RefundId, AttemptReference Attempt, long Amount, string Currency, string Reason);
 
-public sealed record RefundResult(bool Accepted, string GatewayReference, string Message);
+public sealed record RefundResult(bool Accepted, string GatewayReference, string Message)
+{
+    /// <summary>Where the refund stands right after the call. Pending ones finish through a webhook or a later status check.</summary>
+    public RefundState Status { get; init; } = RefundState.Pending;
+}
+
+public enum RefundState { Pending, Succeeded, Failed }

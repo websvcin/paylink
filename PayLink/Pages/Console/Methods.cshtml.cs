@@ -5,7 +5,7 @@ using WebSvc.PayLink.Abstractions;
 namespace PayLink.Pages.Console;
 
 /// <summary>Payment methods: turn connectors on, with separate Test and Live settings. Secrets are kept and never shown again.</summary>
-public sealed class MethodsModel(ConnectorRegistry registry, ConnectorSettingsService methods) : ConsolePage
+public sealed class MethodsModel(ConnectorRegistry registry, ConnectorSettingsService methods, PayLink.Platform.PlatformSettings settings) : ConsolePage
 {
     public IReadOnlyList<IPaymentConnector> Connectors => registry.All;
     public IReadOnlyList<ConnectorSetting> Saved { get; private set; } = [];
@@ -14,8 +14,12 @@ public sealed class MethodsModel(ConnectorRegistry registry, ConnectorSettingsSe
     public ConnectorSetting? Setting(string id, string mode) => Saved.FirstOrDefault(s => s.ConnectorId == id && s.Mode == mode);
     public Dictionary<string, string> Values(ConnectorSetting? s) => methods.Values(s);
 
+    public string BaseUrl { get; private set; } = "";
+    public string HookUrl(string connector, string mode) => $"{BaseUrl}/hooks/{Tenant.Slug}/{connector}/{mode}";
+
     public async Task OnGetAsync()
     {
+        BaseUrl = await settings.GetPublicBaseUrlAsync();
         Saved = await methods.ListAsync(Tenant);
         LiveReady = await methods.IsLiveReadyAsync(Tenant);
     }

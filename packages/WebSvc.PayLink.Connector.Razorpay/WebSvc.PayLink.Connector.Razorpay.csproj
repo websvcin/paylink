@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Description>Razorpay for PayLink: Payment Links checkout, signed callbacks and webhooks, status checks and refunds.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- A connector depends only on Abstractions, never on another connector or on the app. Packed as a package dependency. -->
+    <ProjectReference Include="..\WebSvc.PayLink.Abstractions\WebSvc.PayLink.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

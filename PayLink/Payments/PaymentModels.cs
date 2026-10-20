@@ -144,8 +144,10 @@ public sealed class Payment
     public string? FailureReason { get; set; }
     public string? FailureMessage { get; set; }
     public string? HoldReason { get; set; }
+    public long AmountRefunded { get; set; }
 
     public bool IsFinal => PaymentStatuses.IsFinal(Status);
+    public string? RefundLabel => AmountRefunded <= 0 ? null : AmountRefunded >= Amount ? "Refunded" : "Partly refunded";
     public PaymentMode Mode => Livemode ? PaymentMode.Live : PaymentMode.Test;
 }
 
@@ -163,10 +165,40 @@ public sealed class Attempt
     public string? GatewayMessage { get; set; }
     public string? Utr { get; set; }
     public string? ProofFile { get; set; }
+    public string? ProviderPaymentId { get; set; }
+    public string? PaidMethod { get; set; }
+    public string? PolledAt { get; set; }
     public string? Ip { get; set; }
     public string? UserAgent { get; set; }
     public string CreatedAt { get; set; } = "";
     public string UpdatedAt { get; set; } = "";
+}
+
+public sealed class Refund
+{
+    public string Id { get; set; } = "";
+    public string PaymentId { get; set; } = "";
+    public string AttemptId { get; set; } = "";
+    public bool Livemode { get; set; }
+    public long Amount { get; set; }
+    public string Currency { get; set; } = "INR";
+    public string Status { get; set; } = RefundStatuses.Pending;
+    public string? Reason { get; set; }
+    public string Connector { get; set; } = "";
+    public string? GatewayRef { get; set; }
+    public string? GatewayMessage { get; set; }
+    public bool Manual { get; set; }
+    public string? IdempotencyKey { get; set; }
+    public string? CreatedBy { get; set; }
+    public string CreatedAt { get; set; } = "";
+    public string UpdatedAt { get; set; } = "";
+}
+
+public static class RefundStatuses
+{
+    public const string Pending = "pending";
+    public const string Succeeded = "succeeded";
+    public const string Failed = "failed";
 }
 
 public sealed class PaymentEvent
@@ -236,9 +268,11 @@ public static class TenantCapabilities
     public const string Methods = "methods";
     public const string Webhooks = "webhooks";
     public const string Risk = "risk";
+    public const string Refunds = "refunds";
 
     public static readonly (string Key, string Label)[] All =
     [
+        (Refunds, "Refunds: refund paid payments, in full or in part"),
         (PaymentsRead, "Payments (read): list and search payments, see journeys"),
         (PaymentsWrite, "Payments (write): cancel open payments"),
         (UpiVerify, "UPI verification: approve or reject UTRs"),
@@ -326,8 +360,10 @@ public static class WebhookEvents
     public const string Cancelled = "payment.cancelled";
     public const string Expired = "payment.expired";
     public const string Test = "webhook.test";
+    public const string RefundSucceeded = "refund.succeeded";
+    public const string RefundFailed = "refund.failed";
 
-    public static readonly string[] All = [Processing, OnHold, Succeeded, Failed, Cancelled, Expired];
+    public static readonly string[] All = [Processing, OnHold, Succeeded, Failed, Cancelled, Expired, RefundSucceeded, RefundFailed];
 
     public static string? ForStatus(string status) => status switch
     {

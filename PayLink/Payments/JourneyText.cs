@@ -34,10 +34,20 @@ public static class JourneyText
             "risk.blocked" => ($"Blocked by risk rule: {D("kind")} = {D("value")}", "bad"),
             "risk.review" => ($"Held for review by rule: {D("kind")} = {D("value")}", "warn"),
             "risk.released" => ($"Released from review · {D("note")}", "good"),
+            "payer.returned" => ($"Payer came back from {D("connector")}", ""),
+            "gateway.returned" => ($"{D("status") switch { "succeeded" => "Paid", "failed" => "Failed", "cancelled" => "Cancelled", _ => "Returned: " + D("status") }} at the gateway{(D("code") is { Length: > 0 } rc ? " (" + rc + ")" : "")}", "info"),
+            "gateway.status_checked" => ($"Gateway status: {D("status")}{(D("code") is { Length: > 0 } sc ? " (" + sc + ")" : "")}", "info"),
+            "gateway.unreachable" => ($"Couldn't reach the gateway: {D("message")}", "warn"),
+            "gateway.gave_up" => ("No result from the gateway within 24 hours", ""),
+            "refund.requested" => ($"Refund of {Amount(D("amount"))} requested{(D("manual") == "true" ? " (recorded by hand)" : "")}{(D("reason") is { Length: > 0 } rr ? " · " + rr : "")}", "warn"),
+            "refund.succeeded" => ($"Refunded {Amount(D("amount"))}", "good"),
+            "refund.failed" => ($"Refund failed{(D("message") is { Length: > 0 } fm ? ": " + fm : "")}", "bad"),
             "status.ignored" or "attempt.status_ignored" => ($"Ignored a late change to {D("requested")} ({D("because")})", ""),
             _ => (e.Type, ""),
         };
     }
+
+    private static string Amount(string minor) => long.TryParse(minor, out var m) ? Money.Format(m, "INR") : minor;
 
     public static string Actor(PaymentEvent e) => e.ActorType switch
     {

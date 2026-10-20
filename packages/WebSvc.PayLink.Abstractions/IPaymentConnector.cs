@@ -28,3 +28,19 @@ public interface IPaymentConnector
 }
 
 public sealed class WebhookVerificationException(string message) : Exception(message);
+
+/// <summary>
+/// Optional. For gateways that send the payer back to PayLink with the result (a form post or query string, as PayU and
+/// CCAvenue do). The connector must verify the data (hash, signature or decryption) or return null, in which case PayLink
+/// asks <see cref="IPaymentConnector.FetchStatusAsync"/> instead.
+/// </summary>
+public interface IPayerReturnHandler
+{
+    Task<GatewayEvent?> ParseReturnAsync(HttpRequest request, AttemptReference attempt, ConnectorConfig config, CancellationToken cancellationToken);
+}
+
+/// <summary>Optional. Lets PayLink ask the gateway how a pending refund ended.</summary>
+public interface IRefundStatusFetcher
+{
+    Task<RefundResult> FetchRefundAsync(string refundId, string gatewayReference, ConnectorConfig config, CancellationToken cancellationToken);
+}

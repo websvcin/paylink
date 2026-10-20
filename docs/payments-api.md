@@ -79,6 +79,12 @@ Response `201`:
 | `GET` | `/api/v1/payments/{id}` | Status, attempts, `paid_with` (`connector`, `method`, `utr`), `failure` (`reason`, `message`). |
 | `GET` | `/api/v1/payments?status=&reference=&limit=&offset=` | Newest first. |
 | `POST` | `/api/v1/payments/{id}/cancel` | Open payments only. A payment that's `processing` can't be cancelled: the payer may already have paid. |
+| `POST` | `/api/v1/payments/{id}/refunds` | `{ "amount": 5000, "reason": "…" }`; leave out `amount` to refund everything left. Send `Idempotency-Key`. Returns the refund (`pending`, `succeeded` or `failed`). |
+| `GET` | `/api/v1/payments/{id}/refunds` | The payment's refunds. The payment itself also shows `amount_refunded` and `refunds`. |
+
+### Refunds
+
+A refund goes back through the gateway that took the payment, in full or in part, as many times as you like up to the payment's amount. Most gateways answer `pending` first; PayLink then follows it (their webhook, or by asking) and sends `refund.succeeded` or `refund.failed`. The payment stays `succeeded`; `amount_refunded` grows. PayLink UPI and the Simulator can't send money back: refund the payer yourself and record it in the console (**Record a manual refund**, with a note saying how), or with the tenant developer API (`"manual": true`).
 
 ## Statuses
 
@@ -93,7 +99,7 @@ Failure reasons: `payer_cancelled`, `bank_declined`, `insufficient_funds`, `auth
 
 Add endpoints in **Console → Developers**, separately for Test and Live (Live needs https). Each endpoint gets a signing secret (`whsec_…`, shown once).
 
-Events: `payment.processing`, `payment.on_hold`, `payment.succeeded`, `payment.failed`, `payment.cancelled`, `payment.expired`, and `webhook.test` from the **Send test** button.
+Events: `payment.processing`, `payment.on_hold`, `payment.succeeded`, `payment.failed`, `payment.cancelled`, `payment.expired`, `refund.succeeded`, `refund.failed`, and `webhook.test` from the **Send test** button.
 
 ```
 POST https://acme.in/hooks/paylink
@@ -119,12 +125,18 @@ PayLink only delivers to public addresses. Set `PayLink__Webhooks__AllowPrivateN
 
 ## Payment methods in this release
 
-| Method | Package | How the payment is confirmed |
-|---|---|---|
-| **PayLink UPI** | `WebSvc.PayLink.Connector.Upi` | A `upi://pay` QR code (and "Pay with UPI app" on phones) pays straight into your UPI ID, with the payment ID in the note. The payer enters the 12-digit UTR (and optionally a screenshot); you check it in your bank or UPI app and approve it in **Console → UPI verification**. A UTR can't be reused for another payment. No gateway, no fee. |
-| **Simulator** | `WebSvc.PayLink.Connector.Simulator` | Test only. The payer picks Succeed, Fail or Stay pending. |
+Each is its own NuGet package that depends only on `WebSvc.PayLink.Abstractions`. Turn them on in **Console → Payment methods**, separately for Test and Live; each one's settings are checked before it can be turned on.
 
-Razorpay, PhonePe, PayU and CCAvenue arrive as their own packages in Phase 2. Gateways notify `POST /hooks/{tenant}/{connector}/{test|live}`; every notification is stored, and only a verified one changes a payment.
+| Method | Package | How a payment is confirmed | Refunds |
+|---|---|---|---|
+| **PayLink UPI** | `WebSvc.PayLink.Connector.Upi` | A `upi://pay` QR code (and "Pay with UPI app" on phones) pays straight into your UPI ID, with the payment ID in the note. The payer enters the 12-digit UTR (and optionally a screenshot); you check it and approve it in **Console → UPI verification**. A UTR can't be reused. No gateway, no fee. | Manual |
+| **Razorpay** | `WebSvc.PayLink.Connector.Razorpay` | A Razorpay Payment Link per attempt. The payer returns with a signed query string (checked), Razorpay's webhook (`X-Razorpay-Signature`) confirms it, and PayLink asks Razorpay if neither arrives. | Full and partial |
+| **PhonePe** | `WebSvc.PayLink.Connector.PhonePe` | Standard Checkout v2 (OAuth client id and secret), or v1 (salt key) for older accounts. PhonePe's redirect isn't signed, so PayLink asks PhonePe for the order status; its callback (v2: hashed username and password; v1: X-VERIFY) confirms it too. | Full and partial |
+| **PayU** | `WebSvc.PayLink.Connector.PayU` | A hashed form posted to PayU. PayU posts the result back with a SHA-512 reverse hash, checked before anything changes; `verify_payment` covers the rest. | Full and partial |
+| **CCAvenue** | `WebSvc.PayLink.Connector.CCAvenue` | An encrypted order (AES-128, key = MD5 of the working key). CCAvenue posts back `encResp`, which only decrypts with your working key; the order status API covers the rest. | Full and partial |
+| **Simulator** | `WebSvc.PayLink.Connector.Simulator` | Test only. The payer picks Succeed, Fail or Stay pending. | Manual |
+
+**How PayLink follows a payment.** After the payer leaves for a gateway, three things can settle it, whichever comes first: the payer coming back (`/pay/{id}/return`), the gateway's webhook (`POST /hooks/{tenant}/{connector}/{test|live}`, the URL shown on the Payment methods page for you to paste into the gateway's dashboard), or PayLink asking the gateway: every minute for half an hour, then every 15 minutes. An attempt with no result after 24 hours expires, so the payer can try again; one that may already have taken money (`processing`) is never given up on. Every notification is stored, verified or not; only a verified one changes a payment.
 
 ## Tenant developer API
 
@@ -134,6 +146,7 @@ Base path `/api/tenant`, `Authorization: Bearer tdk_…`. Choose test or live da
 |---|---|
 | `payments.read` | `GET /payments?status=&q=&limit=&offset=`, `GET /payments/{id}` (with the full journey) |
 | `payments.write` | `POST /payments/{id}/cancel` `{ "note": "…" }` |
+| `refunds` | `POST /payments/{id}/refunds` `{ "amount": 5000, "reason": "…", "manual": false }` (manual refunds need a reason) |
 | `upi.verify` | `GET /upi/pending`, `POST /upi/{attempt_id}/approve` and `/reject` `{ "note": "…" }` (note required) |
 | `methods` | `GET /methods`, `PUT /methods/{connector}/{test|live}` `{ "enabled": true, "settings": { "vpa": "acme@okhdfcbank", … } }`. Secrets are never returned. |
 | `webhooks` | `GET/POST /webhooks`, `DELETE /webhooks/{id}`, `GET /webhooks/deliveries?payment_id=`, `POST /webhooks/deliveries/{id}/redeliver` |
@@ -153,6 +166,6 @@ Same shape as LoginLink and the Platform Developer API:
 | 401 | `invalid_key` |
 | 403 | `wrong_key_type`, `insufficient_scope`, `tenant_suspended` |
 | 404 | `not_found` |
-| 409 | `idempotency_conflict`, `reference_conflict`, `final`, `processing` |
+| 409 | `idempotency_conflict`, `reference_conflict`, `final`, `processing`, `not_paid`, `refunds_not_supported` |
 
 Every call is listed (without bodies) in **Console → Developers → Recent API calls**.

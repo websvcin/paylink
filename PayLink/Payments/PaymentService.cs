@@ -39,7 +39,7 @@ public sealed record EventSource(Actor Actor, string? UserAgent = null)
 /// The payment core. A payment is what the merchant asked for; an attempt is one try through one connector. Every change is
 /// appended to the payment's event log (its journey), statuses only move forward, and merchants hear about changes through webhooks.
 /// </summary>
-public sealed class PaymentService(
+public sealed partial class PaymentService(
     TenantDb tenantDb,
     PlatformDb platformDb,
     PlatformSettings platform,
@@ -210,7 +210,7 @@ public sealed class PaymentService(
             var config = await methods.ConfigAsync(tenant, connector.Manifest.Id, p.Mode);
             var request = new AttemptRequest(p.Id, attempt.Id, p.Amount, p.Currency, p.Description ?? p.Reference ?? "",
                 new PayerDetails(p.CustomerName, p.CustomerEmail, p.CustomerPhone),
-                $"{await platform.GetPublicBaseUrlAsync()}/pay/{p.Id}/return", PaymentJson.Metadata(p.Metadata) ?? new Dictionary<string, string>());
+                $"{await platform.GetPublicBaseUrlAsync()}/pay/{p.Id}/return?attempt={attempt.Id}", PaymentJson.Metadata(p.Metadata) ?? new Dictionary<string, string>());
             next = await registry.CallAsync(connector, ct => connector.CreateAttemptAsync(request, config, ct));
         }
         catch (ConnectorCallException ex)
@@ -316,7 +316,13 @@ public sealed class PaymentService(
     /// <summary>Applies a status reported by a gateway (webhook or status check) to an attempt and its payment.</summary>
     public async Task ApplyAsync(DbConnection c, Payment p, Attempt a, AttemptStatusResult result, EventSource source, string eventType)
     {
-        var data = new { status = result.Status.ToString().ToLowerInvariant(), code = result.GatewayCode, message = result.GatewayMessage };
+        var data = new { status = result.Status.ToString().ToLowerInvariant(), code = result.GatewayCode, message = result.GatewayMessage, gateway_payment = result.ProviderPaymentId };
+        if ((result.ProviderPaymentId is { Length: > 0 } && result.ProviderPaymentId != a.ProviderPaymentId) || (result.Method is { Length: > 0 } && result.Method != a.PaidMethod))
+        {
+            a.ProviderPaymentId = result.ProviderPaymentId ?? a.ProviderPaymentId;
+            a.PaidMethod = result.Method ?? a.PaidMethod;
+            await c.ExecuteAsync("UPDATE attempts SET provider_payment_id = @ProviderPaymentId, paid_method = @PaidMethod WHERE id = @Id;", a);
+        }
         switch (result.Status)
         {
             case AttemptStatus.Succeeded:
@@ -506,7 +512,7 @@ public sealed class PaymentService(
         {
             x.PaidAt = Clock.Now();
             x.Connector = a.Connector;
-            x.Method = a.Method;
+            x.Method = a.PaidMethod ?? a.Method;
             x.SucceededAttemptId = a.Id;
             x.Utr = a.Utr ?? x.Utr;
             x.FailureReason = null;

@@ -15,6 +15,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.Up
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connectors.Tests", "WebSvc.PayLink.Connectors.Tests\WebSvc.PayLink.Connectors.Tests.csproj", "{9FD6CFE2-7282-4A0C-B20B-10661E229F2F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.Razorpay", "WebSvc.PayLink.Connector.Razorpay\WebSvc.PayLink.Connector.Razorpay.csproj", "{D47343F5-4322-4AC0-9196-F5D89D245317}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.PhonePe", "WebSvc.PayLink.Connector.PhonePe\WebSvc.PayLink.Connector.PhonePe.csproj", "{DBCDD6E2-8970-4799-8A2A-68549E1C799E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.PayU", "WebSvc.PayLink.Connector.PayU\WebSvc.PayLink.Connector.PayU.csproj", "{C0753C69-475A-4253-B3C1-C651B4141C4B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.CCAvenue", "WebSvc.PayLink.Connector.CCAvenue\WebSvc.PayLink.Connector.CCAvenue.csproj", "{63F3234F-268D-4341-914A-07C4E2628BAB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +56,21 @@ Global
 		{9FD6CFE2-7282-4A0C-B20B-10661E229F2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9FD6CFE2-7282-4A0C-B20B-10661E229F2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9FD6CFE2-7282-4A0C-B20B-10661E229F2F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D47343F5-4322-4AC0-9196-F5D89D245317}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D47343F5-4322-4AC0-9196-F5D89D245317}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D47343F5-4322-4AC0-9196-F5D89D245317}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D47343F5-4322-4AC0-9196-F5D89D245317}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBCDD6E2-8970-4799-8A2A-68549E1C799E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBCDD6E2-8970-4799-8A2A-68549E1C799E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBCDD6E2-8970-4799-8A2A-68549E1C799E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBCDD6E2-8970-4799-8A2A-68549E1C799E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C0753C69-475A-4253-B3C1-C651B4141C4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C0753C69-475A-4253-B3C1-C651B4141C4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C0753C69-475A-4253-B3C1-C651B4141C4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C0753C69-475A-4253-B3C1-C651B4141C4B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63F3234F-268D-4341-914A-07C4E2628BAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63F3234F-268D-4341-914A-07C4E2628BAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63F3234F-268D-4341-914A-07C4E2628BAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63F3234F-268D-4341-914A-07C4E2628BAB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

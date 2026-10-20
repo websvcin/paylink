@@ -29,7 +29,7 @@
                 <tr>
                     <td><a href="@root/payments/@p.Id" class="mono">@p.Id</a>@if (p.Reference is not null) { <br><span class="hint">@p.Reference</span> }</td>
                     <td class="num">@Money.Format(p.Amount, p.Currency)</td>
-                    <td><span class="chip @PaymentStatuses.Tone(p.Status)">@PaymentStatuses.Label(p.Status)</span></td>
+                    <td><span class="chip @PaymentStatuses.Tone(p.Status)">@PaymentStatuses.Label(p.Status)</span>@if (p.RefundLabel is { } rl) { <br><span class="hint">@rl</span> }</td>
                     <td>@(p.CustomerName ?? p.CustomerEmail ?? p.CustomerPhone ?? "—")</td>
                     <td>@(p.Connector ?? "—")@if (p.Utr is not null) { <br><span class="hint mono">UTR @p.Utr</span> }</td>
                     <td><time>@Clock.Short(p.CreatedAt)</time></td>

@@ -84,10 +84,42 @@ public sealed class PaymentsApiController(PaymentService payments, PlatformSetti
         return await Shape(result.Payment!, 200);
     }
 
+    public sealed class RefundBody
+    {
+        public long? Amount { get; set; }
+        public string? Reason { get; set; }
+    }
+
+    /// <summary>Refunds all (no amount) or part of a succeeded payment through its gateway.</summary>
+    [HttpPost("payments/{id}/refunds")]
+    public async Task<IActionResult> CreateRefund(string id)
+    {
+        var p = await payments.GetAsync(Tenant, id);
+        if (p is null || p.Livemode != Key.Livemode) return Error(404, "not_found", $"No {(Key.Livemode ? "live" : "test")} payment {id}.");
+        RefundBody? body = null;
+        if (Request.ContentLength is > 0 || Request.Headers.TransferEncoding.Count > 0)
+        {
+            try { body = await JsonSerializer.DeserializeAsync<RefundBody>(Request.Body, PaymentJson.Options); }
+            catch (JsonException ex) { return Error(400, "invalid_json", ex.Message); }
+        }
+        var outcome = await payments.RefundAsync(Tenant, id, body?.Amount, body?.Reason, Request.Headers["Idempotency-Key"].FirstOrDefault(), Source);
+        if (outcome.Error is { } e) return Error(e.Status, e.Code, e.Message);
+        return new JsonResult(PaymentJson.From(outcome.Refund!), PaymentJson.Options) { StatusCode = 201 };
+    }
+
+    [HttpGet("payments/{id}/refunds")]
+    public async Task<IActionResult> Refunds(string id)
+    {
+        var p = await payments.GetAsync(Tenant, id);
+        if (p is null || p.Livemode != Key.Livemode) return Error(404, "not_found", $"No {(Key.Livemode ? "live" : "test")} payment {id}.");
+        return new JsonResult(new { @object = "list", data = (await payments.RefundsAsync(Tenant, id)).Select(PaymentJson.From) }, PaymentJson.Options);
+    }
+
     private async Task<IActionResult> Shape(Payment p, int status)
     {
         var attempts = await payments.AttemptsAsync(Tenant, p.Id);
-        return new JsonResult(PaymentJson.From(p, await settings.GetPublicBaseUrlAsync(), attempts), PaymentJson.Options) { StatusCode = status };
+        var refunds = await payments.RefundsAsync(Tenant, p.Id);
+        return new JsonResult(PaymentJson.From(p, await settings.GetPublicBaseUrlAsync(), attempts, refunds), PaymentJson.Options) { StatusCode = status };
     }
 
     private ObjectResult Error(int status, string error, string description)

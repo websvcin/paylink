@@ -6,20 +6,18 @@
 
 ## Status
 
-**Phase 1 (this release): the payment core.** A merchant integrates once with the Payments API, sends payers to the hosted checkout, and takes real UPI payments with no gateway contract. Gateways (Razorpay, PhonePe, PayU, CCAvenue) arrive as connector packages in Phase 2.
+**Phase 2 (this release): gateways.** On top of the Phase 1 payment core, Razorpay, PhonePe, PayU and CCAvenue are connector packages a merchant turns on in the console, with signed callbacks and webhooks, status polling and refunds. Switching a merchant from UPI to Razorpay is a console setting.
 
 | Works today | Coming next |
 |---|---|
-| **Payments API** (`/api/v1`): create, get, list, cancel; `Idempotency-Key`; test and live keys (`sk_test_…`, `sk_live_…`). See [docs/payments-api.md](../docs/payments-api.md) | Razorpay, PhonePe, PayU, CCAvenue connectors, refunds, status polling (Phase 2) |
-| **Hosted checkout** at `/pay/{id}`: methods the merchant turned on, retry with another method, return to the merchant | Connector catalog: install, allow, drain from Admin (Phase 3) |
-| **PayLink UPI** (free): `upi://pay` QR code to the merchant's UPI ID, payer's UTR and screenshot, merchant's verification queue, reused-UTR check | Risk score, location and VPN rules, funnel and failure reports, alerts, settlement reconciliation (Phase 3) |
-| **Simulator** for Test: Succeed, Fail or Stay pending, no gateway account needed | Payment links, JS drop-in button, PayPal and Stripe, UPI statement matching (Phase 4) |
-| Payment journey: append-only event log per payment (who, when, from where, why), statuses that only move forward | Subdomain per tenant, PostgreSQL (later) |
-| Signed webhooks (`PayLink-Signature`) with retries for 24 hours, delivery log and **Send again** | |
-| Risk rules: block lists (email, domain, phone, customer, IP/CIDR), amount limits, attempts per IP, review queue | |
-| Tenant developer keys (`tdk_…`) and the tenant developer API; API request log | |
-| Console: Test/Live switch, overview, payments search, payment page, UPI verification, payment methods, developers, risk rules | |
-| Everything from Phase 0: setup wizard, SQLite/MySQL platform and tenant databases, auto-provisioning, LoginLink sign-in and admission, platform developer keys, hash-chained audit logs | |
+| **Gateways**: Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form); signed callbacks and webhooks; status polling; full and partial refunds | Connector catalog: install, allow, drain from Admin; runtime install from nuget.org (Phase 3) |
+| **Payments API** (`/api/v1`): create, get, list, cancel, refund; `Idempotency-Key`; test and live keys. See [docs/payments-api.md](../docs/payments-api.md) | Platform limits, subdomains, moving databases, platform dashboard (Phase 3) |
+| **Hosted checkout** at `/pay/{id}`: the merchant's methods, retry with another method, return to the merchant | Risk score, location and VPN rules, funnel and failure reports, alerts, settlement reconciliation (Phase 3) |
+| **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds | Payment links, JS drop-in, routing and failover, PayPal and Stripe, UPI statement matching, PostgreSQL, custom domains, reporting API, CrudApi, disputes, FileLink (Phase 4) |
+| **Simulator** for Test | |
+| Payment journey (append-only events), statuses that only move forward, signed webhooks with retries, risk rules and review holds | |
+| Tenant developer keys (`tdk_`) and API; API request log; console with Test/Live switch | |
+| Setup: new or restore (backup .zip or bootstrap.db), encryption key inside bootstrap.db (or `PayLink__MasterKey`), SQLite/MySQL platform and tenant databases, auto-provisioning (tested before saving), LoginLink with clear credential checks | |
 
 ## Run it
 

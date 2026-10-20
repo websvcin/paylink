@@ -4,7 +4,8 @@ using PayLink.Platform;
 namespace PayLink.Payments;
 
 /// <summary>
-/// Background work for every active tenant: expire unpaid payments and send due webhooks. Runs every few seconds;
+/// Background work for every active tenant: expire unpaid payments, ask gateways about open attempts and pending refunds,
+/// and send due webhooks. Runs every few seconds;
 /// one tenant failing never stops the others. PayLink:Jobs:IntervalSeconds sets the pace (default 10; 0 turns the loop off).
 /// </summary>
 public sealed class PaymentJobs(IServiceProvider services, BootstrapStore bootstrap, IConfiguration configuration, ILogger<PaymentJobs> logger) : BackgroundService
@@ -41,6 +42,8 @@ public sealed class PaymentJobs(IServiceProvider services, BootstrapStore bootst
             try
             {
                 await payments.ExpireDueAsync(tenant);
+                await payments.PollAsync(tenant, ct);
+                await payments.PollRefundsAsync(tenant, ct);
                 await webhooks.DeliverDueAsync(tenant, ct);
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)

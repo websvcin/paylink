@@ -41,6 +41,7 @@ builder.Services.AddSingleton<TenantKeyService>();
 builder.Services.AddSingleton<FileStore>();
 builder.Services.AddSingleton<PaymentJobs>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<PaymentJobs>());
+builder.Services.AddHttpClient(ConnectorRegistry.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddHttpClient(WebhookService.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(10))
     .ConfigurePrimaryHttpMessageHandler(() => WebhookService.CreateHandler(builder.Configuration.GetValue<bool>("PayLink:Webhooks:AllowPrivateNetworks")));
 
@@ -129,8 +130,17 @@ app.MapGet("/healthz", async (BootstrapStore bootstrap, PlatformDb platformDb, H
     }, statusCode: healthy ? 200 : 503);
 });
 
-// Gateways send the payer back here; the checkout shows the result.
-app.MapGet("/pay/{id}/return", (string id) => Results.Redirect($"/pay/{Uri.EscapeDataString(id)}"));
+// Gateways send the payer back here (GET, or a form post for PayU and CCAvenue). A verified result is applied, or the
+// gateway is asked; then the checkout shows the outcome.
+app.MapMethods("/pay/{id}/return", ["GET", "POST"], async (string id, string? attempt, HttpContext http, PlatformDb platformDb, PlatformRepository repo, PaymentService payments) =>
+{
+    long? tenantId;
+    await using (var c = await platformDb.OpenAsync())
+        tenantId = await c.ExecuteScalarAsync<long?>("SELECT tenant_id FROM payment_routes WHERE payment_id = @id;", new { id });
+    if (tenantId is not null && !string.IsNullOrEmpty(attempt) && await repo.TenantByIdAsync(tenantId.Value) is { IsActive: true } tenant)
+        await payments.ReturnAsync(tenant, id, attempt, http.Request, EventSource.Payer(http));
+    return Results.Redirect($"/pay/{Uri.EscapeDataString(id)}");
+}).DisableAntiforgery();
 
 app.MapRazorPages();
 app.MapControllers();

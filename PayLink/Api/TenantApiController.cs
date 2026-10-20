@@ -42,7 +42,7 @@ public sealed class TenantApiController(
     public async Task<IActionResult> Payment(string id)
     {
         if (await payments.DetailAsync(Tenant, id) is not { } d) return Error(404, "not_found", $"No payment {id}.");
-        var dto = PaymentJson.From(d.Payment, await settings.GetPublicBaseUrlAsync(), d.Attempts);
+        var dto = PaymentJson.From(d.Payment, await settings.GetPublicBaseUrlAsync(), d.Attempts, await payments.RefundsAsync(Tenant, id));
         return Json(new
         {
             payment = dto,
@@ -59,6 +59,17 @@ public sealed class TenantApiController(
     [RequireTenantCapability(TenantCapabilities.PaymentsWrite)]
     public async Task<IActionResult> Cancel(string id, [FromBody] NoteBody? body) =>
         Outcome(await payments.CancelAsync(Tenant, id, body?.Note ?? "Cancelled through the tenant developer API", new EventSource(Me)));
+
+    public sealed record RefundBody(long? Amount, string? Reason, bool Manual = false);
+
+    /// <summary>A refund through the gateway, or (manual = true, reason required) a refund the merchant made outside PayLink.</summary>
+    [HttpPost("payments/{id}/refunds")]
+    [RequireTenantCapability(TenantCapabilities.Refunds)]
+    public async Task<IActionResult> Refund(string id, [FromBody] RefundBody body)
+    {
+        var outcome = await payments.RefundAsync(Tenant, id, body.Amount, body.Reason, Request.Headers["Idempotency-Key"].FirstOrDefault(), new EventSource(Me), body.Manual);
+        return outcome.Error is { } e ? Error(e.Status, e.Code, e.Message) : Json(PaymentJson.From(outcome.Refund!), 201);
+    }
 
     // ---------- UPI verification ----------
 

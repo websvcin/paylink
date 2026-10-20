@@ -6,10 +6,10 @@
 
 | Still to port | Where it is | Becomes |
 |---|---|---|
-| PhonePe (v1 pay API, X-Verify) | `Api/Services/PaymentService.cs` → `PhonePe()`, `Web/Pages/PhonePe.cshtml.cs` | `WebSvc.PayLink.Connector.PhonePe` (on PhonePe's current API) |
-| PayU (hash, auto-posted form) | `PaymentService.PayU()`, `Web/Pages/PayU.cshtml.cs` | `WebSvc.PayLink.Connector.PayU` |
-| Razorpay (payment links) | `PaymentService.RazorPay()`, `Web/Pages/RazorPay.cshtml.cs`, `_callback.cshtml.cs` | `WebSvc.PayLink.Connector.Razorpay` |
-| CCAvenue (AES request) | `PaymentService.CCAvenue()`, `Api/Helper/CCAvenueHelper.cs` | `WebSvc.PayLink.Connector.CCAvenue` |
+| ~~PhonePe (v1 pay API, X-Verify)~~ **Done in Phase 2** | `Api/Services/PaymentService.cs` → `PhonePe()`, `Web/Pages/PhonePe.cshtml.cs` | `WebSvc.PayLink.Connector.PhonePe` (on PhonePe's current API) |
+| ~~PayU (hash, auto-posted form)~~ **Done in Phase 2** | `PaymentService.PayU()`, `Web/Pages/PayU.cshtml.cs` | `WebSvc.PayLink.Connector.PayU` |
+| ~~Razorpay (payment links)~~ **Done in Phase 2** | `PaymentService.RazorPay()`, `Web/Pages/RazorPay.cshtml.cs`, `_callback.cshtml.cs` | `WebSvc.PayLink.Connector.Razorpay` |
+| ~~CCAvenue (AES request)~~ **Done in Phase 2** (with CCAvenue's documented key and IV; the old code used a random IV) | `PaymentService.CCAvenue()`, `Api/Helper/CCAvenueHelper.cs` | `WebSvc.PayLink.Connector.CCAvenue` |
 | ~~UPI QR + proof upload~~ **Done in Phase 1** | `PaymentService.UPI()`, `Web/Pages/UpiQR.cshtml`, `Web/Services/UpiQrParser.cs` | `WebSvc.PayLink.Connector.Upi` (rewritten: QR, UTR and screenshot, merchant verification) |
 | ResellerClub flow | `Web/Pages/RcPay.cshtml.cs` | Decide: port or drop |
 

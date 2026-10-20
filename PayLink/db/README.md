@@ -27,4 +27,4 @@ db/
    `Server=db.example.com;Port=3306;Database=paylink_example;Uid=paylink_user;Pwd=…;SslMode=Required`.
 3. PayLink tests the connection, checks the database is empty, and creates its tables.
 
-You can also run the scripts yourself in order with the `mysql` client. They only use `CREATE TABLE IF NOT EXISTS` and `INSERT IGNORE`, so when PayLink connects afterwards and applies them again, nothing changes except that `schema_migrations` gets filled in. The one exception is a database that already has other tables: tenant signup requires an empty database.
+You can also run the scripts yourself in order with the `mysql` client. Most only use `CREATE TABLE IF NOT EXISTS` and `INSERT IGNORE`; scripts that add columns (`ALTER TABLE`, from `0003` on) can only run once, so if you ran scripts by hand, insert their rows into `schema_migrations` too (version, name, checksum, applied_at), or let PayLink apply everything itself. The one exception is a database that already has other tables: tenant signup requires an empty database.

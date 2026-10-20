@@ -24,6 +24,9 @@ public sealed class MySqlFlowTests
 {
     private static string? Admin => Environment.GetEnvironmentVariable("PAYLINK_TEST_MYSQL_ADMIN");
 
+    private static string LatestTenantScript => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "db", "mysql", "tenant"), "*.sql")
+        .Select(f => Path.GetFileName(f)[..4]).Max()!;
+
     [Fact]
     public async Task Platform_and_tenants_on_mysql()
     {
@@ -112,6 +115,11 @@ public sealed class MySqlFlowTests
                 Assert.Contains("₹349.00", await delta.TextAsync(await delta.GetAsync("/delta/console")));
                 await using (var pc = await Db.OpenAsync(deltaTarget))
                     Assert.Equal(2, await pc.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM payments WHERE status = 'succeeded';"));
+                // Refunds and the background jobs (expiry, polling, refund checks, webhooks) on MySQL.
+                var manual = await app.Get<PaymentService>().RefundAsync(deltaTenant, upiId, 4900, "IMPS ref 99", null, EventSource.System, manual: true);
+                Assert.Equal(RefundStatuses.Succeeded, manual.Refund!.Status);
+                await app.Get<PaymentJobs>().RunOnceAsync();
+                Assert.Equal(4900, (await app.Get<PaymentService>().GetAsync(deltaTenant, upiId))!.AmountRefunded);
 
                 // Omega isn't approved: auto is greyed out, but it can bring its own (empty) MySQL database.
                 var omegaDb = await provisioner.CreateAsync("paylink_", "omega_byo");
@@ -140,7 +148,7 @@ public sealed class MySqlFlowTests
                 {
                     await using var c = await Db.OpenAsync(target);
                     Assert.Equal(1, await c.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM members WHERE role = 'owner';"));
-                    Assert.Equal("0002", await c.ExecuteScalarAsync<string>("SELECT MAX(version) FROM schema_migrations;"));
+                    Assert.Equal(LatestTenantScript, await c.ExecuteScalarAsync<string>("SELECT MAX(version) FROM schema_migrations;"));
                 }
                 await using (var c = await app.Get<PlatformDb>().OpenAsync()) Assert.Null(await AuditLog.VerifyAsync(c));
             }

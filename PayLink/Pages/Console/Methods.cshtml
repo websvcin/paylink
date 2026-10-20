@@ -47,7 +47,17 @@
                         @foreach (var f in m.ConfigSchema)
                         {
                             var id = $"{m.Id}_{mode}_{f.Key}";
-                            if (f.Type == ConfigFieldType.Boolean)
+                            if (f.Type == ConfigFieldType.Choice && f.Options is { Count: > 0 } options)
+                            {
+                                <div class="field">
+                                    <label for="@id">@f.Label</label>
+                                    <select id="@id" name="@mode.@f.Key">
+                                        @foreach (var o in options) { <option value="@o" selected="@(values.GetValueOrDefault(f.Key, options[0]) == o)">@o</option> }
+                                    </select>
+                                    @if (f.Help is not null) { <span class="hint">@f.Help</span> }
+                                </div>
+                            }
+                            else if (f.Type == ConfigFieldType.Boolean)
                             {
                                 <label class="check"><input type="checkbox" id="@id" name="@mode.@f.Key" value="true" checked="@(values.GetValueOrDefault(f.Key) == "true")"><span>@f.Label@if (f.Help is not null) { <br><span class="hint">@f.Help</span> }</span></label>
                             }
@@ -61,6 +71,10 @@
                                     @if (f.Help is not null) { <span class="hint">@f.Help</span> }
                                 </div>
                             }
+                        }
+                        @if (m.Capabilities.Webhooks || m.Id is "payu" or "ccavenue")
+                        {
+                            <div class="field"><span class="label">Webhook / notification URL for @m.Name (@mode)</span><code class="secret" style="user-select:all">@Model.HookUrl(m.Id, mode)</code></div>
                         }
                         @if (s?.CheckMessage is not null) { <p class="hint">Last check @Clock.Short(s.CheckedAt): @s.CheckMessage</p> }
                         @if (Model.CanConfigure)
@@ -77,4 +91,4 @@
         }
     </div>
 }
-<p class="hint">Razorpay, PhonePe, PayU and CCAvenue arrive as their own connector packages in Phase 2. Each one is added here with no change to your integration.</p>
+<p class="hint">Each method is its own connector package; new ones appear here with no change to your integration. Payers see the methods turned on for the payment's mode, in this order.</p>
