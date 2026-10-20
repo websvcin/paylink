@@ -12,7 +12,7 @@ namespace PayLink.Api;
 [ApiController]
 [Route("api/v1/links")]
 [Authorize(Policy = "PaymentsKey")]
-public sealed class LinksApiController(PaymentLinkService links, PlatformSettings settings) : ControllerBase
+public sealed class LinksApiController(PaymentLinkService links, PayLink.Tenancy.CustomDomains domains) : ControllerBase
 {
     private TenantRecord Tenant => (TenantRecord)HttpContext.Items[TenantKeyHandler.TenantItem]!;
     private TenantApiKey Key => (TenantApiKey)HttpContext.Items[TenantKeyHandler.KeyItem]!;
@@ -54,7 +54,7 @@ public sealed class LinksApiController(PaymentLinkService links, PlatformSetting
     [HttpGet("")]
     public async Task<IActionResult> List()
     {
-        var baseUrl = await settings.GetPublicBaseUrlAsync();
+        var baseUrl = await domains.BaseUrlAsync(Tenant);
         var list = await links.ListAsync(Tenant, Key.Livemode);
         return new JsonResult(new { @object = "list", data = list.Select(l => Dto(l, baseUrl)) }, PaymentJson.Options);
     }
@@ -83,7 +83,7 @@ public sealed class LinksApiController(PaymentLinkService links, PlatformSetting
         PaymentLinkService.Closed(Tenant, l) is null, l.Paid, l.Collected, l.CreatedAt);
 
     private async Task<IActionResult> Shape(PaymentLink l, int status) =>
-        new JsonResult(Dto(l, await settings.GetPublicBaseUrlAsync()), PaymentJson.Options) { StatusCode = status };
+        new JsonResult(Dto(l, await domains.BaseUrlAsync(Tenant)), PaymentJson.Options) { StatusCode = status };
 
     private ObjectResult Error(int status, string error, string description) =>
         new(new { error, error_description = description }) { StatusCode = status };

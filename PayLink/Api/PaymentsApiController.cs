@@ -16,7 +16,7 @@ namespace PayLink.Api;
 [ApiController]
 [Route("api/v1")]
 [Authorize(Policy = "PaymentsKey")]
-public sealed class PaymentsApiController(PaymentService payments, PlatformSettings settings) : ControllerBase
+public sealed class PaymentsApiController(PaymentService payments, PayLink.Tenancy.CustomDomains domains) : ControllerBase
 {
     private TenantRecord Tenant => (TenantRecord)HttpContext.Items[TenantKeyHandler.TenantItem]!;
     private TenantApiKey Key => (TenantApiKey)HttpContext.Items[TenantKeyHandler.KeyItem]!;
@@ -70,7 +70,7 @@ public sealed class PaymentsApiController(PaymentService payments, PlatformSetti
     public async Task<IActionResult> List(string? status, string? reference, [FromQuery(Name = "link_id")] string? linkId, int limit = 20, int offset = 0)
     {
         var list = await payments.SearchAsync(Tenant, Key.Livemode, status, null, Math.Clamp(limit, 1, 100), offset, reference, linkId);
-        var baseUrl = await settings.GetPublicBaseUrlAsync();
+        var baseUrl = await domains.BaseUrlAsync(Tenant);
         return new JsonResult(new { @object = "list", data = list.Select(p => PaymentJson.From(p, baseUrl)) }, PaymentJson.Options);
     }
 
@@ -126,7 +126,7 @@ public sealed class PaymentsApiController(PaymentService payments, PlatformSetti
     {
         var attempts = await payments.AttemptsAsync(Tenant, p.Id);
         var refunds = await payments.RefundsAsync(Tenant, p.Id);
-        return new JsonResult(PaymentJson.From(p, await settings.GetPublicBaseUrlAsync(), attempts, refunds), PaymentJson.Options) { StatusCode = status };
+        return new JsonResult(PaymentJson.From(p, await domains.BaseUrlAsync(Tenant), attempts, refunds), PaymentJson.Options) { StatusCode = status };
     }
 
     private ObjectResult Error(int status, string error, string description)

@@ -1,11 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using PayLink.Payments;
-using PayLink.Platform;
 using QRCoder;
 
 namespace PayLink.Pages.Console;
 
-public sealed class LinksModel(PaymentLinkService links, PlatformSettings settings) : ConsolePage
+public sealed class LinksModel(PaymentLinkService links, PayLink.Tenancy.CustomDomains domains) : ConsolePage
 {
     public IReadOnlyList<PaymentLink> Links { get; private set; } = [];
     public string BaseUrl { get; private set; } = "";
@@ -13,7 +12,7 @@ public sealed class LinksModel(PaymentLinkService links, PlatformSettings settin
     public async Task OnGetAsync()
     {
         Links = await links.ListAsync(Tenant, Livemode);
-        BaseUrl = await settings.GetPublicBaseUrlAsync();
+        BaseUrl = await domains.BaseUrlAsync(Tenant);
     }
 
     public async Task<IActionResult> OnPostAddAsync(string title, string? description, string amountMode, string? amount, string? minAmount, string? maxAmount,
@@ -28,7 +27,7 @@ public sealed class LinksModel(PaymentLinkService links, PlatformSettings settin
         var (link, problem) = await links.CreateAsync(Tenant, new CreateLinkRequest(title, description, fixedAmount,
             payer ? Money.ParseMajor(minAmount) : null, payer ? Money.ParseMajor(maxAmount) : null, "INR",
             askEmail, askPhone, returnUrl, maxPayments, expires, string.IsNullOrWhiteSpace(code) ? null : code.Trim().ToLowerInvariant()), Livemode, Me);
-        return problem is not null ? Failed(problem) : Done($"Link created: {await settings.GetPublicBaseUrlAsync()}/l/{link!.Code}");
+        return problem is not null ? Failed(problem) : Done($"Link created: {await domains.BaseUrlAsync(Tenant)}/l/{link!.Code}");
     }
 
     public async Task<IActionResult> OnPostActiveAsync(string id, bool active)
@@ -42,7 +41,7 @@ public sealed class LinksModel(PaymentLinkService links, PlatformSettings settin
     {
         if (await links.GetAsync(Tenant, id) is not { } link) return NotFound();
         using var generator = new QRCodeGenerator();
-        using var data = generator.CreateQrCode($"{await settings.GetPublicBaseUrlAsync()}/l/{link.Code}", QRCodeGenerator.ECCLevel.M);
+        using var data = generator.CreateQrCode($"{await domains.BaseUrlAsync(Tenant)}/l/{link.Code}", QRCodeGenerator.ECCLevel.M);
         Response.Headers.ContentDisposition = $"attachment; filename=\"paylink-{link.Code}.svg\"";
         return Content(new SvgQRCode(data).GetGraphic(10), "image/svg+xml");
     }

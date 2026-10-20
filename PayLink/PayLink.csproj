@@ -32,6 +32,7 @@
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.1.2" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="MaxMind.Db" Version="4.1.0" />
+    <PackageReference Include="DnsClient" Version="1.8.0" />
   </ItemGroup>
 
   <PropertyGroup>

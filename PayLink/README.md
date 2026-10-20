@@ -15,7 +15,7 @@
 | **Hosted checkout** at `/pay/{id}`: the merchant's methods, retry with another method, return to the merchant | |
 | **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds; **bank statement matching** (upload the CSV, matching UTR and amount approve automatically) | |
 | **Connector catalog** (Admin): install, allow, drain, uninstall; install connector packages from nuget.org at runtime (allowed ID prefixes only) | |
-| **Platform**: amount and currency limits, tenant consoles on subdomains, move a tenant's or the platform's database, live dashboard, backup download | Custom domains, reporting API |
+| **Platform**: amount and currency limits, tenant consoles on subdomains, move a tenant's or the platform's database, live dashboard, backup download | Reporting API |
 | **Risk**: rules by amount, velocity, country (block/allow), Tor, phone country vs. location, and a 0–100 score from those signals; review holds. Location from an optional MaxMind-format database (Admin → Location data) | Connect CrudApi, disputes, FileLink file storage |
 | **Reports**: funnel, success rate, failure reasons, methods, daily volume; CSV export | |
 | **Alerts**: low success rate, UPI waiting, large refunds, risk blocks, gateway errors; by webhook (`alert.triggered`) and email (Admin → Settings → Email) | |
@@ -23,6 +23,7 @@
 | **Payment links** at `/l/{code}` (fixed or payer-chosen amount, one-time or limited, QR code) and a **Pay button** for any site (`js/paylink.js`) | |
 | **Routing**: method order and amount ranges per mode, a circuit breaker that rests a gateway after repeated errors, automatic failover to the next gateway | |
 | **PostgreSQL** (13+) for the platform and tenant databases, next to SQLite and MySQL; move a tenant between any of them | |
+| **Custom domains**: a tenant proves its own domain (e.g. pay.acme.in) with a TXT record; console, links and checkout then answer there | |
 | **Simulator** for Test; payment journey (append-only events), statuses that only move forward, signed webhooks with retries | |
 | Tenant developer keys (`tdk_`) and API; API request log; console with Test/Live switch | |
 | Setup: new or restore (backup .zip or bootstrap.db), encryption key inside bootstrap.db (or `PayLink__MasterKey`), SQLite/MySQL/PostgreSQL platform and tenant databases, auto-provisioning (tested before saving), LoginLink with clear credential checks | |
@@ -66,6 +67,27 @@ At `/signup` (or by a platform admin at **Admin → Tenants → New tenant**, or
    - **Use my own MySQL**: fields or a connection string; must be empty; tested before anything is created.
 
 If any step fails, everything created for that attempt is removed.
+
+## Tenant addresses
+
+A tenant's console is at `/{slug}/console` on the platform's address. Two more are optional:
+
+- **Subdomain** (Admin → Tenants → tenant): `{slug}.{tenant domain}`, with the tenant domain set in Admin → Platform settings. Needs wildcard DNS and a wildcard certificate.
+- **The tenant's own domain** (Console → Your domain): the tenant adds a TXT record `_paylink-challenge.{domain}` with the value shown, points the domain at PayLink (CNAME), and presses Verify. The console, payment links and checkout then answer there, and the Payments API returns `checkout_url`s on it. Your reverse proxy needs a certificate for each such domain. With Caddy, issue them on demand and let PayLink say which names are verified:
+
+```
+{
+    on_demand_tls {
+        ask http://paylink:8080/.well-known/paylink/domain
+    }
+}
+https:// {
+    tls { on_demand }
+    reverse_proxy paylink:8080
+}
+```
+
+Either way, PayLink registers the new sign-in callback on the tenant's console app in LoginLink (when it holds a management credential for the organization; otherwise it says what to add).
 
 ## Project layout
 

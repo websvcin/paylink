@@ -142,7 +142,7 @@
                 <div class="opts">
                     <label class="opt"><input type="radio" name="TenantAutoProvision" value="approved" checked="@(Model.TenantAutoProvision == AutoProvisionModes.Approved)"><div><b>Approved LoginLink organizations only</b><span>You add organizations to an approval list first. Recommended.</span></div></label>
                     <label class="opt"><input type="radio" name="TenantAutoProvision" value="everyone" checked="@(Model.TenantAutoProvision == AutoProvisionModes.Everyone)"><div><b>Every new tenant</b><span>Each one creates a database on your hosting, with its limits and costs.</span></div></label>
-                    <label class="opt"><input type="radio" name="TenantAutoProvision" value="off" checked="@(Model.TenantAutoProvision == AutoProvisionModes.Off)"><div><b>Platform database only</b><span>Tenants use SQLite or their own MySQL.</span></div></label>
+                    <label class="opt"><input type="radio" name="TenantAutoProvision" value="off" checked="@(Model.TenantAutoProvision == AutoProvisionModes.Off)"><div><b>Platform database only</b><span>Tenants use SQLite or their own MySQL or PostgreSQL.</span></div></label>
                 </div>
                 <div class="actions">
                     <button class="btn" type="submit" name="action" value="test">Test &amp; verify</button>

@@ -1,0 +1,52 @@
+@page "/{slug}/console/domain"
+@model PayLink.Pages.Console.DomainModel
+@{
+    ViewData["Title"] = "Your domain";
+    ViewData["Where"] = Model.Tenant.Name;
+    var d = Model.Domain;
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Your domain</h1><p>Use a name of your own, such as <code>pay.yourcompany.in</code>, for payment links, checkout and this console. Payers then see your domain instead of the platform's. You prove the domain is yours with a DNS record; nothing changes until it's verified.</p></div></div>
+
+@if (d is null)
+{
+    @if (Model.CanConfigure)
+    {
+        <form method="post" asp-page-handler="Add" class="card">
+            <div class="field"><label for="domain">Domain</label><input id="domain" name="domain" class="mono" required placeholder="pay.yourcompany.in" autocomplete="off"><span class="hint">A subdomain you control, not used for anything else.</span></div>
+            <div class="actions"><button class="btn pri" type="submit">Continue</button></div>
+        </form>
+    }
+    else { <div class="card empty">No domain yet. An owner or admin can add one.</div> }
+}
+else
+{
+    <div class="card">
+        <h3 style="display:inline">@d.Domain</h3>
+        @if (d.Verified) { <span class="chip good">Verified</span> } else { <span class="chip warn">Waiting for DNS</span> }
+        @if (d.LastError is not null && !d.Verified) { <div class="notice warn" style="margin-top:10px">@d.LastError</div> }
+        <p class="muted">Add these at your DNS provider. Keep the TXT record: PayLink checks it again if you add the domain anew.</p>
+        <div class="tbl"><table><thead><tr><th>Type</th><th>Name</th><th>Value</th></tr></thead><tbody>
+            <tr><td>TXT</td><td class="mono">@d.ChallengeName</td><td class="mono">@d.ChallengeValue</td></tr>
+            <tr><td>CNAME</td><td class="mono">@d.Domain</td><td class="mono">@(Model.Target.Length > 0 ? Model.Target : "the platform's host name")</td></tr>
+        </tbody></table></div>
+        <p class="hint">The platform's reverse proxy needs a TLS certificate for @d.Domain. If you run the platform yourself: Caddy can issue one on demand, asking <code>/.well-known/paylink/domain?domain=@d.Domain</code> first (see the README).</p>
+        @if (d.Verified)
+        {
+            <dl class="kv">
+                <dt>Console</dt><dd class="mono">https://@d.Domain/</dd>
+                <dt>Payment links</dt><dd class="mono">https://@d.Domain/l/…</dd>
+                <dt>Checkout</dt><dd class="mono">https://@d.Domain/pay/…</dd>
+            </dl>
+        }
+        @if (Model.CanConfigure)
+        {
+            <div class="actions">
+                @if (!d.Verified) { <form method="post" asp-page-handler="Verify" class="inline"><button class="btn pri" type="submit">Verify</button></form> }
+                <form method="post" asp-page-handler="Remove" class="inline"><button class="btn danger" type="submit">Remove domain</button></form>
+            </div>
+        }
+    </div>
+}

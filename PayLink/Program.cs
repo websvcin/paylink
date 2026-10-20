@@ -43,6 +43,9 @@ builder.Services.AddSingleton<Reports>();
 builder.Services.AddSingleton<AlertService>();
 builder.Services.AddSingleton<PaymentLinkService>();
 builder.Services.AddSingleton<UpiStatementService>();
+builder.Services.AddSingleton<IDnsTxtResolver, DnsTxtResolver>();
+builder.Services.AddSingleton<ConsoleCallbacks>();
+builder.Services.AddSingleton<CustomDomains>();
 builder.Services.AddSingleton<Settlements>();
 builder.Services.AddSingleton<SmtpEmailSender>();
 builder.Services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<SmtpEmailSender>());
@@ -157,6 +160,10 @@ app.MapMethods("/pay/{id}/return", ["GET", "POST"], async (string id, string? at
         await payments.ReturnAsync(tenant, id, attempt, http.Request, EventSource.Payer(http));
     return Results.Redirect($"/pay/{Uri.EscapeDataString(id)}");
 }).DisableAntiforgery();
+
+// For a reverse proxy that issues TLS certificates on demand (Caddy's on_demand_tls "ask"): 200 only for a tenant's verified domain.
+app.MapGet("/.well-known/paylink/domain", async (string? domain, CustomDomains domains) =>
+    !string.IsNullOrEmpty(domain) && await domains.IsVerifiedAsync(domain) ? Results.Ok() : Results.NotFound());
 
 // The drop-in (js/paylink.js) asks here when its window closes without saying how it ended. Only the id and status, which
 // whoever holds the (unguessable) payment id already knows; the merchant's server still confirms through the API or webhook.

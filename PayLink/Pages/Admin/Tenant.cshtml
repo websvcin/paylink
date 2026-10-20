@@ -13,8 +13,9 @@
 <div class="card">
     <dl class="kv">
         <dt>Console</dt><dd>@(t.ConsoleMode == "subdomain" ? Model.SubdomainUrl : $"/{t.Slug}/console")</dd>
+        <dt>Own domain</dt><dd>@(Model.Domain is { } dom ? $"{dom.Domain} ({(dom.Verified ? "verified" : "waiting for DNS")})" : "None")</dd>
         <dt>LoginLink</dt><dd><code>@t.LoginlinkOrg</code> (@(t.LoginlinkMode == "created" ? "created by PayLink" : "connected"))@(t.MgmtClientId is null ? " · no management credential stored" : "")</dd>
-        <dt>Data</dt><dd>@t.DbDisplay · @(t.DbMode switch { "sqlite" => "SQLite, managed by PayLink", "auto" => "MySQL, auto-provisioned", _ => "MySQL, their own" })</dd>
+        <dt>Data</dt><dd>@t.DbDisplay · @(t.DbMode switch { "sqlite" => "SQLite, managed by PayLink", "auto" => "MySQL, auto-provisioned", _ => (t.DbEngine == "PostgreSql" ? "PostgreSQL" : "MySQL") + ", their own" })</dd>
         <dt>Created</dt><dd>@Clock.Display(t.CreatedAt) via @t.CreatedVia</dd>
     </dl>
 </div>
