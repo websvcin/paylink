@@ -1,3 +1,4 @@
+# Run from this folder (PayLink/).
 # PayLink alone (SQLite for the platform and tenants):
 #   docker compose up -d
 #   docker compose logs paylink        # shows the one-time setup code
@@ -10,7 +11,10 @@
 services:
   paylink:
     image: websvcin/paylink:latest
-    build: .
+    build:
+      # The image also needs ../packages and ../scripts, so it builds from the repository root.
+      context: ..
+      dockerfile: PayLink/Dockerfile
     container_name: paylink
     ports:
       - "8080:8080"

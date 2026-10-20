@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\PayLink\PayLink.csproj" />
+    <ProjectReference Include="..\PayLink.csproj" />
   </ItemGroup>
 
 </Project>

@@ -8,18 +8,20 @@
     <RootNamespace>PayLink</RootNamespace>
     <AssemblyName>PayLink</AssemblyName>
     <Version>0.1.0</Version>
+    <!-- The test project lives inside this folder; keep its files (and its bin/obj) out of the app. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);PayLink.Tests/**;App_Data/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Built from packages/ today (scripts/pack-packages.sh); from nuget.org once published. -->
+    <!-- Built from ../packages today (scripts/pack-packages.sh); from nuget.org once published. -->
     <PackageReference Include="WebSvc.PayLink.Abstractions" Version="0.1.0" />
     <PackageReference Include="WebSvc.PayLink.Storage" Version="0.1.0" />
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.1.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The SQL scripts in the repository's db/ folder ship next to the app and are applied at runtime. -->
-    <Content Include="..\..\db\**\*.sql" LinkBase="db" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The SQL scripts in db/ ship next to the app and are applied at runtime. -->
+    <Content Include="db\**\*.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -14,7 +14,7 @@ Payment connectors (`WebSvc.PayLink.Connector.Razorpay`, `.PhonePe`, …) will b
 ```bash
 dotnet test PayLink.Packages.sln
 PAYLINK_TEST_MYSQL_ADMIN="Server=127.0.0.1;Uid=root;Pwd=…" dotnet test PayLink.Packages.sln   # also creates and drops a real MySQL database
-bash ../scripts/pack-packages.sh    # packs into ../artifacts/packages for the app to use
+bash ../scripts/pack-packages.sh    # packs into ../artifacts/packages for PayLink to use
 ```
 
 ## Publishing (once on nuget.org)
@@ -22,8 +22,8 @@ bash ../scripts/pack-packages.sh    # packs into ../artifacts/packages for the a
 Bump `<Version>` in the package's `.csproj`, then:
 
 ```bash
-dotnet pack src/WebSvc.PayLink.Storage -c Release -o out
+dotnet pack WebSvc.PayLink.Storage -c Release -o out
 dotnet nuget push out/WebSvc.PayLink.Storage.*.nupkg --source https://api.nuget.org/v3/index.json --api-key $NUGET_API_KEY
 ```
 
-After publishing, remove the `paylink-local` source from the app's `nuget.config`.
+After publishing, remove the `paylink-local` source from `PayLink/nuget.config`.

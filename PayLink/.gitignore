@@ -1,0 +1,10 @@
+# Runtime data: bootstrap.db, platform.db, tenant databases, encryption keys
+App_Data/
+
+# docker compose --profile mysql
+mysql-data/
+
+# Never commit credentials
+*.pfx
+*.pem
+.env
