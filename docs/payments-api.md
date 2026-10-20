@@ -151,6 +151,16 @@ curl -G https://paylink.example.in/api/v1/reporting/payments -H "Authorization: 
 
 Times are ISO 8601 text in UTC, so `ge '2026-10-01'` works. A mistake answers `400 invalid_query` with what to fix.
 
+## CrudApi (full table access)
+
+For every table rather than the reporting datasets, connect a [CrudApi](https://github.com/websvcin/crudapi) workspace in **Console → Data access** (MySQL tenant databases only, since CrudApi reads MySQL):
+
+1. **A read-only user.** On an auto-provisioned database PayLink creates one with `SELECT` only; otherwise enter a user you made (`GRANT SELECT ON yourdb.* TO …`). PayLink checks it can read and refuses it if it can write. Set the host CrudApi should use if it differs from PayLink's.
+2. **Register.** Enter CrudApi's address, your workspace and a workspace developer key (`wdk_…`, Databases and API credentials). PayLink registers the database (`POST /api/tenant/databases`) and creates a Reader API client (`POST /api/tenant/api-clients`), whose secret is shown once. Or register it yourself with the details shown.
+3. **Disconnect** unregisters it (`DELETE /api/tenant/databases/{id}`) and removes the read-only user PayLink made.
+
+CrudApi's documentation lists these routes but not their request bodies; PayLink sends `{name, engine, host, port, database, user, password}` and `{name, role: "Reader"}`, and shows CrudApi's answer word for word if it differs, with the manual steps next to it.
+
 ## Statuses
 
 `created` → `requires_action` (payer chose a method) → `processing` (waiting for confirmation) → `succeeded` | `failed` | `cancelled` | `expired`.

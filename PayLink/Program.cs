@@ -46,6 +46,8 @@ builder.Services.AddSingleton<UpiStatementService>();
 builder.Services.AddSingleton<IDnsTxtResolver, DnsTxtResolver>();
 builder.Services.AddSingleton<ConsoleCallbacks>();
 builder.Services.AddSingleton<CustomDomains>();
+builder.Services.AddSingleton<CrudApiClient>();
+builder.Services.AddSingleton<CrudApiConnection>();
 builder.Services.AddSingleton<Settlements>();
 builder.Services.AddSingleton<SmtpEmailSender>();
 builder.Services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<SmtpEmailSender>());
@@ -65,6 +67,7 @@ builder.Services.AddHttpClient(WebhookService.HttpClientName, c => c.Timeout = T
 
 builder.Services.AddHttpClient("loginlink", c => c.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient("hosting", c => c.Timeout = TimeSpan.FromSeconds(60));
+builder.Services.AddHttpClient(CrudApiClient.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(20));
 
 // Cookie and form-signing keys live in bootstrap.db with the secret key, so the data folder is self-contained.
 var dataRoot = builder.Configuration["PayLink:DataRoot"] is { Length: > 0 } configured

@@ -1,0 +1,72 @@
+@page "/{slug}/console/data"
+@model PayLink.Pages.Console.DataModel
+@{
+    ViewData["Title"] = "Data access";
+    ViewData["Where"] = Model.Tenant.Name;
+    var l = Model.Link;
+    var secret = TempData["Secret"] as string;
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Data access</h1><p>Read your payment data from other tools. Nothing here can change a payment, and payments never depend on it.</p></div></div>
+
+<div class="card">
+    <h3>Reporting API (built in)</h3>
+    <p class="muted">Payments, attempts, refunds, disputes, links and the payment journey, with filters, grouping and paging, using a secret key from Developers. Test keys read test data, live keys live data.</p>
+    <pre class="secret" style="white-space:pre-wrap;user-select:text">curl -G @Model.BaseUrl/api/v1/reporting/payments -H "Authorization: Bearer sk_test_…" \
+  --data-urlencode "filter=payments.status eq 'succeeded'" --data-urlencode "groupBy=connector"</pre>
+</div>
+
+<div class="card">
+    <h3>CrudApi (full table access)</h3>
+    <p class="muted">Connects your PayLink database to a <a href="https://github.com/websvcin/crudapi" target="_blank" rel="noopener">CrudApi</a> workspace, for REST and OData on every table. Read-only twice over: a database user that can only read, and CrudApi's Reader role.</p>
+    @if (Model.Unavailable is not null)
+    {
+        <div class="notice warn">@Model.Unavailable</div>
+    }
+    else if (Model.CanConfigure)
+    {
+        <h4>1. A read-only database user</h4>
+        @if (l is { ReadUser.Length: > 0 })
+        {
+            <p><span class="chip good">Checked</span> <span class="mono">@l.ReadUser</span>@(l.CreatedUserHost is null ? "" : " (made by PayLink)") can read and can't change anything.</p>
+        }
+        <form method="post" asp-page-handler="Reader">
+            @if (Model.CanCreateUser) { <p class="hint">Leave the user blank and PayLink creates one with SELECT only.</p> }
+            <div class="grid3">
+                <div class="field"><label for="user">MySQL user</label><input id="user" name="user" class="mono" autocomplete="off" placeholder="@(Model.CanCreateUser ? "blank: create one" : "paylink_reader")"></div>
+                <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="new-password"></div>
+                <div class="field"><label for="host">Host CrudApi uses</label><input id="host" name="host" class="mono" value="@(l?.Host ?? Model.DefaultHost)"><span class="hint">How CrudApi reaches the database; may differ from PayLink's.</span></div>
+            </div>
+            <div class="actions"><button class="btn pri" type="submit">@(l is null ? "Check user" : "Use another user")</button></div>
+        </form>
+
+        @if (l is { ReadUser.Length: > 0 })
+        {
+            <h4>2. Register it in CrudApi</h4>
+            @if (secret is not null) { <div class="notice good">Reader client secret (shown once): <span class="mono">@secret</span></div> }
+            @if (l.RegistrationId is not null)
+            {
+                <p><span class="chip good">Registered</span> in <span class="mono">@l.Server</span> as database <span class="mono">@l.RegistrationId</span>@(l.ReaderClientId is null ? "" : $", Reader client {l.ReaderClientId}").</p>
+                @if (l.Note is not null) { <p class="hint">@l.Note</p> }
+                @if (l.Workspace is not null) { <p class="hint">Tables: <span class="mono">@l.Server/api/v1/@l.Workspace/@l.RegistrationId/crud/payments</span></p> }
+            }
+            else
+            {
+                <form method="post" asp-page-handler="Register">
+                    <div class="grid3">
+                        <div class="field"><label for="server">CrudApi address</label><input id="server" name="server" class="mono" placeholder="https://crud.example.in" required></div>
+                        <div class="field"><label for="workspace">Workspace</label><input id="workspace" name="workspace" class="mono" placeholder="acme"></div>
+                        <div class="field"><label for="key">Workspace developer key</label><input id="key" name="key" class="mono" placeholder="wdk_…" autocomplete="off" required><span class="hint">With Databases and API credentials.</span></div>
+                    </div>
+                    <div class="actions"><button class="btn pri" type="submit">Register</button></div>
+                </form>
+                <p class="hint">Or register it yourself in CrudApi (Databases → Register a database) with: host <span class="mono">@l.Host</span>, port <span class="mono">@l.Port</span>, database <span class="mono">@l.Database</span>, user <span class="mono">@l.ReadUser</span> and its password@(l.CreatedUserHost is null ? "" : $" (PayLink made it: {l.ReadPassword})"). Then create a Reader API client.</p>
+            }
+            <form method="post" asp-page-handler="Disconnect" class="actions"><button class="btn danger" type="submit">Disconnect</button></form>
+        }
+    }
+    else if (l is not null) { <p>Connected@(l.Server is null ? "" : $" to {l.Server}").</p> }
+    else { <p class="hint">Not connected. An owner or admin can connect it.</p> }
+</div>

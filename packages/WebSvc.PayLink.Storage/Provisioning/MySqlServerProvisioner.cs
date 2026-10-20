@@ -72,6 +72,44 @@ public sealed class MySqlServerProvisioner(MySqlServerHosting hosting, string? c
         return new ProvisionedDatabase(dbName, user, target, $"{dbName}|{user}|{userHost}");
     }
 
+    /// <summary>A second user that can only read <paramref name="dbName"/> (SELECT), for tools such as CrudApi. Returns its name and password.</summary>
+    public async Task<(string User, string Password, string UserHost)> CreateReadOnlyUserAsync(string dbName, CancellationToken ct = default)
+    {
+        var user = ProvisioningNames.UserName();
+        var password = ProvisioningNames.Password();
+        ProvisioningNames.EnsureSafeIdentifier(dbName, "database name");
+        ProvisioningNames.EnsureSafeIdentifier(user, "user name");
+        var userHost = hosting.UserHost.Replace("'", "", StringComparison.Ordinal);
+        try
+        {
+            await using var connection = new MySqlConnection(AdminConnectionString);
+            await connection.OpenAsync(ct);
+            await connection.ExecuteAsync($"CREATE USER '{user}'@'{userHost}' IDENTIFIED BY @password;", new { password });
+            await connection.ExecuteAsync($"GRANT SELECT ON `{dbName}`.* TO '{user}'@'{userHost}';");
+        }
+        catch (MySqlException ex)
+        {
+            await DropUserAsync(user, userHost);
+            throw new ProvisioningException("MySQL refused to create the read-only user: " + ex.Message, ex);
+        }
+        return (user, password, userHost);
+    }
+
+    public async Task DropUserAsync(string user, string userHost)
+    {
+        try
+        {
+            ProvisioningNames.EnsureSafeIdentifier(user, "user name");
+            await using var connection = new MySqlConnection(AdminConnectionString);
+            await connection.OpenAsync();
+            await connection.ExecuteAsync($"DROP USER IF EXISTS '{user}'@'{userHost.Replace("'", "", StringComparison.Ordinal)}';");
+        }
+        catch (Exception ex) when (ex is MySqlException or ProvisioningException)
+        {
+            // Best effort, as with dropping a database.
+        }
+    }
+
     public Task DropAsync(ProvisionedDatabase database, CancellationToken ct = default)
     {
         var parts = database.ProviderReference.Split('|');

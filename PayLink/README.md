@@ -16,7 +16,7 @@
 | **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds; **bank statement matching** (upload the CSV, matching UTR and amount approve automatically) | |
 | **Connector catalog** (Admin): install, allow, drain, uninstall; install connector packages from nuget.org at runtime (allowed ID prefixes only) | |
 | **Platform**: amount and currency limits, tenant consoles on subdomains, move a tenant's or the platform's database, live dashboard, backup download | |
-| **Risk**: rules by amount, velocity, country (block/allow), Tor, phone country vs. location, and a 0–100 score from those signals; review holds. Location from an optional MaxMind-format database (Admin → Location data) | Connect CrudApi, disputes, FileLink file storage |
+| **Risk**: rules by amount, velocity, country (block/allow), Tor, phone country vs. location, and a 0–100 score from those signals; review holds. Location from an optional MaxMind-format database (Admin → Location data) | FileLink file storage |
 | **Reports**: funnel, success rate, failure reasons, methods, daily volume; CSV export | |
 | **Alerts**: low success rate, UPI waiting, large refunds, risk blocks, gateway errors; by webhook (`alert.triggered`) and email (Admin → Settings → Email) | |
 | **Reconciliation**: upload a gateway's settlement CSV, map its columns (guessed for you), match lines to payments, see mismatches and unknown lines, daily close and unsettled payments | |
@@ -25,6 +25,7 @@
 | **PostgreSQL** (13+) for the platform and tenant databases, next to SQLite and MySQL; move a tenant between any of them | |
 | **Custom domains**: a tenant proves its own domain (e.g. pay.acme.in) with a TXT record; console, links and checkout then answer there | |
 | **Reporting API** (`/api/v1/reporting`): payments, attempts, refunds, disputes, links and the journey, with CrudApi's filter language, grouping and paging | |
+| **Connect CrudApi** (Console → Data access): a SELECT-only MySQL user (made by PayLink on an auto-provisioned database, or yours, checked by trying to write), registered in a CrudApi workspace with a Reader client, or the details to register by hand; disconnect removes both | |
 | **Simulator** for Test; payment journey (append-only events), statuses that only move forward, signed webhooks with retries | |
 | Tenant developer keys (`tdk_`) and API; API request log; console with Test/Live switch | |
 | Setup: new or restore (backup .zip or bootstrap.db), encryption key inside bootstrap.db (or `PayLink__MasterKey`), SQLite/MySQL/PostgreSQL platform and tenant databases, auto-provisioning (tested before saving), LoginLink with clear credential checks | |
