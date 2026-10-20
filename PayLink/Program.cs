@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using PayLink.Api;
 using PayLink.Identity;
 using PayLink.Infrastructure;
+using PayLink.Payments;
 using PayLink.Platform;
 using PayLink.Tenancy;
 
@@ -29,6 +30,19 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<HealthState>();
 builder.Services.AddHostedService<StartupMigrations>();
 
+// Payments (Phase 1)
+builder.Services.AddSingleton<ConnectorRegistry>();
+builder.Services.AddSingleton<ConnectorSettingsService>();
+builder.Services.AddSingleton<WebhookService>();
+builder.Services.AddSingleton<PaymentService>();
+builder.Services.AddSingleton<RiskRuleStore>();
+builder.Services.AddSingleton<TenantKeyService>();
+builder.Services.AddSingleton<FileStore>();
+builder.Services.AddSingleton<PaymentJobs>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<PaymentJobs>());
+builder.Services.AddHttpClient(WebhookService.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(10))
+    .ConfigurePrimaryHttpMessageHandler(() => WebhookService.CreateHandler(builder.Configuration.GetValue<bool>("PayLink:Webhooks:AllowPrivateNetworks")));
+
 builder.Services.AddHttpClient("loginlink", c => c.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient("hosting", c => c.Timeout = TimeSpan.FromSeconds(60));
 
@@ -43,13 +57,16 @@ builder.Services
     .AddAuthentication(AuthSchemes.Console)
     .AddCookie(AuthSchemes.Admin, o => CookieDefaults.Configure(o, "paylink.admin", "/", "/admin/login"))
     .AddCookie(AuthSchemes.Console, o => CookieDefaults.Configure(o, "paylink.console", "/", "/"))
-    .AddScheme<AuthenticationSchemeOptions, DeveloperKeyHandler>(AuthSchemes.DeveloperKey, null);
+    .AddScheme<AuthenticationSchemeOptions, DeveloperKeyHandler>(AuthSchemes.DeveloperKey, null)
+    .AddScheme<AuthenticationSchemeOptions, TenantKeyHandler>(TenantKeyHandler.Scheme, null);
 
 builder.Services.AddAuthorization(o =>
 {
     o.AddPolicy("PlatformAny", p => p.AddAuthenticationSchemes(AuthSchemes.Admin).RequireClaim(PayLinkClaims.Access, "admin", "support"));
     o.AddPolicy("PlatformAdmin", p => p.AddAuthenticationSchemes(AuthSchemes.Admin).RequireClaim(PayLinkClaims.Access, "admin"));
     o.AddPolicy("DeveloperKey", p => p.AddAuthenticationSchemes(AuthSchemes.DeveloperKey).RequireAuthenticatedUser());
+    o.AddPolicy("PaymentsKey", p => p.AddAuthenticationSchemes(TenantKeyHandler.Scheme).RequireClaim(TenantKeyHandler.KindClaim, TenantKeyKinds.Secret));
+    o.AddPolicy("TenantDeveloperKey", p => p.AddAuthenticationSchemes(TenantKeyHandler.Scheme).RequireClaim(TenantKeyHandler.KindClaim, TenantKeyKinds.Developer));
 });
 
 builder.Services.AddRazorPages(o =>
@@ -59,6 +76,9 @@ builder.Services.AddRazorPages(o =>
     o.Conventions.AllowAnonymousToPage("/Admin/Logout");
 });
 builder.Services.AddControllers();
+// Write ₹ and non-Latin names as themselves instead of &#x…; escapes. HTML-significant characters are still encoded.
+builder.Services.Configure<Microsoft.Extensions.WebEncoders.WebEncoderOptions>(o =>
+    o.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));
 
 // Behind a reverse proxy, set PayLink:TrustedProxies (comma-separated IPs) so client IPs and https are read correctly.
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
@@ -81,6 +101,8 @@ if (!app.Environment.IsDevelopment())
 app.UseStaticFiles();
 app.UseMiddleware<SetupGate>();
 app.UseRouting();
+// Wraps the API so failed sign-ins are logged too; the key handler leaves the tenant in HttpContext.Items.
+app.UseMiddleware<ApiRequestLogging>();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -104,6 +126,9 @@ app.MapGet("/healthz", async (BootstrapStore bootstrap, PlatformDb platformDb, H
         version = typeof(Program).Assembly.GetName().Version?.ToString(3),
     }, statusCode: healthy ? 200 : 503);
 });
+
+// Gateways send the payer back here; the checkout shows the result.
+app.MapGet("/pay/{id}/return", (string id) => Results.Redirect($"/pay/{Uri.EscapeDataString(id)}"));
 
 app.MapRazorPages();
 app.MapControllers();

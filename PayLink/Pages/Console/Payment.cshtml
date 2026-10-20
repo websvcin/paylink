@@ -1,0 +1,144 @@
+@page "/{slug}/console/payments/{id}"
+@model PayLink.Pages.Console.PaymentModel
+@{
+    var p = Model.Payment;
+    ViewData["Title"] = p.Id;
+    ViewData["Where"] = Model.Tenant.Name;
+    var root = $"/{Model.Tenant.Slug}/console";
+    var waitingUpi = Model.Attempts.FirstOrDefault(a => a.Connector == "upi" && a.Status == AttemptStatuses.Processing);
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head">
+    <div>
+        <p><a href="@root/payments">← Payments</a></p>
+        <h1 class="mono" style="margin-top:6px">@p.Id</h1>
+    </div>
+</div>
+
+<div class="grid2">
+    <div class="card">
+        <div class="actions" style="justify-content:space-between">
+            <span class="amount">@Money.Format(p.Amount, p.Currency)</span>
+            <span class="chip @PaymentStatuses.Tone(p.Status)">@PaymentStatuses.Label(p.Status)</span>
+        </div>
+        <dl class="kv">
+            @if (p.Description is not null) { <dt>For</dt><dd>@p.Description</dd> }
+            @if (p.Reference is not null) { <dt>Your reference</dt><dd class="mono">@p.Reference</dd> }
+            <dt>Customer</dt><dd>@(string.Join(" · ", new[] { p.CustomerName, p.CustomerEmail, p.CustomerPhone, p.CustomerId }.Where(x => x is not null)) is { Length: > 0 } c ? c : "—")</dd>
+            <dt>Mode</dt><dd>@(p.Livemode ? "Live" : "Test")</dd>
+            @if (p.Connector is not null) { <dt>Method</dt><dd>@p.Connector@(p.Utr is null ? "" : $" · UTR {p.Utr}")</dd> }
+            @if (p.FailureReason is not null) { <dt>Why</dt><dd>@p.FailureReason@(p.FailureMessage is null ? "" : $" · {p.FailureMessage}")</dd> }
+            @if (p.HoldReason is not null) { <dt>Held because</dt><dd>@p.HoldReason</dd> }
+            <dt>Created</dt><dd>@Clock.Display(p.CreatedAt) · @(p.CreatedVia == "console" ? "console" : "API") · @p.CreatedBy</dd>
+            @if (p.PaidAt is not null) { <dt>Paid</dt><dd>@Clock.Display(p.PaidAt)</dd> }
+            else if (!p.IsFinal) { <dt>Expires</dt><dd>@Clock.Display(p.ExpiresAt)</dd> }
+            <dt>Checkout</dt><dd><a href="@Model.CheckoutUrl" class="mono">@Model.CheckoutUrl</a></dd>
+            <dt>Trace</dt><dd class="mono">@p.TraceId</dd>
+        </dl>
+    </div>
+
+    <div class="card">
+        <h3>Actions</h3>
+        @if (waitingUpi is not null)
+        {
+            <div class="notice warn">The payer says they paid by UPI. Check your bank or UPI app for UTR <b class="mono">@waitingUpi.Utr</b> and @Money.Format(p.Amount, p.Currency).</div>
+            @if (waitingUpi.ProofFile is not null) { <a href="?handler=Proof&attemptId=@waitingUpi.Id" target="_blank" rel="noopener"><img class="proof" src="?handler=Proof&attemptId=@waitingUpi.Id" alt="The payer's UPI screenshot"></a> }
+            @if (Model.CanOperate)
+            {
+                <form method="post" asp-page-handler="Verify" class="opts">
+                    <input type="hidden" name="attemptId" value="@waitingUpi.Id">
+                    <div class="field"><label for="vnote">Note (required)</label><input id="vnote" name="note" placeholder="Found in HDFC statement, 21 Oct" required></div>
+                    <div class="actions">
+                        <button class="btn pri" type="submit" name="decision" value="approve">Approve: money received</button>
+                        <button class="btn danger" type="submit" name="decision" value="reject">Reject: not found</button>
+                    </div>
+                </form>
+            }
+        }
+        else if (p.Status == PaymentStatuses.OnHold && Model.CanOperate)
+        {
+            <form method="post" asp-page-handler="Release" class="opts">
+                <p class="hint">A risk rule held this payment. Release it to let the payer pay, or cancel it.</p>
+                <div class="field"><label for="rnote">Why it's safe (required)</label><input id="rnote" name="note" required></div>
+                <div class="actions"><button class="btn pri" type="submit">Release</button></div>
+            </form>
+        }
+        @if (!p.IsFinal && p.Status != PaymentStatuses.Processing && Model.CanOperate)
+        {
+            <form method="post" asp-page-handler="Cancel" class="actions">
+                <input name="note" placeholder="Reason (optional)" aria-label="Reason" style="flex:1 1 200px;width:auto">
+                <button class="btn danger" type="submit">Cancel payment</button>
+            </form>
+        }
+        @if (p.IsFinal && waitingUpi is null)
+        {
+            <p class="hint">This payment is @PaymentStatuses.Label(p.Status).ToLowerInvariant(). Final statuses never change.</p>
+        }
+        else if (!Model.CanOperate)
+        {
+            <p class="hint">Your role (@Model.Role) can view payments. Owners, admins and finance can act on them.</p>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <h3>Journey</h3>
+    <ol class="journey">
+        @foreach (var e in Model.Events)
+        {
+            var (title, tone) = JourneyText.Describe(e);
+            <li>
+                <time datetime="@e.At">@Clock.Short(e.At):@(Clock.Parse(e.At)?.ToString("ss"))</time>
+                <span class="dot @tone" aria-hidden="true"></span>
+                <div>
+                    <b>@title</b>
+                    <div class="meta">@JourneyText.Actor(e)@(e.Ip is null ? "" : $" · {e.Ip}")@(e.StatusAfter is not null && e.StatusAfter != e.StatusBefore ? $" · {PaymentStatuses.Label(e.StatusBefore ?? "")} → {PaymentStatuses.Label(e.StatusAfter)}" : "")@(e.UserAgent is null ? "" : $" · {e.UserAgent}")</div>
+                </div>
+            </li>
+        }
+    </ol>
+</div>
+
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Attempt</th><th>Method</th><th>Status</th><th>Gateway</th><th>Started</th></tr></thead>
+            <tbody>
+            @foreach (var a in Model.Attempts)
+            {
+                <tr>
+                    <td class="mono">@a.Id</td>
+                    <td>@a.Connector · @a.Method</td>
+                    <td><span class="chip @(a.Status == "succeeded" ? "good" : a.Status == "failed" ? "bad" : a.Status == "processing" ? "warn" : "")">@a.Status</span>@if (a.FailureReason is not null) { <br><span class="hint">@a.FailureReason</span> }</td>
+                    <td class="mono hint">@(a.GatewayRef ?? "—")@if (a.Utr is not null) { <br><text>UTR @a.Utr</text> }</td>
+                    <td><time>@Clock.Short(a.CreatedAt)</time>@if (a.Ip is not null) { <br><span class="hint">@a.Ip</span> }</td>
+                </tr>
+            }
+            @if (Model.Attempts.Count == 0) { <tr><td colspan="5" class="empty">The payer hasn't chosen a method yet</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Webhook</th><th>Status</th><th>Tries</th><th>Last answer</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var d in Model.Deliveries)
+            {
+                <tr>
+                    <td>@d.EventType<br><span class="hint mono">@d.EventId</span></td>
+                    <td><span class="chip @(d.Status == "delivered" ? "good" : d.Status == "failed" ? "bad" : "warn")">@d.Status</span></td>
+                    <td class="num">@d.AttemptCount</td>
+                    <td class="hint">@string.Join(" · ", new[] { d.LastStatusCode?.ToString(), d.LastResponse }.Where(x => !string.IsNullOrEmpty(x)))</td>
+                    <td>@if (Model.CanDevelop) { <form method="post" asp-page-handler="Redeliver" class="inline"><input type="hidden" name="deliveryId" value="@d.Id"><button class="btn sm" type="submit">Send again</button></form> }</td>
+                </tr>
+            }
+            @if (Model.Deliveries.Count == 0) { <tr><td colspan="5" class="empty">No webhooks for this payment. Add an endpoint under Developers.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>

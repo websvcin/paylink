@@ -60,6 +60,30 @@ public static class Flows
         return await browser.TextAsync(r);
     }
 
+    /// <summary>Connects <paramref name="org"/> and creates a SQLite tenant; returns the owner's signed-in console browser.</summary>
+    public static async Task<Browser> CreateTenantAsync(PayLinkApp app, FakeLoginLink ll, string slug, string name, FakeLoginLink.Person owner, string db = "sqlite")
+    {
+        var b = new Browser(app);
+        await ConnectExistingAsync(b, ll, slug, owner);
+        var r = await b.FollowAsync(await b.SubmitAsync("/signup", "Create",
+            F(("TenantName", name), ("TenantSlug", slug), ("DbChoice", db), ("action", "create"))));
+        Assert.True(b.LastUrl!.AbsolutePath == $"/{slug}/console", await Problem(b, r));
+        return b;
+    }
+
+    /// <summary>Creates a key on the Developers page and returns the secret, which is shown once.</summary>
+    public static async Task<string> CreateKeyAsync(Browser b, string slug, string kind = "secret", bool live = false, params string[] capabilities)
+    {
+        await b.GetAsync($"/{slug}/console?mode={(live ? "live" : "test")}");
+        var fields = F(("name", kind == "secret" ? "Shop server" : "Automation"), ("kind", kind));
+        var r = await b.FollowAsync(await b.SubmitAsync($"/{slug}/console/developers", "Key",
+            capabilities.Length == 0 ? fields : fields.Concat(capabilities.Select((c, i) => KeyValuePair.Create($"capabilities[{i}]", (string?)c))).ToDictionary()));
+        var html = await b.TextAsync(r);
+        var m = System.Text.RegularExpressions.Regex.Match(html, kind == "secret" ? @"sk_(test|live)_[a-z0-9-]+_[A-Za-z0-9]{32}" : @"tdk_[a-z0-9-]+_[A-Za-z0-9]{32}");
+        Assert.True(m.Success, "No key on the page: " + await Problem(b, r));
+        return m.Value;
+    }
+
     public static async Task<string> Problem(Browser browser, HttpResponseMessage r)
     {
         var html = await browser.TextAsync(r);

@@ -8,7 +8,7 @@ A self-hosted, multi-tenant payments platform in the same family as [LoginLink](
 |---|---|
 | [`PayLink/`](PayLink/README.md) | The app: code, SQL scripts (`db/`), tests, Dockerfile, docker-compose. **Start here.** |
 | [`packages/`](packages/README.md) | `WebSvc.PayLink.*` NuGet packages the app uses |
-| [`docs/`](docs/platform-api.md) | Platform Developer API reference |
+| [`docs/`](docs/payments-api.md) | [Payments API](docs/payments-api.md) and [Platform Developer API](docs/platform-api.md) references |
 | `scripts/` | Build helpers (`pack-packages.sh`) |
 | [`legacy/`](legacy/README.md) | Old code, **to be deleted** once its gateway code is ported |
 

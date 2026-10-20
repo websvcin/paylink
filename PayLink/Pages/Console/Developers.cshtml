@@ -1,0 +1,154 @@
+@page "/{slug}/console/developers"
+@model PayLink.Pages.Console.DevelopersModel
+@{
+    ViewData["Title"] = "Developers";
+    ViewData["Where"] = Model.Tenant.Name;
+    var mode = Model.ModeName;
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Developers</h1><p>Integrate once: create a payment from your server, send the payer to its <code>checkout_url</code>, and trust the signed webhook. Adding payment methods later needs no code change. See <a href="/docs/payments-api">the Payments API</a>.</p></div></div>
+
+@if (TempData["Secret"] is string secret)
+{
+    <div class="notice good">
+        <p><b>Copy this now: it's shown only once.</b> (@TempData["SecretFor"])</p>
+        <p class="secret" style="margin-top:8px">@secret</p>
+    </div>
+}
+
+<div class="card">
+    <h3>Try it</h3>
+    <pre class="secret" style="white-space:pre-wrap;user-select:text">curl @Model.BaseUrl/api/v1/payments \
+  -H "Authorization: Bearer sk_@(mode)_@(Model.Tenant.Slug)_…" \
+  -H "Idempotency-Key: order-1042" \
+  -H "Content-Type: application/json" \
+  -d '{ "amount": 149900, "currency": "INR", "reference": "order-1042",
+        "description": "Course fee", "return_url": "https://example.com/orders/1042" }'</pre>
+</div>
+
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Key</th><th>Kind</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var k in Model.Keys)
+            {
+                <tr>
+                    <td><b>@k.Name</b><br><span class="mono hint">@k.KeyPrefix</span></td>
+                    <td>@if (k.Kind == TenantKeyKinds.Secret) { <span class="chip @(k.Livemode ? "good" : "warn")">@(k.Livemode ? "Live secret" : "Test secret")</span> }
+                        else { <span class="chip info">Developer</span><br><span class="hint">@k.Capabilities</span> }</td>
+                    <td class="hint">@Clock.Short(k.CreatedAt) · @k.CreatedBy</td>
+                    <td class="hint">@Clock.Short(k.LastUsedAt)</td>
+                    <td>@if (k.RevokedAt is not null) { <span class="chip bad">Revoked</span> }
+                        else if (Model.CanDevelop) { <form method="post" asp-page-handler="Revoke" class="inline"><input type="hidden" name="id" value="@k.Id"><button class="btn sm danger" type="submit">Revoke</button></form> }</td>
+                </tr>
+            }
+            @if (Model.Keys.Count == 0) { <tr><td colspan="5" class="empty">No keys yet</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (Model.CanDevelop)
+{
+    <form method="post" asp-page-handler="Key" class="card">
+        <h3>Create a key</h3>
+        <div class="opts">
+            <label class="opt"><input type="radio" name="kind" value="secret" checked><div><b>@(Model.Livemode ? "Live" : "Test") secret key</b><span>For your server: create payments and read their status with <code>/api/v1</code>. @(Model.Livemode ? "Live keys take real money." : "Test keys only ever create test payments.") Switch Test/Live in the menu for the other kind.</span></div></label>
+            <label class="opt"><input type="radio" name="kind" value="developer"><div><b>Developer key (tdk_)</b><span>Automates this console with <code>/api/tenant</code>, limited to the capabilities you choose. It can't take payments.</span></div></label>
+            <div class="reveal caps">
+                @foreach (var (key, label) in TenantCapabilities.All) { <label><input type="checkbox" name="capabilities" value="@key"><div>@key<span>@label</span></div></label> }
+            </div>
+        </div>
+        <div class="field"><label for="keyname">Name</label><input id="keyname" name="name" placeholder="Shop server" required></div>
+        <div class="actions"><button class="btn pri" type="submit">Create key</button></div>
+    </form>
+}
+
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>@(Model.Livemode ? "Live" : "Test") webhook endpoint</th><th>Events</th><th>Added</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var e in Model.Endpoints.Where(e => e.Livemode == Model.Livemode))
+            {
+                <tr>
+                    <td class="mono">@e.Url@if (e.Description is not null) { <br><span class="hint">@e.Description</span> }</td>
+                    <td class="hint">@(e.Events == "*" ? "All payment events" : e.Events.Replace(",", ", "))</td>
+                    <td class="hint">@Clock.Short(e.CreatedAt)</td>
+                    <td>@if (Model.CanDevelop)
+                        {
+                            <div class="actions">
+                                <form method="post" asp-page-handler="TestEndpoint" class="inline"><input type="hidden" name="id" value="@e.Id"><button class="btn sm" type="submit">Send test</button></form>
+                                <form method="post" asp-page-handler="RemoveEndpoint" class="inline"><input type="hidden" name="id" value="@e.Id"><button class="btn sm danger" type="submit">Remove</button></form>
+                            </div>
+                        }</td>
+                </tr>
+            }
+            @if (!Model.Endpoints.Any(e => e.Livemode == Model.Livemode)) { <tr><td colspan="4" class="empty">No @mode endpoints. PayLink signs every delivery with <code>PayLink-Signature</code> and retries for a day.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (Model.CanDevelop)
+{
+    <form method="post" asp-page-handler="Endpoint" class="card">
+        <h3>Add a @mode webhook endpoint</h3>
+        <div class="grid2">
+            <div class="field"><label for="url">URL</label><input id="url" name="url" type="url" class="mono" placeholder="https://example.com/hooks/paylink" required>@if (Model.Livemode) { <span class="hint">Live endpoints must use https.</span> }</div>
+            <div class="field"><label for="desc">Description</label><input id="desc" name="description" placeholder="Order service"></div>
+        </div>
+        <details>
+            <summary>Only some events (default: all)</summary>
+            <div class="caps" style="margin-top:8px">
+                @foreach (var ev in WebhookEvents.All) { <label><input type="checkbox" name="events" value="@ev"><div>@ev</div></label> }
+            </div>
+        </details>
+        <div class="actions"><button class="btn pri" type="submit">Add endpoint</button></div>
+    </form>
+}
+
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Recent webhook</th><th>Status</th><th>Tries</th><th>Last answer</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var d in Model.Deliveries)
+            {
+                <tr>
+                    <td>@d.EventType<br><span class="hint mono">@(d.PaymentId ?? d.EventId)</span></td>
+                    <td><span class="chip @(d.Status == "delivered" ? "good" : d.Status == "failed" ? "bad" : "warn")">@d.Status</span>@if (d.Status == "pending" && d.NextAttemptAt is not null) { <br><span class="hint">next @Clock.Short(d.NextAttemptAt)</span> }</td>
+                    <td class="num">@d.AttemptCount</td>
+                    <td class="hint">@string.Join(" · ", new[] { d.LastStatusCode?.ToString(), d.LastResponse }.Where(x => !string.IsNullOrEmpty(x)))@(d.LastDurationMs is null ? "" : $" · {d.LastDurationMs} ms")</td>
+                    <td>@if (Model.CanDevelop) { <form method="post" asp-page-handler="Redeliver" class="inline"><input type="hidden" name="deliveryId" value="@d.Id"><button class="btn sm" type="submit">Send again</button></form> }</td>
+                </tr>
+            }
+            @if (Model.Deliveries.Count == 0) { <tr><td colspan="5" class="empty">No @mode webhooks sent yet</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Recent API call</th><th>Key</th><th>Status</th><th>Time</th><th>When</th></tr></thead>
+            <tbody>
+            @foreach (var r in Model.Requests)
+            {
+                <tr>
+                    <td class="mono">@r.Method @r.Path@if (r.IdempotencyKey is not null) { <br><span class="hint">Idempotency-Key @r.IdempotencyKey</span> }</td>
+                    <td>@(r.KeyName ?? "—")</td>
+                    <td><span class="chip @(r.Status < 300 ? "good" : r.Status < 500 ? "warn" : "bad")">@r.Status</span>@if (r.Error is not null) { <br><span class="hint">@r.Error</span> }</td>
+                    <td class="num">@r.DurationMs ms</td>
+                    <td class="hint">@Clock.Short(r.At)</td>
+                </tr>
+            }
+            @if (Model.Requests.Count == 0) { <tr><td colspan="5" class="empty">No API calls yet</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>

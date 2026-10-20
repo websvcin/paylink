@@ -5,8 +5,8 @@ Plain SQL, one folder per engine and per database kind. PayLink applies these au
 ```
 db/
 ├─ mysql/
-│  ├─ platform/     0001_init.sql …   platform database (tenant registry, admins, keys, audit)
-│  ├─ tenant/       0001_init.sql …   one database per tenant (team, sign-in policy, audit; payments later)
+│  ├─ platform/     0001_init.sql, 0002_payment_routes.sql   platform database (tenant registry, admins, keys, audit, payment → tenant routes)
+│  ├─ tenant/       0001_init.sql, 0002_payments.sql         one database per tenant (team, sign-in policy, audit; payments, attempts, journey, keys, webhooks, risk rules)
 │  └─ provisioning/ create-paylink-database.sql   create an empty database + user by hand
 └─ sqlite/
    ├─ platform/     0001_init.sql …

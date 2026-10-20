@@ -16,6 +16,9 @@ public sealed class PayLinkApp(string? dataRoot = null, bool keepData = false) :
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("PayLink:DataRoot", DataRoot);
+        // Tests run the background jobs themselves (PaymentJobs.RunOnceAsync) and receive webhooks on localhost.
+        builder.UseSetting("PayLink:Jobs:IntervalSeconds", "0");
+        builder.UseSetting("PayLink:Webhooks:AllowPrivateNetworks", "true");
         builder.UseEnvironment("Development");
         builder.ConfigureLogging(l => l.SetMinimumLevel(LogLevel.Warning));
     }
@@ -80,6 +83,23 @@ public sealed partial class Browser(PayLinkApp app)
                 : await _outside.GetAsync(location);
         }
         return response;
+    }
+
+    /// <summary>Like <see cref="SubmitAsync"/>, as multipart/form-data with one file.</summary>
+    public async Task<HttpResponseMessage> SubmitWithFileAsync(string pageUrl, string handler, IDictionary<string, string?> fields, string fileField, string fileName, byte[] content, string contentType)
+    {
+        var page = await GetAsync(pageUrl);
+        var token = TokenPattern().Match(await page.Content.ReadAsStringAsync());
+        if (!token.Success) throw new InvalidOperationException($"No antiforgery token on {pageUrl}");
+        var form = new MultipartFormDataContent();
+        foreach (var (k, v) in fields.Where(kv => kv.Value is not null)) form.Add(new StringContent(v!), k);
+        form.Add(new StringContent(WebUtility.HtmlDecode(token.Groups[1].Value)), "__RequestVerificationToken");
+        var file = new ByteArrayContent(content);
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        form.Add(file, fileField, fileName);
+        var target = $"{pageUrl.Split('?')[0]}?handler={handler}";
+        LastUrl = new Uri(_paylink.BaseAddress!, target);
+        return await _paylink.PostAsync(target, form);
     }
 
     public async Task<string> TextAsync(HttpResponseMessage response) => await response.Content.ReadAsStringAsync();

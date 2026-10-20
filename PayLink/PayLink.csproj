@@ -7,38 +7,45 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>PayLink</RootNamespace>
     <AssemblyName>PayLink</AssemblyName>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <!-- The test project lives inside this folder; keep its files (and its bin/obj) out of the app. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);PayLink.Tests/**;App_Data/**</DefaultItemExcludes>
   </PropertyGroup>
 
+  <!-- WebSvc.PayLink.* packages: built from ../packages into ../artifacts/packages today, from nuget.org once published.
+       Each has its own version; bump the one you changed. -->
+  <ItemGroup>
+    <PayLinkLocalPackage Include="WebSvc.PayLink.Abstractions" Version="0.1.0" />
+    <PayLinkLocalPackage Include="WebSvc.PayLink.Storage" Version="0.3.0" />
+    <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.Simulator" Version="0.1.0" />
+    <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.Upi" Version="0.1.0" />
+    <PackageReference Include="@(PayLinkLocalPackage)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.1.2" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+
   <PropertyGroup>
-    <!-- Each package has its own version; bump the one you changed. -->
-    <PayLinkAbstractionsVersion>0.1.0</PayLinkAbstractionsVersion>
-    <PayLinkStorageVersion>0.2.0</PayLinkStorageVersion>
     <PayLinkPackagesSource>$(MSBuildThisFileDirectory)..\packages</PayLinkPackagesSource>
     <PayLinkLocalFeed>$(MSBuildThisFileDirectory)..\artifacts\packages</PayLinkLocalFeed>
   </PropertyGroup>
 
-  <ItemGroup>
-    <!-- Built from ../packages into ../artifacts/packages today; from nuget.org once published. -->
-    <PackageReference Include="WebSvc.PayLink.Abstractions" Version="$(PayLinkAbstractionsVersion)" />
-    <PackageReference Include="WebSvc.PayLink.Storage" Version="$(PayLinkStorageVersion)" />
-    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.1.2" />
-  </ItemGroup>
-
   <!--
     On a fresh checkout the local feed is empty, so restore would fail with NU1301.
-    Before restoring, pack the WebSvc.PayLink.* packages from ../packages into the feed if they're missing.
+    Before restoring, pack each WebSvc.PayLink.* package from ../packages into the feed if that version is missing.
     Works the same on Windows, macOS and Linux; scripts/pack-packages.sh does the same and also refreshes the NuGet cache.
   -->
   <Target Name="PackLocalPayLinkPackages"
           BeforeTargets="Restore;_GenerateRestoreGraph;_GenerateRestoreGraphProjectEntry;_GenerateProjectRestoreGraph"
-          Condition="Exists('$(PayLinkPackagesSource)') And (!Exists('$(PayLinkLocalFeed)\WebSvc.PayLink.Abstractions.$(PayLinkAbstractionsVersion).nupkg') Or !Exists('$(PayLinkLocalFeed)\WebSvc.PayLink.Storage.$(PayLinkStorageVersion).nupkg'))">
-    <Message Importance="high" Text="PayLink: packing WebSvc.PayLink.* from ../packages into ../artifacts/packages (missing or new version)" />
-    <MakeDir Directories="$(PayLinkLocalFeed)" />
-    <Exec Command="dotnet pack &quot;$(PayLinkPackagesSource)\WebSvc.PayLink.Abstractions\WebSvc.PayLink.Abstractions.csproj&quot; -c Release -o &quot;$(PayLinkLocalFeed)&quot; --nologo -v quiet" />
-    <Exec Command="dotnet pack &quot;$(PayLinkPackagesSource)\WebSvc.PayLink.Storage\WebSvc.PayLink.Storage.csproj&quot; -c Release -o &quot;$(PayLinkLocalFeed)&quot; --nologo -v quiet" />
+          Condition="Exists('$(PayLinkPackagesSource)')">
+    <ItemGroup>
+      <_PayLinkMissing Include="@(PayLinkLocalPackage)" Condition="!Exists('$(PayLinkLocalFeed)\%(Identity).%(Version).nupkg')" />
+    </ItemGroup>
+    <Message Importance="high" Text="PayLink: packing %(_PayLinkMissing.Identity) %(_PayLinkMissing.Version) from ../packages into ../artifacts/packages" Condition="'@(_PayLinkMissing)' != ''" />
+    <MakeDir Directories="$(PayLinkLocalFeed)" Condition="'@(_PayLinkMissing)' != ''" />
+    <Exec Command="dotnet pack &quot;$(PayLinkPackagesSource)\%(_PayLinkMissing.Identity)\%(_PayLinkMissing.Identity).csproj&quot; -c Release -o &quot;$(PayLinkLocalFeed)&quot; --nologo -v quiet" Condition="'@(_PayLinkMissing)' != ''" />
   </Target>
 
   <ItemGroup>

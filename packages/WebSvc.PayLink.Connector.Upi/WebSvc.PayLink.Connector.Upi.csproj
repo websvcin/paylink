@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Description>PayLink UPI: a free method that shows a upi://pay QR code paying straight to the merchant's UPI ID. Payments are confirmed by the payer's UTR and a check by the merchant.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- A connector depends only on Abstractions, never on another connector or on the app. Packed as a package dependency. -->
+    <ProjectReference Include="..\WebSvc.PayLink.Abstractions\WebSvc.PayLink.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -4,8 +4,9 @@ using PayLink.Platform;
 
 namespace PayLink.Pages.Admin;
 
-public sealed class SettingsModel(PlatformSettings settings, PlatformDb platformDb, AppPaths paths) : AdminPage
+public sealed class SettingsModel(PlatformSettings settings, PlatformDb platformDb, AppPaths paths, PayLink.Payments.ConnectorRegistry connectors) : AdminPage
 {
+    public IReadOnlyList<WebSvc.PayLink.Abstractions.IPaymentConnector> Connectors => connectors.All;
     public string DataRoot => paths.DataRoot;
     public IReadOnlyList<DataFolderItem> DataFolderItems => DataFolder.Describe(paths);
     public bool SignupOpen { get; private set; }

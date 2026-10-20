@@ -1,15 +1,24 @@
 @{
     var tenant = (TenantRecord)ViewData["Tenant"]!;
     var current = ViewContext.RouteData.Values["page"] as string ?? "";
-    string Cur(string page) => current == page ? "page" : "false";
+    string Cur(params string[] pages) => pages.Contains(current) ? "page" : "false";
     var pending = ViewData["PendingMembers"] as int? ?? 0;
+    var upi = ViewData["PendingUpi"] as int? ?? 0;
+    var live = ViewData["Livemode"] as bool? ?? false;
     var root = $"/{tenant.Slug}/console";
+    var here = Context.Request.Path.Value;
 }
 <span class="grp">@tenant.Name</span>
+<div class="modes" role="group" aria-label="Test or live data">
+    <a href="@here?mode=test" aria-current="@(live ? "false" : "true")">Test</a>
+    <a href="@here?mode=live" aria-current="@(live ? "true" : "false")">Live</a>
+</div>
 <a href="@root" aria-current="@Cur("/Console/Index")">Overview</a>
-<a href="@root/team" aria-current="@Cur("/Console/Team")">Team &amp; sign-in @if (pending > 0) { <span class="count">@pending</span> }</a>
+<a href="@root/payments" aria-current="@Cur("/Console/Payments", "/Console/Payment")">Payments</a>
+<a href="@root/upi" aria-current="@Cur("/Console/Upi")">UPI verification @if (upi > 0) { <span class="count">@upi</span> }</a>
+<a href="@root/risk" aria-current="@Cur("/Console/Risk")">Risk rules</a>
 <a href="@root/audit" aria-current="@Cur("/Console/Audit")">Audit log</a>
-<span class="grp">Coming in Phase 1</span>
-<span class="hint" style="padding:7px 10px">Payments</span>
-<span class="hint" style="padding:7px 10px">Payment methods</span>
-<span class="hint" style="padding:7px 10px">Developers</span>
+<span class="grp">Setup</span>
+<a href="@root/methods" aria-current="@Cur("/Console/Methods")">Payment methods</a>
+<a href="@root/developers" aria-current="@Cur("/Console/Developers")">Developers</a>
+<a href="@root/team" aria-current="@Cur("/Console/Team")">Team &amp; sign-in @if (pending > 0) { <span class="count">@pending</span> }</a>

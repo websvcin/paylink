@@ -1,0 +1,39 @@
+@page "/{slug}/console/upi"
+@model PayLink.Pages.Console.UpiModel
+@{
+    ViewData["Title"] = "UPI verification";
+    ViewData["Where"] = Model.Tenant.Name;
+    var root = $"/{Model.Tenant.Slug}/console";
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>UPI verification</h1><p>PayLink UPI payments go straight to your UPI ID, so no bank tells PayLink they arrived. Check each UTR in your bank or UPI app, then approve or reject. Your webhook fires only after you decide.</p></div></div>
+
+@foreach (var (p, a) in Model.Queue)
+{
+    <div class="card">
+        <div class="actions" style="justify-content:space-between">
+            <div><span class="amount" style="font-size:1.4rem">@Money.Format(p.Amount, p.Currency)</span> <span class="hint">· <a class="mono" href="@root/payments/@p.Id">@p.Id</a>@(p.Reference is null ? "" : " · " + p.Reference)</span></div>
+            <span class="hint">waiting since @Clock.Short(a.UpdatedAt)</span>
+        </div>
+        <dl class="kv">
+            <dt>UTR</dt><dd class="mono" style="font-size:1.05rem">@a.Utr</dd>
+            <dt>Customer</dt><dd>@(p.CustomerName ?? p.CustomerEmail ?? p.CustomerPhone ?? "—")</dd>
+            <dt>Screenshot</dt><dd>@if (a.ProofFile is not null) { <a href="@root/payments/@p.Id?handler=Proof&attemptId=@a.Id" target="_blank" rel="noopener">Open</a> } else { <span class="hint">None</span> }</dd>
+        </dl>
+        @if (Model.CanOperate)
+        {
+            <form method="post" class="actions">
+                <input type="hidden" name="attemptId" value="@a.Id">
+                <input name="note" placeholder="Note (required), e.g. found in HDFC statement" aria-label="Note" required style="flex:1 1 260px;width:auto">
+                <button class="btn pri" type="submit" name="decision" value="approve">Approve</button>
+                <button class="btn danger" type="submit" name="decision" value="reject">Reject</button>
+            </form>
+        }
+    </div>
+}
+@if (Model.Queue.Count == 0)
+{
+    <div class="card empty">Nothing to check. New @Model.ModeName UPI payments appear here when a payer enters their UTR.</div>
+}

@@ -6,8 +6,10 @@ Libraries PayLink uses through `PackageReference`, each with its own version. Th
 |---|---|
 | `WebSvc.PayLink.Abstractions` | The connector contract every payment connector depends on: manifest, config schema, attempts, next actions, normalized statuses and failure reasons. Kept small; a breaking change means a new major version. |
 | `WebSvc.PayLink.Storage` | Engine-neutral storage: SQLite and MySQL connections, SQL-script migrations with checksums, connection probes, and database provisioning through a MySQL server, Plesk or cPanel. |
+| `WebSvc.PayLink.Connector.Upi` | PayLink UPI: a `upi://pay` QR code paying straight into the merchant's UPI ID; UTR and VPA checks. |
+| `WebSvc.PayLink.Connector.Simulator` | Test-only connector: the checkout offers Succeed, Fail and Stay pending. |
 
-Payment connectors (`WebSvc.PayLink.Connector.Razorpay`, `.PhonePe`, …) will be added here, one package each, depending only on Abstractions.
+Each connector depends only on Abstractions, so updating one can't break another. Gateway connectors (`WebSvc.PayLink.Connector.Razorpay`, `.PhonePe`, …) are added the same way in Phase 2. `WebSvc.PayLink.Connectors.Tests` tests the connectors.
 
 ## Build and test
 

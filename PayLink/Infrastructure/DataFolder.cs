@@ -27,6 +27,8 @@ public static class DataFolder
                 "In setup step 3, if you choose SQLite."),
             Folder("tenants/", "One SQLite file per tenant that chose SQLite: its team, settings, payments and audit log.",
                 "When the first tenant on SQLite is created."),
+            Folder("files/", "Screenshots payers attach to PayLink UPI payments, one folder per tenant. Shown only to the tenant's team; every view is audited.",
+                "When a payer first uploads a screenshot."),
         ];
 
         DataFolderItem File(string name, string purpose, string when, string? probe = null, bool secret = false)

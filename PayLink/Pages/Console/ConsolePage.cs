@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using PayLink.Identity;
 using PayLink.Infrastructure;
+using PayLink.Payments;
 using PayLink.Platform;
 using PayLink.Tenancy;
 
@@ -18,6 +19,16 @@ public abstract class ConsolePage : PageModel
     public string Role { get; private set; } = TenantRoles.Viewer;
     public string MyEmail { get; private set; } = "";
     public bool CanManageTeam => TenantRoles.CanManageTeam(Role);
+    /// <summary>Approve UPI payments, cancel payments, release holds.</summary>
+    public bool CanOperate => Role is TenantRoles.Owner or TenantRoles.Admin or TenantRoles.Finance;
+    /// <summary>Payment methods and risk rules.</summary>
+    public bool CanConfigure => Role is TenantRoles.Owner or TenantRoles.Admin;
+    /// <summary>API keys and webhooks.</summary>
+    public bool CanDevelop => Role is TenantRoles.Owner or TenantRoles.Admin or TenantRoles.Developer;
+    /// <summary>Which data the console shows: test or live. Switched with ?mode=live|test and remembered per tenant.</summary>
+    public bool Livemode { get; private set; }
+    public string ModeName => Livemode ? "live" : "test";
+    protected string Root => $"/{Tenant.Slug}/console";
     protected TenantDb TenantDb => HttpContext.RequestServices.GetRequiredService<TenantDb>();
     protected Actor Me => User.ToActor(HttpContext);
 
@@ -59,6 +70,16 @@ public abstract class ConsolePage : PageModel
         ViewData["Role"] = Role;
         ViewData["MyEmail"] = MyEmail;
         ViewData["PendingMembers"] = (await TenantDb.MembersAsync(tenant)).Count(m => m.Status == "pending");
+        ViewData["PendingUpi"] = await HttpContext.RequestServices.GetRequiredService<PaymentService>().UpiQueueCountAsync(tenant);
+
+        var modeCookie = $"paylink.mode.{tenant.Slug}";
+        if (Request.Query["mode"].ToString() is "live" or "test")
+        {
+            Livemode = Request.Query["mode"] == "live";
+            Response.Cookies.Append(modeCookie, ModeName, new CookieOptions { Path = $"/{tenant.Slug}", HttpOnly = true, SameSite = SameSiteMode.Lax, Secure = Request.IsHttps });
+        }
+        else Livemode = Request.Cookies[modeCookie] == "live";
+        ViewData["Livemode"] = Livemode;
         await next();
     }
 
@@ -73,4 +94,8 @@ public abstract class ConsolePage : PageModel
         TempData["Error"] = message;
         return Redirect(Request.Path);
     }
+
+    protected IActionResult NotAllowed(string what) => Failed($"Your role ({Role}) can't {what}.");
+
+    protected EventSource Source => new(Me, Request.Headers.UserAgent.ToString() is { Length: > 0 } ua ? ua[..Math.Min(ua.Length, 500)] : null);
 }

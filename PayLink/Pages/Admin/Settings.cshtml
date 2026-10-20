@@ -48,6 +48,28 @@
 </div>
 
 <div class="card">
+    <h3>Payment connectors in this version</h3>
+    <p class="hint">Each is its own NuGet package and depends only on WebSvc.PayLink.Abstractions, so updating one can't break another. Tenants turn them on in their console. Installing, allowing and draining connectors from here arrives with the connector catalog (Phase 3).</p>
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Connector</th><th>Package</th><th>Methods</th><th>Currencies</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var c in Model.Connectors)
+            {
+                <tr>
+                    <td><b>@c.Manifest.Name</b> <span class="hint mono">@c.Manifest.Id</span></td>
+                    <td class="mono">@c.GetType().Assembly.GetName().Name @c.Manifest.Version</td>
+                    <td>@string.Join(", ", c.Manifest.Methods)</td>
+                    <td>@(c.Manifest.Currencies.Contains("*") ? "any" : string.Join(", ", c.Manifest.Currencies))</td>
+                    <td>@if (c.Manifest.TestOnly) { <span class="chip warn">Test only</span> }</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
     <h3>Data folder</h3>
     <p class="hint">Everything PayLink writes to disk is in <code>@Model.DataRoot</code> (set with <code>PayLink__DataRoot</code>). Back up the whole folder; keep <code>keys/</code> private.</p>
     <div class="tbl"><partial name="_DataFolderContents" model="Model.DataFolderItems" /></div>

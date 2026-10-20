@@ -9,6 +9,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Storage", "W
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Storage.Tests", "WebSvc.PayLink.Storage.Tests\WebSvc.PayLink.Storage.Tests.csproj", "{C007A773-4232-4683-8FAA-BC49B31E8F5F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.Simulator", "WebSvc.PayLink.Connector.Simulator\WebSvc.PayLink.Connector.Simulator.csproj", "{0E96C68D-A28F-4C56-A29E-701A50EF4B6B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.Upi", "WebSvc.PayLink.Connector.Upi\WebSvc.PayLink.Connector.Upi.csproj", "{31BBDF06-7A68-4984-9E1B-3BA2212FB389}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connectors.Tests", "WebSvc.PayLink.Connectors.Tests\WebSvc.PayLink.Connectors.Tests.csproj", "{9FD6CFE2-7282-4A0C-B20B-10661E229F2F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +36,17 @@ Global
 		{C007A773-4232-4683-8FAA-BC49B31E8F5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C007A773-4232-4683-8FAA-BC49B31E8F5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C007A773-4232-4683-8FAA-BC49B31E8F5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E96C68D-A28F-4C56-A29E-701A50EF4B6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E96C68D-A28F-4C56-A29E-701A50EF4B6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E96C68D-A28F-4C56-A29E-701A50EF4B6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E96C68D-A28F-4C56-A29E-701A50EF4B6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31BBDF06-7A68-4984-9E1B-3BA2212FB389}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31BBDF06-7A68-4984-9E1B-3BA2212FB389}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31BBDF06-7A68-4984-9E1B-3BA2212FB389}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31BBDF06-7A68-4984-9E1B-3BA2212FB389}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9FD6CFE2-7282-4A0C-B20B-10661E229F2F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9FD6CFE2-7282-4A0C-B20B-10661E229F2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9FD6CFE2-7282-4A0C-B20B-10661E229F2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9FD6CFE2-7282-4A0C-B20B-10661E229F2F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

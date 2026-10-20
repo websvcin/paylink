@@ -3,17 +3,36 @@
 @{
     ViewData["Title"] = Model.Tenant.Name;
     ViewData["Where"] = Model.Tenant.Name;
+    var root = $"/{Model.Tenant.Slug}/console";
+    var upi = ViewData["PendingUpi"] as int? ?? 0;
 }
 @section Nav { <partial name="_ConsoleNav" /> }
 @section Who { <partial name="_ConsoleWho" /> }
 
-<div class="head"><div><h1>@Model.Tenant.Name</h1><p>Your PayLink account is ready. Payments, payment methods and developer keys arrive in the next release.</p></div></div>
+<div class="head"><div><h1>@Model.Tenant.Name</h1><p>@(Model.Livemode ? "Live" : "Test") payments in the last 7 days.</p></div></div>
+
+<div class="stats">
+    <div class="stat"><span>Received</span><b>@Money.Format(Model.Week.SucceededAmount, "INR")</b><span style="text-transform:none;letter-spacing:0">@Model.Week.SucceededCount payment(s)</span></div>
+    <div class="stat"><span>Open</span><b>@Model.Week.OpenCount</b></div>
+    <div class="stat"><span>UPI to check</span><b>@upi</b>@if (upi > 0) { <a href="@root/upi" style="font-size:.84rem">Check now</a> }</div>
+    <div class="stat"><span>Failed or expired</span><b>@Model.Week.FailedCount</b>@if (Model.Week.OnHoldCount > 0) { <span style="text-transform:none;letter-spacing:0">@Model.Week.OnHoldCount on hold</span> }</div>
+</div>
 
 <div class="grid2">
     <div class="card">
+        <h3>Get set up</h3>
+        <div class="checks">
+            <div class="check"><span class="ok">✓</span><span>Account created; your team signs in through LoginLink (<a href="@root/team">Team &amp; sign-in</a>)</span></div>
+            <div class="check"><span class="@(Model.HasMethod ? "ok" : "w")">@(Model.HasMethod ? "✓" : "○")</span><span>Turn on a payment method, e.g. free PayLink UPI (<a href="@root/methods">Payment methods</a>). The Simulator already works in Test.</span></div>
+            <div class="check"><span class="@(Model.HasKey ? "ok" : "w")">@(Model.HasKey ? "✓" : "○")</span><span>Create a secret key and call <code>POST /api/v1/payments</code> (<a href="@root/developers">Developers</a>)</span></div>
+            <div class="check"><span class="@(Model.HasWebhook ? "ok" : "w")">@(Model.HasWebhook ? "✓" : "○")</span><span>Add a webhook endpoint so your system hears about payments</span></div>
+            <div class="check"><span class="@(Model.LiveReady ? "ok" : "w")">@(Model.LiveReady ? "✓" : "○")</span><span>Go live: a method with Live settings that pass their check</span></div>
+        </div>
+    </div>
+    <div class="card">
         <h3>Account</h3>
         <dl class="kv">
-            <dt>Console address</dt><dd><code>/@Model.Tenant.Slug/console</code></dd>
+            <dt>Console</dt><dd><code>/@Model.Tenant.Slug/console</code></dd>
             <dt>Sign-in</dt><dd>LoginLink organization <code>@Model.Tenant.LoginlinkOrg</code> (@(Model.Tenant.LoginlinkMode == "created" ? "created by PayLink" : "connected"))</dd>
             <dt>Your data</dt><dd>@Model.Tenant.DbDisplay <span class="hint">· @(Model.Tenant.DbMode switch { "sqlite" => "managed by PayLink", "auto" => "created for you", _ => "your own MySQL" })</span></dd>
             <dt>Team</dt><dd>@Model.Members member(s)</dd>
@@ -21,16 +40,27 @@
         </dl>
         @if (Model.Tenant.ApiRegistration == "failed")
         {
-            <div class="notice warn">PayLink couldn't register itself as an API in your LoginLink organization: @Model.Tenant.ApiRegistrationError. This is only needed later, for API calls with LoginLink tokens.</div>
+            <div class="notice warn">PayLink couldn't register itself as an API in your LoginLink organization: @Model.Tenant.ApiRegistrationError.</div>
         }
     </div>
-    <div class="card">
-        <h3>What's next</h3>
-        <div class="checks">
-            <div class="check"><span class="ok">✓</span><span>Account created and your team signs in through LoginLink</span></div>
-            <div class="check"><span class="ok">✓</span><span>Choose who may sign in: <a href="/@Model.Tenant.Slug/console/team">Team &amp; sign-in</a></span></div>
-            <div class="check"><span class="w">○</span><span>Turn on payment methods: PayLink UPI, Razorpay, PhonePe and more (Phase 1–2)</span></div>
-            <div class="check"><span class="w">○</span><span>Create API keys and integrate once (Phase 1)</span></div>
-        </div>
+</div>
+
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Recent payment</th><th>Amount</th><th>Status</th><th>Created</th></tr></thead>
+            <tbody>
+            @foreach (var p in Model.Recent)
+            {
+                <tr>
+                    <td><a class="mono" href="@root/payments/@p.Id">@p.Id</a>@if (p.Reference is not null) { <span class="hint"> · @p.Reference</span> }</td>
+                    <td class="num">@Money.Format(p.Amount, p.Currency)</td>
+                    <td><span class="chip @PaymentStatuses.Tone(p.Status)">@PaymentStatuses.Label(p.Status)</span></td>
+                    <td class="hint">@Clock.Short(p.CreatedAt)</td>
+                </tr>
+            }
+            @if (Model.Recent.Count == 0) { <tr><td colspan="4" class="empty">No @Model.ModeName payments yet. Create one under <a href="@root/payments">Payments</a> or through the API.</td></tr> }
+            </tbody>
+        </table>
     </div>
 </div>

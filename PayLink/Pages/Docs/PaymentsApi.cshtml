@@ -1,0 +1,53 @@
+@page "/docs/payments-api"
+@{
+    ViewData["Title"] = "Payments API";
+    ViewData["Where"] = "Developer docs";
+}
+<div class="narrow" style="display:grid;gap:18px">
+    <div class="head"><div><h1>Payments API</h1><p>The one integration a merchant writes. It doesn't change when payment methods are turned on or off. The full reference is <a href="https://github.com/websvcin/paylink/blob/main/docs/payments-api.md">docs/payments-api.md</a>.</p></div></div>
+
+    <div class="card">
+        <h3>1. Create a payment from your server</h3>
+        <pre class="secret" style="white-space:pre-wrap;user-select:text">POST /api/v1/payments
+Authorization: Bearer sk_test_{tenant}_…
+Idempotency-Key: ord-ACM-20931
+Content-Type: application/json
+
+{ "amount": 149900, "currency": "INR", "reference": "ACM-20931",
+  "description": "Full-stack course", "return_url": "https://acme.in/orders/ACM-20931",
+  "customer": { "email": "rahul@example.com" }, "metadata": { "plan": "monthly" } }</pre>
+        <p class="hint">Amounts are integers in paise. The response has <code>id</code>, <code>status</code> and <code>checkout_url</code>. The same Idempotency-Key with the same body returns the same payment.</p>
+    </div>
+
+    <div class="card">
+        <h3>2. Send the payer to <code>checkout_url</code></h3>
+        <p class="muted">PayLink shows the methods you turned on (PayLink UPI, and the Simulator in Test), runs the flow and returns the payer to <code>return_url?payment_id=…&amp;status=…</code>.</p>
+    </div>
+
+    <div class="card">
+        <h3>3. Trust the signed webhook</h3>
+        <pre class="secret" style="white-space:pre-wrap;user-select:text">PayLink-Signature: t=1760900120,v1=&lt;hex HMAC-SHA256 of "{t}.{raw body}" with your whsec_ secret&gt;
+PayLink-Event: payment.succeeded</pre>
+        <p class="hint">Events: payment.processing, payment.on_hold, payment.succeeded, payment.failed, payment.cancelled, payment.expired. Retries for 24 hours.</p>
+    </div>
+
+    <div class="card flush">
+        <div class="tbl">
+            <table>
+                <thead><tr><th>Route</th><th>What it does</th></tr></thead>
+                <tbody>
+                    <tr><td class="mono">POST /api/v1/payments</td><td>Create a payment</td></tr>
+                    <tr><td class="mono">GET /api/v1/payments/{id}</td><td>Status, attempts, how it was paid or why it failed</td></tr>
+                    <tr><td class="mono">GET /api/v1/payments</td><td>List, newest first (<code>status</code>, <code>reference</code>, <code>limit</code>, <code>offset</code>)</td></tr>
+                    <tr><td class="mono">POST /api/v1/payments/{id}/cancel</td><td>Cancel an open payment</td></tr>
+                    <tr><td class="mono">/api/tenant/…</td><td>Tenant developer API (tdk_ keys): payments, UPI verification, methods, webhooks, risk rules</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Statuses</h3>
+        <p class="muted"><code>created</code> → <code>requires_action</code> → <code>processing</code> → <code>succeeded</code> | <code>failed</code> | <code>cancelled</code> | <code>expired</code>, plus <code>on_hold</code> when a risk rule asks for review. Final statuses never change.</p>
+    </div>
+</div>

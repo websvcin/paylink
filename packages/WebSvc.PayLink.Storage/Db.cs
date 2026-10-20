@@ -41,12 +41,15 @@ public sealed class SqlDialect
     public string LastInsertId => Engine == DbEngine.Sqlite ? "SELECT last_insert_rowid();" : "SELECT LAST_INSERT_ID();";
 
     /// <summary>Insert or replace one row identified by <paramref name="keyColumn"/>. Parameters are named after the columns.</summary>
-    public string Upsert(string table, string keyColumn, params string[] valueColumns)
+    public string Upsert(string table, string keyColumn, params string[] valueColumns) => Upsert(table, [keyColumn], valueColumns);
+
+    /// <summary>Insert or replace one row identified by several key columns (a composite primary key).</summary>
+    public string Upsert(string table, IReadOnlyList<string> keyColumns, params string[] valueColumns)
     {
-        var columns = new[] { keyColumn }.Concat(valueColumns).ToArray();
+        var columns = keyColumns.Concat(valueColumns).ToArray();
         var insert = $"INSERT INTO {table} ({string.Join(", ", columns)}) VALUES ({string.Join(", ", columns.Select(c => "@" + c))})";
         return Engine == DbEngine.Sqlite
-            ? $"{insert} ON CONFLICT({keyColumn}) DO UPDATE SET {string.Join(", ", valueColumns.Select(c => $"{c} = excluded.{c}"))};"
+            ? $"{insert} ON CONFLICT({string.Join(", ", keyColumns)}) DO UPDATE SET {string.Join(", ", valueColumns.Select(c => $"{c} = excluded.{c}"))};"
             : $"{insert} ON DUPLICATE KEY UPDATE {string.Join(", ", valueColumns.Select(c => $"{c} = VALUES({c})"))};";
     }
 }

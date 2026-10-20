@@ -1,0 +1,145 @@
+@page "/pay/{id}"
+@model PayLink.Pages.Pay.IndexModel
+@using WebSvc.PayLink.Abstractions
+@{
+    var p = Model.Payment;
+    ViewData["Title"] = $"Pay {Model.Tenant.Name}";
+    var error = TempData["PayError"] as string;
+    var showMethods = !p.IsFinal && p.Status != PaymentStatuses.OnHold && p.Status != PaymentStatuses.Processing && (Model.Current is null || Model.Choose);
+}
+<div class="pay">
+    @if (!p.Livemode) { <div class="testbar">TEST MODE · NO REAL MONEY MOVES</div> }
+
+    <div class="card">
+        <div class="merchant">
+            <div class="logo" aria-hidden="true">@Model.Tenant.Name[..1].ToUpperInvariant()</div>
+            <div><b>@Model.Tenant.Name</b>@if (p.Reference is not null) { <div class="hint">Order @p.Reference</div> }</div>
+        </div>
+        <div class="amount">@Money.Format(p.Amount, p.Currency)</div>
+        @if (p.Description is not null) { <p class="muted">@p.Description</p> }
+        @if (!p.IsFinal && p.Status != PaymentStatuses.Processing) { <p class="hint">Pay before @Clock.Display(p.ExpiresAt)</p> }
+    </div>
+
+    @if (Model.Unavailable is not null)
+    {
+        <div class="notice bad">@Model.Unavailable</div>
+    }
+    else
+    {
+        @if (error is not null) { <div class="notice bad" role="alert">@error</div> }
+
+        @if (p.Status == PaymentStatuses.Succeeded)
+        {
+            <div class="card result">
+                <div class="big good" aria-hidden="true">✓</div>
+                <h2>Paid</h2>
+                <p class="muted">@Model.Tenant.Name has received your payment@(p.Utr is null ? "" : $" (UPI reference {p.Utr})").</p>
+                <p class="hint mono">@p.Id</p>
+                @if (p.ReturnUrl is not null) { <a class="btn pri" href="@Model.ReturnUrl">Back to @Model.Tenant.Name</a> }
+            </div>
+        }
+        else if (p.IsFinal)
+        {
+            <div class="card result">
+                <div class="big bad" aria-hidden="true">✕</div>
+                <h2>@(p.Status == PaymentStatuses.Expired ? "This payment has expired" : p.Status == PaymentStatuses.Cancelled ? "This payment was cancelled" : "This payment didn't go through")</h2>
+                <p class="muted">No money was taken by PayLink. @(p.FailureReason == FailureReasons.Rejected ? $"{Model.Tenant.Name} couldn't find your UPI payment. If money left your account, contact them with your UPI reference." : $"Ask {Model.Tenant.Name} for a new payment link if you still want to pay.")</p>
+                @if (p.ReturnUrl is not null) { <a class="btn" href="@Model.ReturnUrl">Back to @Model.Tenant.Name</a> }
+            </div>
+        }
+        else if (p.Status == PaymentStatuses.OnHold)
+        {
+            <div class="card result">
+                <div class="big warn" aria-hidden="true">…</div>
+                <h2>One moment</h2>
+                <p class="muted">@Model.Tenant.Name needs to review this payment before you can pay. Please try again later.</p>
+            </div>
+        }
+        else if (showMethods)
+        {
+            <div class="card">
+                <h3>Choose how to pay</h3>
+                <form method="post" asp-page-handler="Choose" class="methods">
+                    @foreach (var m in Model.Methods)
+                    {
+                        <button class="method" type="submit" name="connector" value="@m.Manifest.Id">
+                            <div><b>@m.Manifest.Name</b><br><span>@(m.Manifest.Id switch { "upi" => "Any UPI app: GPay, PhonePe, Paytm, BHIM…", "simulator" => "Test only: choose the outcome yourself", _ => string.Join(", ", m.Manifest.Methods) })</span></div>
+                            <span aria-hidden="true">→</span>
+                        </button>
+                    }
+                </form>
+                @if (Model.Methods.Count == 0) { <p class="muted">@Model.Tenant.Name hasn't turned on a way to pay @(p.Livemode ? "" : "test ")payments yet.</p> }
+            </div>
+        }
+        else if (Model.Current is { } a && Model.Next is NextAction.ShowQr qr)
+        {
+            @if (a.Status == AttemptStatuses.Processing)
+            {
+                <div class="card result">
+                    <div class="big warn" aria-hidden="true">…</div>
+                    <h2>Waiting for @Model.Tenant.Name to confirm</h2>
+                    <p class="muted">You entered UPI reference <b class="mono">@a.Utr</b>. @Model.Tenant.Name checks it against their bank and confirms your payment. You can close this page; you'll hear from them.</p>
+                    <p class="hint mono">@p.Id</p>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <h3>Pay with UPI</h3>
+                    <ol class="muted" style="margin:0;padding-left:20px">
+                        <li>Scan the code with any UPI app, or tap the button on your phone.</li>
+                        <li>Check the name and amount, and pay.</li>
+                        <li>Enter the 12-digit UPI reference (UTR) from your app below.</li>
+                    </ol>
+                    <div class="qr">@Html.Raw(Model.QrSvg)</div>
+                    <a class="btn pri" href="@qr.Uri">Pay with UPI app</a>
+                </div>
+                <form method="post" asp-page-handler="Utr" enctype="multipart/form-data" class="card">
+                    <input type="hidden" name="attemptId" value="@a.Id">
+                    <div class="field"><label for="utr">UPI reference (UTR)</label><input id="utr" name="utr" class="mono" inputmode="numeric" pattern="[0-9 ]{12,15}" maxlength="15" placeholder="12 digits" required autocomplete="off"><span class="hint">In your UPI app's payment details, often called UTR, UPI Ref No. or Transaction ID.</span></div>
+                    <div class="field"><label for="screenshot">Screenshot (optional)</label><input id="screenshot" name="screenshot" type="file" accept="image/png,image/jpeg,image/webp"><span class="hint">Helps @Model.Tenant.Name find your payment. PNG, JPEG or WebP, up to 5 MB.</span></div>
+                    <div class="actions"><button class="btn pri" type="submit">I've paid</button><a class="btn" href="?choose=true">Use another method</a></div>
+                </form>
+            }
+        }
+        else if (Model.Current is { } sim && Model.Next is NextAction.Sdk { Payload: WebSvc.PayLink.Connector.Simulator.SimulatorConnector.ChooseOutcome })
+        {
+            <form method="post" asp-page-handler="Simulate" class="card">
+                <h3>Simulator</h3>
+                <p class="muted">No money moves. Pick what should happen, and PayLink sends the matching webhook to @Model.Tenant.Name's test endpoint.</p>
+                @if (sim.Status == AttemptStatuses.Processing) { <div class="notice warn">Pending. Choose again to finish it.</div> }
+                <input type="hidden" name="attemptId" value="@sim.Id">
+                <div class="actions">
+                    <button class="btn pri" type="submit" name="outcome" value="succeed">Succeed</button>
+                    <button class="btn danger" type="submit" name="outcome" value="fail">Fail</button>
+                    @if (sim.Status != AttemptStatuses.Processing) { <button class="btn" type="submit" name="outcome" value="pending">Stay pending</button> }
+                </div>
+                @if (sim.Status != AttemptStatuses.Processing) { <a href="?choose=true">Use another method</a> }
+            </form>
+        }
+        else if (Model.Current is { } r && Model.Next is NextAction.Redirect redirect)
+        {
+            <div class="card">
+                <p>Continue to @Model.ConnectorName(r.Connector) to pay.</p>
+                <div class="actions"><a class="btn pri" href="@redirect.Url">Continue</a><a class="btn" href="?choose=true">Use another method</a></div>
+            </div>
+        }
+        else if (Model.Current is { } f && Model.Next is NextAction.PostForm form)
+        {
+            <form method="post" action="@form.Url" class="card" id="gateway">
+                @foreach (var kv in form.Fields) { <input type="hidden" name="@kv.Key" value="@kv.Value"> }
+                <p>Continue to @Model.ConnectorName(f.Connector) to pay.</p>
+                <div class="actions"><button class="btn pri" type="submit">Continue</button><a class="btn" href="?choose=true">Use another method</a></div>
+            </form>
+        }
+        else
+        {
+            <div class="card result">
+                <div class="big warn" aria-hidden="true">…</div>
+                <h2>Processing</h2>
+                <p class="muted">We're waiting to hear from the payment provider. This page shows the result once it's in.</p>
+            </div>
+        }
+    }
+    <p class="hint" style="text-align:center">Secured by PayLink · <span class="mono">@p.Id</span></p>
+</div>

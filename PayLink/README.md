@@ -6,18 +6,20 @@
 
 ## Status
 
-**Phase 0 (this release): the platform foundation.** Install, set up, sign in through LoginLink, create tenants with their own databases, and manage who gets in. Payments, connectors and the hosted checkout arrive in Phase 1 and 2.
+**Phase 1 (this release): the payment core.** A merchant integrates once with the Payments API, sends payers to the hosted checkout, and takes real UPI payments with no gateway contract. Gateways (Razorpay, PhonePe, PayU, CCAvenue) arrive as connector packages in Phase 2.
 
 | Works today | Coming next |
 |---|---|
-| First-run setup wizard with a one-time setup code | Payments API, hosted checkout, Simulator and PayLink UPI (Phase 1) |
-| Platform database on **SQLite or MySQL** | Razorpay, PhonePe, PayU, CCAvenue connectors (Phase 2) |
-| Database hosting: MySQL server (tested), Plesk and cPanel (written to their APIs, not yet tried on a live panel) | Connector catalog, risk rules, reports (Phase 3) |
-| Tenant signup: connect an existing LoginLink organization or create one | Subdomain per tenant, PostgreSQL (later) |
-| One database per tenant: **SQLite**, **auto-provisioned MySQL** (approved organizations) or **bring your own MySQL** | |
-| Sign-in only through LoginLink, with admission modes for `/admin` and each tenant console | |
-| Platform developer keys (`pdk_`) and the Platform Developer API | |
-| Hash-chained audit logs for the platform and every tenant | |
+| **Payments API** (`/api/v1`): create, get, list, cancel; `Idempotency-Key`; test and live keys (`sk_test_…`, `sk_live_…`). See [docs/payments-api.md](../docs/payments-api.md) | Razorpay, PhonePe, PayU, CCAvenue connectors, refunds, status polling (Phase 2) |
+| **Hosted checkout** at `/pay/{id}`: methods the merchant turned on, retry with another method, return to the merchant | Connector catalog: install, allow, drain from Admin (Phase 3) |
+| **PayLink UPI** (free): `upi://pay` QR code to the merchant's UPI ID, payer's UTR and screenshot, merchant's verification queue, reused-UTR check | Risk score, location and VPN rules, funnel and failure reports, alerts, settlement reconciliation (Phase 3) |
+| **Simulator** for Test: Succeed, Fail or Stay pending, no gateway account needed | Payment links, JS drop-in button, PayPal and Stripe, UPI statement matching (Phase 4) |
+| Payment journey: append-only event log per payment (who, when, from where, why), statuses that only move forward | Subdomain per tenant, PostgreSQL (later) |
+| Signed webhooks (`PayLink-Signature`) with retries for 24 hours, delivery log and **Send again** | |
+| Risk rules: block lists (email, domain, phone, customer, IP/CIDR), amount limits, attempts per IP, review queue | |
+| Tenant developer keys (`tdk_…`) and the tenant developer API; API request log | |
+| Console: Test/Live switch, overview, payments search, payment page, UPI verification, payment methods, developers, risk rules | |
+| Everything from Phase 0: setup wizard, SQLite/MySQL platform and tenant databases, auto-provisioning, LoginLink sign-in and admission, platform developer keys, hash-chained audit logs | |
 
 ## Run it
 
@@ -101,6 +103,8 @@ For local testing against a LoginLink on `http://localhost`, plain HTTP is accep
 |---|---|
 | `PayLink__DataRoot` | Data folder (default `App_Data` next to the app; `/app/App_Data` in Docker) |
 | `PayLink__LoginLink__DefaultServer` | LoginLink address setup fills in (default `https://loginlink.websvc.in`; editable on the page) |
+| `PayLink__Webhooks__AllowPrivateNetworks` | `true` lets webhooks reach private and local addresses (default: public addresses only) |
+| `PayLink__Jobs__IntervalSeconds` | How often expiry and webhook delivery run (default 10; 0 turns the background loop off) |
 | `PayLink__SetupCode` | Choose the setup code instead of a generated one |
 | `PayLink__MasterKey` | Base64 32-byte key instead of `keys/master.key` |
 | `PayLink__TrustedProxies` | Comma-separated proxy IPs whose `X-Forwarded-For`/`-Proto` are trusted |

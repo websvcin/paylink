@@ -24,6 +24,10 @@
         <div class="shell">
             <nav class="side" aria-label="Sections">@await RenderSectionAsync("Nav")</nav>
             <div class="main">
+                @if (ViewData["Livemode"] is false)
+                {
+                    <div class="modebar" role="status"><b>Test mode.</b> You're viewing test data. Test payments never move real money.</div>
+                }
                 <partial name="_Flash" />
                 @RenderBody()
             </div>

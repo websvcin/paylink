@@ -150,3 +150,41 @@ details > summary { cursor: pointer; color: var(--accent); font-size: .9rem; }
 .locked { display: flex; gap: 8px; align-items: center; }
 .locked input { flex: 1; min-width: 0; }
 .locked input[readonly] { background: var(--sunk); color: var(--muted); }
+
+/* Console: Test/Live switch and the amber test-mode bar. */
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--sunk); border-radius: 8px; padding: 3px; margin: 0 0 6px; }
+.side .modes a { justify-content: center; padding: 4px 8px; font-size: .84rem; }
+.side .modes a[aria-current="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+.modebar { background: var(--warn-soft); color: var(--warn); border: 1px solid transparent; border-radius: 8px; padding: 8px 14px; font-size: .9rem; }
+
+/* Payment journey timeline. */
+.journey { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.journey li { display: grid; grid-template-columns: 9.5em 14px minmax(0, 1fr); gap: 10px; position: relative; padding-bottom: 14px; }
+.journey li::before { content: ""; position: absolute; left: calc(9.5em + 16px); top: 14px; bottom: 0; width: 2px; background: var(--line); }
+.journey li:last-child::before { display: none; }
+.journey time { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; padding-top: 2px; }
+.journey .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--line); margin-top: 5px; position: relative; z-index: 1; }
+.journey .dot.good { background: var(--good); } .journey .dot.bad { background: var(--bad); } .journey .dot.warn { background: var(--warn); } .journey .dot.info { background: var(--info); }
+.journey b { font-weight: 600; font-size: .92rem; }
+.journey .meta { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
+.amount { font-size: 1.9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.searchbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.searchbar input { flex: 1 1 220px; width: auto; }
+.searchbar select { width: auto; }
+.proof { max-width: 100%; max-height: 420px; border: 1px solid var(--line); border-radius: 8px; }
+
+/* Hosted checkout. */
+.pay { max-width: 460px; margin: 0 auto; display: grid; gap: 14px; }
+.pay .merchant { display: flex; gap: 12px; align-items: center; }
+.pay .logo { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; }
+.pay .methods { display: grid; gap: 8px; }
+.pay .method { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 14px; font: inherit; cursor: pointer; color: var(--ink); }
+.pay .method:hover { border-color: var(--accent); }
+.pay .method span { color: var(--muted); font-size: .84rem; }
+.qr { display: grid; place-items: center; background: #fff; border-radius: 12px; padding: 12px; border: 1px solid var(--line); }
+.qr svg { width: 220px; height: 220px; }
+.testbar { background: var(--warn); color: #fff; text-align: center; font-size: .78rem; font-weight: 700; letter-spacing: .08em; padding: 4px; border-radius: 6px; }
+.result { text-align: center; display: grid; gap: 8px; justify-items: center; }
+.result .big { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6rem; font-weight: 700; }
+.result .big.good { background: var(--good-soft); color: var(--good); } .result .big.bad { background: var(--bad-soft); color: var(--bad); } .result .big.warn { background: var(--warn-soft); color: var(--warn); }
+@media (max-width: 600px) { .journey li { grid-template-columns: 14px minmax(0, 1fr); } .journey li time { grid-column: 2; order: 2; } .journey li::before { left: 6px; } }

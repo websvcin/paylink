@@ -1,0 +1,80 @@
+@page "/{slug}/console/methods"
+@model PayLink.Pages.Console.MethodsModel
+@using WebSvc.PayLink.Abstractions
+@{
+    ViewData["Title"] = "Payment methods";
+    ViewData["Where"] = Model.Tenant.Name;
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Payment methods</h1><p>Turn methods on here; your integration doesn't change. Test and Live have separate settings. Secrets are stored encrypted and never shown again.</p></div></div>
+
+@if (!Model.LiveReady)
+{
+    <div class="notice warn">Live payments are off until one method has Live settings that pass their check. Test payments work now, with the Simulator.</div>
+}
+
+@foreach (var c in Model.Connectors)
+{
+    var m = c.Manifest;
+    <div class="card">
+        <div class="actions" style="justify-content:space-between">
+            <div><h3 style="display:inline">@m.Name</h3> <span class="hint">· @string.Join(", ", m.Methods.Select(x => x.ToString().ToUpperInvariant() == "UPI" ? "UPI" : x.ToString())) · @(m.Currencies.Contains("*") ? "any currency" : string.Join(", ", m.Currencies)) · @c.GetType().Assembly.GetName().Name @m.Version</span></div>
+        </div>
+        @if (m.Id == "simulator")
+        {
+            <p class="muted">Always offered on test checkouts: the payer picks <b>Succeed</b>, <b>Fail</b> or <b>Stay pending</b>, so you can test your integration and webhooks without a gateway account. Never shown on live payments.</p>
+        }
+        else
+        {
+            @if (m.Id == "upi")
+            {
+                <p class="muted">Free. Payers scan a QR code or tap “Pay with UPI app” and pay straight into your UPI ID; there's no gateway and no fee. They then enter the 12-digit UTR, and you confirm it under UPI verification.</p>
+            }
+            <div class="grid2">
+                @foreach (var mode in new[] { "test", "live" })
+                {
+                    var s = Model.Setting(m.Id, mode);
+                    var values = Model.Values(s);
+                    <form method="post" class="card" style="background:var(--bg)">
+                        <input type="hidden" name="connector" value="@m.Id">
+                        <input type="hidden" name="mode" value="@mode">
+                        <div class="actions" style="justify-content:space-between">
+                            <h4>@(mode == "live" ? "Live" : "Test")</h4>
+                            @if (s is { Enabled: true }) { <span class="chip good">On</span> } else if (s is { CheckOk: false }) { <span class="chip bad">Check failed</span> } else { <span class="chip">Off</span> }
+                        </div>
+                        @foreach (var f in m.ConfigSchema)
+                        {
+                            var id = $"{m.Id}_{mode}_{f.Key}";
+                            if (f.Type == ConfigFieldType.Boolean)
+                            {
+                                <label class="check"><input type="checkbox" id="@id" name="@mode.@f.Key" value="true" checked="@(values.GetValueOrDefault(f.Key) == "true")"><span>@f.Label@if (f.Help is not null) { <br><span class="hint">@f.Help</span> }</span></label>
+                            }
+                            else
+                            {
+                                <div class="field">
+                                    <label for="@id">@f.Label</label>
+                                    <input id="@id" name="@mode.@f.Key" class="mono" type="@(f.Type == ConfigFieldType.Secret ? "password" : "text")"
+                                           value="@(f.Type == ConfigFieldType.Secret ? "" : values.GetValueOrDefault(f.Key))"
+                                           placeholder="@(f.Type == ConfigFieldType.Secret && values.ContainsKey(f.Key) ? "Saved. Leave blank to keep it." : "")" autocomplete="off">
+                                    @if (f.Help is not null) { <span class="hint">@f.Help</span> }
+                                </div>
+                            }
+                        }
+                        @if (s?.CheckMessage is not null) { <p class="hint">Last check @Clock.Short(s.CheckedAt): @s.CheckMessage</p> }
+                        @if (Model.CanConfigure)
+                        {
+                            <div class="actions">
+                                <button class="btn pri" type="submit" name="action" value="enable">@(s is { Enabled: true } ? "Save" : "Check and turn on")</button>
+                                @if (s is { Enabled: true }) { <button class="btn danger" type="submit" name="action" value="disable" formnovalidate>Turn off</button> }
+                                else { <button class="btn" type="submit" name="action" value="save">Save without turning on</button> }
+                            </div>
+                        }
+                    </form>
+                }
+            </div>
+        }
+    </div>
+}
+<p class="hint">Razorpay, PhonePe, PayU and CCAvenue arrive as their own connector packages in Phase 2. Each one is added here with no change to your integration.</p>

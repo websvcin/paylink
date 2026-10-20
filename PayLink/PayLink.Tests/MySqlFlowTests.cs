@@ -2,7 +2,9 @@ using System.Net;
 using System.Text.Json.Nodes;
 using Dapper;
 using MySqlConnector;
+using System.Net.Http.Json;
 using PayLink.Infrastructure;
+using PayLink.Payments;
 using PayLink.Platform;
 using PayLink.Tenancy;
 using PayLink.Tests.Fakes;
@@ -82,6 +84,34 @@ public sealed class MySqlFlowTests
                 Assert.Equal(DbEngine.MySql, deltaTarget.Engine);
                 Assert.NotNull((await app.Get<PlatformRepository>().ApprovalsAsync()).Single(a => a.OrgSlug == "delta").UsedAt);
 
+                // Payments on MySQL: an API payment paid with the Simulator, and a UPI payment approved from the queue.
+                var key = await CreateKeyAsync(delta, "delta");
+                var api = new Browser(app).Api;
+                api.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", key);
+                var apiCreated = await api.PostAsJsonAsync("/api/v1/payments", new { amount = 25000, reference = "DF-1", customer = new { email = "a@b.in" } });
+                Assert.Equal(HttpStatusCode.Created, apiCreated.StatusCode);
+                var payId = (string)(await apiCreated.Content.ReadFromJsonAsync<JsonObject>())!["id"]!;
+                var payer = new Browser(app);
+                await payer.SubmitAsync($"/pay/{payId}", "Choose", F(("connector", "simulator")));
+                var simAttempt = (await app.Get<PaymentService>().AttemptsAsync(deltaTenant, payId)).Single();
+                await payer.SubmitAsync($"/pay/{payId}", "Simulate", F(("attemptId", simAttempt.Id), ("outcome", "succeed")));
+                Assert.Equal("succeeded", (string?)(await api.GetFromJsonAsync<JsonObject>($"/api/v1/payments/{payId}"))!["status"]);
+
+                await delta.SubmitAsync("/delta/console/methods", null,
+                    F(("connector", "upi"), ("mode", "test"), ("action", "enable"), ("test.vpa", "delta@okicici"), ("test.payee_name", "Delta Foods"), ("test.business_vpa_confirmed", "true")));
+                await delta.FollowAsync(await delta.SubmitAsync("/delta/console/payments", "Create", F(("amount", "99"), ("reference", "DF-2"))));
+                var upiId = delta.LastUrl!.AbsolutePath.Split('/').Last();
+                await payer.SubmitAsync($"/pay/{upiId}", "Choose", F(("connector", "upi")));
+                var upiAttempt = (await app.Get<PaymentService>().AttemptsAsync(deltaTenant, upiId)).Single();
+                await payer.SubmitAsync($"/pay/{upiId}", "Utr", F(("attemptId", upiAttempt.Id), ("utr", "512345678901")));
+                Assert.Contains("512345678901", await delta.TextAsync(await delta.GetAsync("/delta/console/upi")));
+                await delta.SubmitAsync("/delta/console/upi", null, F(("attemptId", upiAttempt.Id), ("decision", "approve"), ("note", "Seen in ICICI")));
+                Assert.Equal(PaymentStatuses.Succeeded, (await app.Get<PaymentService>().GetAsync(deltaTenant, upiId))!.Status);
+                Assert.Contains(upiId, await delta.TextAsync(await delta.GetAsync("/delta/console/payments?q=512345678901")));
+                Assert.Contains("₹349.00", await delta.TextAsync(await delta.GetAsync("/delta/console")));
+                await using (var pc = await Db.OpenAsync(deltaTarget))
+                    Assert.Equal(2, await pc.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM payments WHERE status = 'succeeded';"));
+
                 // Omega isn't approved: auto is greyed out, but it can bring its own (empty) MySQL database.
                 var omegaDb = await provisioner.CreateAsync("paylink_", "omega_byo");
                 created.Add(omegaDb.Target);
@@ -109,7 +139,7 @@ public sealed class MySqlFlowTests
                 {
                     await using var c = await Db.OpenAsync(target);
                     Assert.Equal(1, await c.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM members WHERE role = 'owner';"));
-                    Assert.Equal("0001", await c.ExecuteScalarAsync<string>("SELECT MAX(version) FROM schema_migrations;"));
+                    Assert.Equal("0002", await c.ExecuteScalarAsync<string>("SELECT MAX(version) FROM schema_migrations;"));
                 }
                 await using (var c = await app.Get<PlatformDb>().OpenAsync()) Assert.Null(await AuditLog.VerifyAsync(c));
             }

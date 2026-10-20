@@ -1,0 +1,52 @@
+@page "/{slug}/console/risk"
+@model PayLink.Pages.Console.RiskModel
+@{
+    ViewData["Title"] = "Risk rules";
+    ViewData["Where"] = Model.Tenant.Name;
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Risk rules</h1><p>Rules run when a payment is created and when the payer starts paying. <b>Block</b> stops the payment; <b>Review</b> holds it until someone releases it. Each decision is recorded on the payment; the payer only sees a plain message. Rules apply to test and live payments.</p></div></div>
+
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Checks</th><th>Value</th><th>Then</th><th>Note</th><th>Added</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var r in Model.Rules)
+            {
+                <tr>
+                    <td>@(RiskEngine.Kinds.FirstOrDefault(k => k.Kind == r.Kind).Label ?? r.Kind)</td>
+                    <td class="mono">@r.Value</td>
+                    <td><span class="chip @(r.Action == "block" ? "bad" : "warn")">@r.Action</span></td>
+                    <td>@r.Note</td>
+                    <td class="hint">@Clock.Short(r.CreatedAt) · @r.CreatedBy</td>
+                    <td>@if (Model.CanConfigure) { <form method="post" asp-page-handler="Remove" class="inline"><input type="hidden" name="id" value="@r.Id"><button class="btn sm danger" type="submit">Remove</button></form> }</td>
+                </tr>
+            }
+            @if (Model.Rules.Count == 0) { <tr><td colspan="6" class="empty">No rules yet. Every payment is allowed.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (Model.CanConfigure)
+{
+    <form method="post" asp-page-handler="Add" class="card">
+        <h3>Add a rule</h3>
+        <div class="grid3">
+            <div class="field"><label for="kind">Check</label>
+                <select id="kind" name="kind">
+                    @foreach (var k in RiskEngine.Kinds) { <option value="@k.Kind">@k.Label (@(k.Stage == "create" ? "on create" : "at checkout"))</option> }
+                </select>
+            </div>
+            <div class="field"><label for="value">Value</label><input id="value" name="value" class="mono" required placeholder="e.g. mailinator.com, 50000, 203.0.113.0/24"></div>
+            <div class="field"><label for="action">Then</label>
+                <select id="action" name="action"><option value="block">Block</option><option value="review">Hold for review</option></select>
+            </div>
+        </div>
+        <div class="field"><label for="note">Note (for your team)</label><input id="note" name="note"></div>
+        <div class="actions"><button class="btn pri" type="submit">Add rule</button></div>
+    </form>
+}
