@@ -174,7 +174,7 @@ public sealed class Settlements(TenantDb tenantDb, AppPaths paths)
     public sealed class CloseDay
     {
         public string Day { get; set; } = "";
-        public long Lines { get; set; }
+        public long LineCount { get; set; }
         public long Gross { get; set; }
         public long Fees { get; set; }
         public long Tax { get; set; }
@@ -186,7 +186,7 @@ public sealed class Settlements(TenantDb tenantDb, AppPaths paths)
     {
         await using var c = await tenantDb.OpenAsync(t);
         var close = (await c.QueryAsync<CloseDay>(
-            "SELECT settled_on AS Day, COUNT(*) AS Lines, SUM(gross) AS Gross, SUM(fee) AS Fees, SUM(tax) AS Tax, SUM(net) AS Net FROM settlement_lines " +
+            "SELECT settled_on AS Day, COUNT(*) AS line_count, SUM(gross) AS Gross, SUM(fee) AS Fees, SUM(tax) AS Tax, SUM(net) AS Net FROM settlement_lines " +
             "WHERE match_status = 'matched' AND settled_on IS NOT NULL GROUP BY settled_on ORDER BY settled_on DESC LIMIT 31;")).ToList();
         var unsettled = (await c.QueryAsync<Payment>(
             "SELECT * FROM payments WHERE status = 'succeeded' AND livemode = TRUE AND settled_at IS NULL AND connector NOT IN ('upi', 'simulator') AND paid_at < @before ORDER BY paid_at LIMIT 100;",

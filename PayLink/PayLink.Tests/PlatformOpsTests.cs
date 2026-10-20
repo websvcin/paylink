@@ -174,7 +174,7 @@ public sealed class PlatformOpsTests
     [Fact]
     public async Task A_tenant_moves_from_sqlite_to_postgresql()
     {
-        if (!PgTest.On) return;
+        if (!ServerDbTest.OnPostgreSql) return;
         await using var ll = await FakeLoginLink.StartAsync();
         await using var app = new PayLinkApp();
         var admin = new Browser(app);
@@ -187,7 +187,7 @@ public sealed class PlatformOpsTests
         await svc.CreateAsync(tenant, new CreatePaymentRequest(1000, null, "M-1", null, null, null, null, null, null, null, null), false, null, EventSource.System, "api");
 
         var r = await admin.FollowAsync(await admin.SubmitAsync("/admin/tenants/acme", "Move", F(("to", "byo"),
-            ("Byo.Engine", "postgresql"), ("Byo.UseConnectionString", "true"), ("Byo.ConnectionString", PgTest.NewDatabase()))));
+            ("Byo.Engine", "postgresql"), ("Byo.UseConnectionString", "true"), ("Byo.ConnectionString", ServerDbTest.NewDatabase()))));
         Assert.Contains("rows copied and counted", await admin.TextAsync(r));
         var moved = (await app.Get<PlatformRepository>().TenantBySlugAsync("acme"))!;
         Assert.Equal(WebSvc.PayLink.Storage.DbEngine.PostgreSql, app.Get<TenantDb>().Target(moved).Engine);

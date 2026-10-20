@@ -45,7 +45,7 @@ else if (Model.CanOperate)
 <div class="grid2">
     <div class="card flush">
         <div class="tbl"><table><thead><tr><th>Daily close</th><th>Lines</th><th>Gross</th><th>Fees + tax</th><th>Net</th></tr></thead><tbody>
-            @foreach (var d in Model.Close) { <tr><td>@d.Day</td><td class="num">@d.Lines</td><td class="num">@Money.Format(d.Gross, "INR")</td><td class="num">@Money.Format(d.Fees + d.Tax, "INR")</td><td class="num">@Money.Format(d.Net, "INR")</td></tr> }
+            @foreach (var d in Model.Close) { <tr><td>@d.Day</td><td class="num">@d.LineCount</td><td class="num">@Money.Format(d.Gross, "INR")</td><td class="num">@Money.Format(d.Fees + d.Tax, "INR")</td><td class="num">@Money.Format(d.Net, "INR")</td></tr> }
             @if (Model.Close.Count == 0) { <tr><td colspan="5" class="empty">No settlements matched yet</td></tr> }
         </tbody></table></div>
     </div>

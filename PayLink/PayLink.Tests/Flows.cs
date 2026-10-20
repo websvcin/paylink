@@ -11,7 +11,7 @@ public static class Flows
     public static Dictionary<string, string?> F(params (string Key, string? Value)[] pairs) => pairs.ToDictionary(p => p.Key, p => p.Value);
 
     /// <summary>Runs /setup to completion and leaves <paramref name="browser"/> signed in to /admin as Naren.</summary>
-    /// <summary>Runs setup; the platform database is SQLite, or PostgreSQL when the suite runs on it, unless <paramref name="database"/> says otherwise.</summary>
+    /// <summary>Runs setup; the platform database is SQLite, or the server database the suite runs on, unless <paramref name="database"/> says otherwise.</summary>
     public static async Task SetupAsync(PayLinkApp app, Browser browser, FakeLoginLink ll,
         Dictionary<string, string?>? hosting = null, Dictionary<string, string?>? database = null, bool withPlatformApi = true)
     {
@@ -24,8 +24,8 @@ public static class Flows
         r = await browser.SubmitAsync("/setup?step=hosting", "Hosting", hosting ?? F(("action", "skip")));
         Assert.Equal("/setup?step=database", r.Headers.Location?.OriginalString);
 
-        database ??= PgTest.On
-            ? F(("DbChoice", "mysql"), ("Mysql.Engine", "postgresql"), ("Mysql.UseConnectionString", "true"), ("Mysql.ConnectionString", PgTest.NewDatabase()), ("action", "save"))
+        database ??= ServerDbTest.On
+            ? F(("DbChoice", "mysql"), ("Mysql.Engine", ServerDbTest.Engine), ("Mysql.UseConnectionString", "true"), ("Mysql.ConnectionString", ServerDbTest.NewDatabase()), ("action", "save"))
             : F(("DbChoice", "sqlite"), ("action", "save"));
         r = await browser.SubmitAsync("/setup?step=database", "Database", database);
         Assert.True(r.Headers.Location?.OriginalString == "/setup?step=loginlink", await Problem(browser, r));
@@ -69,7 +69,7 @@ public static class Flows
 
     /// <summary>
     /// Connects <paramref name="org"/> and creates a tenant; returns the owner's signed-in console browser. The default database is
-    /// SQLite, or PostgreSQL when the suite runs on it (<see cref="PgTest"/>); pass "sqlite" to insist on SQLite.
+    /// SQLite, or the server database the suite runs on (<see cref="ServerDbTest"/>); pass "sqlite" to insist on SQLite.
     /// </summary>
     public static readonly Dictionary<string, string?> SqlitePlatform = F(("DbChoice", "sqlite"), ("action", "save"));
 
@@ -78,12 +78,12 @@ public static class Flows
         var b = new Browser(app);
         await ConnectExistingAsync(b, ll, slug, owner);
         var fields = F(("TenantName", name), ("TenantSlug", slug), ("DbChoice", db == "default" ? "sqlite" : db), ("action", "create"));
-        if (db == "default" && PgTest.On)
+        if (db == "default" && ServerDbTest.On)
         {
             fields["DbChoice"] = "byo";
-            fields["Byo.Engine"] = "postgresql";
+            fields["Byo.Engine"] = ServerDbTest.Engine;
             fields["Byo.UseConnectionString"] = "true";
-            fields["Byo.ConnectionString"] = PgTest.NewDatabase();
+            fields["Byo.ConnectionString"] = ServerDbTest.NewDatabase();
         }
         var r = await b.FollowAsync(await b.SubmitAsync("/signup", "Create", fields));
         Assert.True(b.LastUrl!.AbsolutePath == $"/{slug}/console", await Problem(b, r));
