@@ -79,13 +79,18 @@ paylink/                            repository root
 
 ## Develop
 
-From the repository root:
+```bash
+cd PayLink
+dotnet run                                 # http://localhost:5000, data in PayLink/App_Data
+dotnet test PayLink.sln                    # SQLite tests
+PAYLINK_TEST_MYSQL_ADMIN="Server=127.0.0.1;Uid=root;Pwd=…" dotnet test PayLink.sln   # adds the MySQL journey
+```
+
+The app uses the `WebSvc.PayLink.*` packages from a local feed, `../artifacts/packages`. **The first build fills it automatically** by packing `../packages`. After you change anything in `packages/`, repack so the app picks it up:
 
 ```bash
-bash scripts/pack-packages.sh              # builds WebSvc.PayLink.* into artifacts/packages (PayLink/nuget.config uses it)
-dotnet run --project PayLink               # http://localhost:5000, data in PayLink/App_Data
-dotnet test PayLink/PayLink.sln            # SQLite tests
-PAYLINK_TEST_MYSQL_ADMIN="Server=127.0.0.1;Uid=root;Pwd=…" dotnet test PayLink/PayLink.sln   # adds the MySQL journey
+bash scripts/pack-packages.sh                                         # macOS / Linux, from the repository root
+powershell -ExecutionPolicy Bypass -File scripts\pack-packages.ps1   # Windows
 ```
 
 For local testing against a LoginLink on `http://localhost`, plain HTTP is accepted for loopback addresses only. Set `PayLink__LoginLink__AllowHttp=true` to allow it elsewhere (not for production).

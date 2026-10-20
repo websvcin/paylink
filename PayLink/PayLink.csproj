@@ -12,12 +12,32 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);PayLink.Tests/**;App_Data/**</DefaultItemExcludes>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PayLinkPackagesVersion>0.1.0</PayLinkPackagesVersion>
+    <PayLinkPackagesSource>$(MSBuildThisFileDirectory)..\packages</PayLinkPackagesSource>
+    <PayLinkLocalFeed>$(MSBuildThisFileDirectory)..\artifacts\packages</PayLinkLocalFeed>
+  </PropertyGroup>
+
   <ItemGroup>
-    <!-- Built from ../packages today (scripts/pack-packages.sh); from nuget.org once published. -->
-    <PackageReference Include="WebSvc.PayLink.Abstractions" Version="0.1.0" />
-    <PackageReference Include="WebSvc.PayLink.Storage" Version="0.1.0" />
+    <!-- Built from ../packages into ../artifacts/packages today; from nuget.org once published. -->
+    <PackageReference Include="WebSvc.PayLink.Abstractions" Version="$(PayLinkPackagesVersion)" />
+    <PackageReference Include="WebSvc.PayLink.Storage" Version="$(PayLinkPackagesVersion)" />
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.1.2" />
   </ItemGroup>
+
+  <!--
+    On a fresh checkout the local feed is empty, so restore would fail with NU1301.
+    Before restoring, pack the WebSvc.PayLink.* packages from ../packages into the feed if they're missing.
+    Works the same on Windows, macOS and Linux; scripts/pack-packages.sh does the same and also refreshes the NuGet cache.
+  -->
+  <Target Name="PackLocalPayLinkPackages"
+          BeforeTargets="Restore;_GenerateRestoreGraph;_GenerateRestoreGraphProjectEntry;_GenerateProjectRestoreGraph"
+          Condition="Exists('$(PayLinkPackagesSource)') And !Exists('$(PayLinkLocalFeed)\WebSvc.PayLink.Storage.$(PayLinkPackagesVersion).nupkg')">
+    <Message Importance="high" Text="PayLink: packing WebSvc.PayLink.* from ../packages into ../artifacts/packages (first build only)" />
+    <MakeDir Directories="$(PayLinkLocalFeed)" />
+    <Exec Command="dotnet pack &quot;$(PayLinkPackagesSource)\WebSvc.PayLink.Abstractions\WebSvc.PayLink.Abstractions.csproj&quot; -c Release -o &quot;$(PayLinkLocalFeed)&quot; --nologo -v quiet" />
+    <Exec Command="dotnet pack &quot;$(PayLinkPackagesSource)\WebSvc.PayLink.Storage\WebSvc.PayLink.Storage.csproj&quot; -c Release -o &quot;$(PayLinkLocalFeed)&quot; --nologo -v quiet" />
+  </Target>
 
   <ItemGroup>
     <!-- The SQL scripts in db/ ship next to the app and are applied at runtime. -->
