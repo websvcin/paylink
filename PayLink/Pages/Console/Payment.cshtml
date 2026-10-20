@@ -143,6 +143,14 @@
     </div>
 </div>
 
+@foreach (var d in Model.Disputes)
+{
+    <div class="notice @(d.IsOpen ? "bad" : d.Status == DisputeStatuses.Won ? "good" : "")">
+        <b>Dispute: @DisputeStatuses.Label(d.Status)</b> · @Money.Format(d.Amount, d.Currency)@(d.Reason is null ? "" : " · " + d.Reason)@(d.IsOpen && d.RespondBy is not null ? $" · respond by {Clock.Display(d.RespondBy)}" : "")
+        · <a href="@($"/{Model.Tenant.Slug}/console/disputes")">Disputes</a>
+    </div>
+}
+
 @if (Model.Refunds.Count > 0)
 {
     <div class="card flush">

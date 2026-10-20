@@ -10,9 +10,9 @@
 
 | Works today | Coming next (Phase 4) |
 |---|---|
-| **Gateways**: Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form); signed callbacks and webhooks; status polling; full and partial refunds | |
+| **Gateways**: Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form), **Stripe** (Checkout), **PayPal** (Orders, captured on return); signed callbacks and webhooks; status polling; full and partial refunds; **disputes** from Razorpay, Stripe and PayPal (Console → Disputes, `dispute.*` webhooks) | |
 | **Payments API** (`/api/v1`): create, get, list, cancel, refund; `Idempotency-Key`; test and live keys. See [docs/payments-api.md](../docs/payments-api.md) | |
-| **Hosted checkout** at `/pay/{id}`: the merchant's methods, retry with another method, return to the merchant | PayPal and Stripe connectors |
+| **Hosted checkout** at `/pay/{id}`: the merchant's methods, retry with another method, return to the merchant | |
 | **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds; **bank statement matching** (upload the CSV, matching UTR and amount approve automatically) | |
 | **Connector catalog** (Admin): install, allow, drain, uninstall; install connector packages from nuget.org at runtime (allowed ID prefixes only) | PostgreSQL |
 | **Platform**: amount and currency limits, tenant consoles on subdomains, move a tenant's or the platform's database, live dashboard, backup download | Custom domains, reporting API |

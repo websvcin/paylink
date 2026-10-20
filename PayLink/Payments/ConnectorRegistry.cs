@@ -1,9 +1,11 @@
 using WebSvc.PayLink.Abstractions;
 using WebSvc.PayLink.Connector.CCAvenue;
+using WebSvc.PayLink.Connector.PayPal;
 using WebSvc.PayLink.Connector.PayU;
 using WebSvc.PayLink.Connector.PhonePe;
 using WebSvc.PayLink.Connector.Razorpay;
 using WebSvc.PayLink.Connector.Simulator;
+using WebSvc.PayLink.Connector.Stripe;
 using WebSvc.PayLink.Connector.Upi;
 
 namespace PayLink.Payments;
@@ -26,6 +28,8 @@ public sealed class ConnectorRegistry(IHttpClientFactory httpFactory, ILogger<Co
         new PhonePeConnector(httpFactory.CreateClient(HttpClientName)),
         new PayUConnector(httpFactory.CreateClient(HttpClientName)),
         new CCAvenueConnector(httpFactory.CreateClient(HttpClientName)),
+        new StripeConnector(httpFactory.CreateClient(HttpClientName)),
+        new PayPalConnector(httpFactory.CreateClient(HttpClientName)),
         new SimulatorConnector(),
     ];
 

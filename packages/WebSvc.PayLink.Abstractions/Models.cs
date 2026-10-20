@@ -100,7 +100,18 @@ public sealed record GatewayEvent(
     /// <summary>PayLink's refund id, when the gateway echoes it back.</summary>
     public string? RefundId { get; init; }
     public RefundState? RefundState { get; init; }
+    /// <summary>Set when the notification is about a dispute (chargeback) on a payment; <see cref="ProviderPaymentId"/> names the payment.</summary>
+    public DisputeInfo? Dispute { get; init; }
 }
+
+/// <summary>A dispute (chargeback) as the gateway reports it. Responding with evidence happens on the gateway's dashboard.</summary>
+public sealed record DisputeInfo(string GatewayReference, DisputeState State, long Amount, string Currency, string? Reason)
+{
+    /// <summary>When the merchant's response is due, if the gateway says.</summary>
+    public DateTimeOffset? RespondBy { get; init; }
+}
+
+public enum DisputeState { NeedsResponse, UnderReview, Won, Lost, Closed }
 
 public sealed record RefundRequest(string RefundId, AttemptReference Attempt, long Amount, string Currency, string Reason);
 

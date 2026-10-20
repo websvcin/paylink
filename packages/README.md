@@ -8,12 +8,14 @@ Libraries PayLink uses through `PackageReference`, each with its own version. Th
 | `WebSvc.PayLink.Storage` | Engine-neutral storage: SQLite and MySQL connections, SQL-script migrations with checksums, connection probes, and database provisioning through a MySQL server, Plesk or cPanel. |
 | `WebSvc.PayLink.Connector.Upi` | PayLink UPI: a `upi://pay` QR code paying straight into the merchant's UPI ID; UTR and VPA checks. |
 | `WebSvc.PayLink.Connector.Simulator` | Test-only connector: the checkout offers Succeed, Fail and Stay pending. |
-| `WebSvc.PayLink.Connector.Razorpay` | Razorpay Payment Links, signed callbacks and webhooks, status, refunds. |
+| `WebSvc.PayLink.Connector.Razorpay` | Razorpay Payment Links, signed callbacks and webhooks, status, refunds, disputes. |
 | `WebSvc.PayLink.Connector.PhonePe` | PhonePe Standard Checkout v2 (OAuth) or v1 (salt key), status, callbacks, refunds. |
 | `WebSvc.PayLink.Connector.PayU` | PayU hosted checkout (SHA-512 hashes), verify_payment, refunds. |
 | `WebSvc.PayLink.Connector.CCAvenue` | CCAvenue encrypted checkout (AES), order status, refunds. |
+| `WebSvc.PayLink.Connector.Stripe` | Stripe Checkout Sessions, signed webhooks (5-minute tolerance), status, refunds, disputes. |
+| `WebSvc.PayLink.Connector.PayPal` | PayPal Orders v2 (sandbox for Test), capture on return or status check, webhooks verified by PayPal, refunds, disputes. |
 
-Each connector depends only on Abstractions, so updating one can't break another. Abstractions 0.2.0 adds optional interfaces (`IPayerReturnHandler`, `IRefundStatusFetcher`) and optional fields; connectors written for 0.1 keep working. `WebSvc.PayLink.Connectors.Tests` tests every connector against stubbed gateway APIs (request shapes, signatures, hashes, encryption, tampering).
+Each connector depends only on Abstractions, so updating one can't break another. Abstractions 0.2.0 adds optional interfaces (`IPayerReturnHandler`, `IRefundStatusFetcher`) and optional fields; connectors written for 0.1 keep working. Abstractions 0.3.0 adds `GatewayEvent.Dispute` (`DisputeInfo`, `DisputeState`) the same way. `WebSvc.PayLink.Connectors.Tests` tests every connector against stubbed gateway APIs (request shapes, signatures, hashes, encryption, tampering).
 
 ## Build and test
 

@@ -22,7 +22,7 @@ public sealed class RazorpayConnector(HttpClient http) : IPaymentConnector, IPay
     public static string ApiBase { get; set; } = "https://api.razorpay.com";
 
     public ConnectorManifest Manifest { get; } = new(
-        Id, "Razorpay", "0.1.0", AbstractionsMajorVersion: 0,
+        Id, "Razorpay", "0.2.0", AbstractionsMajorVersion: 0,
         Methods: [PaymentMethodKind.Upi, PaymentMethodKind.Card, PaymentMethodKind.NetBanking, PaymentMethodKind.Wallet],
         Currencies: ["INR"],
         Capabilities: new ConnectorCapabilities(Refunds: true, PartialRefunds: true, Webhooks: true, StatusPolling: true),
@@ -31,7 +31,7 @@ public sealed class RazorpayConnector(HttpClient http) : IPaymentConnector, IPay
             new ConfigField(KeyIdField, "Key ID", ConfigFieldType.Text, Required: true, Help: "Razorpay Dashboard → Account & Settings → API keys. Test keys start with rzp_test_, live keys with rzp_live_."),
             new ConfigField(KeySecretField, "Key secret", ConfigFieldType.Secret, Required: true),
             new ConfigField(WebhookSecretField, "Webhook secret", ConfigFieldType.Secret, Required: false,
-                Help: "Razorpay Dashboard → Webhooks: add the webhook URL shown here with events payment_link.paid, payment_link.expired, payment_link.cancelled, refund.processed and refund.failed, and the same secret."),
+                Help: "Razorpay Dashboard → Webhooks: add the webhook URL shown here with events payment_link.paid, payment_link.expired, payment_link.cancelled, refund.processed, refund.failed and payment.dispute.*, and the same secret."),
         ]);
 
     private HttpRequestMessage Request(HttpMethod method, string path, ConnectorConfig config, object? body = null)
@@ -123,6 +123,26 @@ public sealed class RazorpayConnector(HttpClient http) : IPaymentConnector, IPay
         var link = json["payload"]?["payment_link"]?["entity"];
         var payment = json["payload"]?["payment"]?["entity"];
         var refund = json["payload"]?["refund"]?["entity"];
+        if (ev.StartsWith("payment.dispute.", StringComparison.Ordinal) && json["payload"]?["dispute"]?["entity"] is { } dispute)
+        {
+            var state = (string?)dispute["status"] switch
+            {
+                "won" => DisputeState.Won,
+                "lost" => DisputeState.Lost,
+                "closed" => DisputeState.Closed,
+                "under_review" => DisputeState.UnderReview,
+                _ => DisputeState.NeedsResponse,
+            };
+            var respondBy = (long?)dispute["respond_by"];
+            return new GatewayEvent("", null, AttemptStatus.Succeeded, FailureReason.None, ev, (string?)dispute["reason_description"] ?? ev, raw)
+            {
+                ProviderPaymentId = (string?)dispute["payment_id"],
+                Dispute = new DisputeInfo((string?)dispute["id"] ?? "", state, (long?)dispute["amount"] ?? 0, (string?)dispute["currency"] ?? "INR", (string?)dispute["reason_code"])
+                {
+                    RespondBy = respondBy is { } t ? DateTimeOffset.FromUnixTimeSeconds(t) : null,
+                },
+            };
+        }
         if (ev.StartsWith("refund.", StringComparison.Ordinal) && refund is not null)
         {
             var state = ev == "refund.processed" ? RefundState.Succeeded : ev == "refund.failed" ? RefundState.Failed : RefundState.Pending;

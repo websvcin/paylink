@@ -18,6 +18,8 @@
     <ProjectReference Include="..\WebSvc.PayLink.Connector.PayU\WebSvc.PayLink.Connector.PayU.csproj" />
     <ProjectReference Include="..\WebSvc.PayLink.Connector.PhonePe\WebSvc.PayLink.Connector.PhonePe.csproj" />
     <ProjectReference Include="..\WebSvc.PayLink.Connector.Razorpay\WebSvc.PayLink.Connector.Razorpay.csproj" />
+    <ProjectReference Include="..\WebSvc.PayLink.Connector.Stripe\WebSvc.PayLink.Connector.Stripe.csproj" />
+    <ProjectReference Include="..\WebSvc.PayLink.Connector.PayPal\WebSvc.PayLink.Connector.PayPal.csproj" />
   </ItemGroup>
 
 </Project>

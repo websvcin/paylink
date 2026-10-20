@@ -18,6 +18,11 @@ public static class PaymentJson
     public sealed record FailureDto(string Reason, string? Message);
     public sealed record RefundDto(string Id, string Object, long Amount, string Currency, string Status, string? Reason, string? GatewayReference, bool Manual, string CreatedAt);
 
+    public sealed record DisputeDto(string Id, string Object, string PaymentId, string Connector, long Amount, string Currency, string? Reason, string Status,
+        string? RespondBy, string? Note, string CreatedAt, string UpdatedAt);
+
+    public static DisputeDto From(Dispute d) => new(d.Id, "dispute", d.PaymentId, d.Connector, d.Amount, d.Currency, d.Reason, d.Status, d.RespondBy, d.Note, d.CreatedAt, d.UpdatedAt);
+
     public static RefundDto From(Refund r) => new(r.Id, "refund", r.Amount, r.Currency, r.Status, r.Reason, r.GatewayRef, r.Manual, r.CreatedAt);
 
     public sealed record AttemptDto(string Id, string Connector, string Method, string Status, string CreatedAt, string? FailureReason, string? GatewayReference);

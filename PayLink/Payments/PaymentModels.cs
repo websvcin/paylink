@@ -374,8 +374,12 @@ public static class WebhookEvents
     public const string RefundSucceeded = "refund.succeeded";
     public const string RefundFailed = "refund.failed";
     public const string AlertTriggered = "alert.triggered";
+    public const string DisputeCreated = "dispute.created";
+    public const string DisputeUpdated = "dispute.updated";
+    public const string DisputeClosed = "dispute.closed";
 
-    public static readonly string[] All = [Processing, OnHold, Succeeded, Failed, Cancelled, Expired, RefundSucceeded, RefundFailed, AlertTriggered];
+    public static readonly string[] All = [Processing, OnHold, Succeeded, Failed, Cancelled, Expired, RefundSucceeded, RefundFailed, AlertTriggered,
+        DisputeCreated, DisputeUpdated, DisputeClosed];
 
     public static string? ForStatus(string status) => status switch
     {

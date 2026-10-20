@@ -122,6 +122,10 @@ Answers `201` with the link, including its `url`, `open` (taking payments now), 
 
 Or call `PayLink.open(checkout_url, { onResult: r => … })`. Checkout opens in a small window, since gateway pages refuse to load inside frames, and the result comes back to your page when it ends, even after a gateway's own pages. If the browser blocks the window, the page goes to checkout instead, and `return_url` brings the payer back. The event is a convenience for your page, not proof of payment: confirm with `GET /api/v1/payments/{id}` or the webhook before you deliver anything. When the window closes early, the drop-in asks `GET /pay/{id}/status`, which answers only the id and status.
 
+## Disputes
+
+When a payer asks their bank to take a payment back, Razorpay, Stripe and PayPal tell PayLink. The dispute appears on the payment, in **Console → Disputes** and as `dispute.*` webhooks. Answer it with evidence on the gateway's dashboard; PayLink follows the outcome (`needs_response`, `under_review`, `won`, `lost`, `closed`). `GET /api/v1/disputes` lists them (`?payment_id=` for one payment), each with `amount`, `reason`, `status`, `respond_by` and your `note`.
+
 ## Statuses
 
 `created` → `requires_action` (payer chose a method) → `processing` (waiting for confirmation) → `succeeded` | `failed` | `cancelled` | `expired`.
@@ -135,7 +139,7 @@ Failure reasons: `payer_cancelled`, `bank_declined`, `insufficient_funds`, `auth
 
 Add endpoints in **Console → Developers**, separately for Test and Live (Live needs https). Each endpoint gets a signing secret (`whsec_…`, shown once).
 
-Events: `payment.processing`, `payment.on_hold`, `payment.succeeded`, `payment.failed`, `payment.cancelled`, `payment.expired`, `refund.succeeded`, `refund.failed`, `alert.triggered` (Live endpoints only; `data` has `kind`, `threshold`, `window_minutes` and a readable `message`), and `webhook.test` from the **Send test** button.
+Events: `payment.processing`, `payment.on_hold`, `payment.succeeded`, `payment.failed`, `payment.cancelled`, `payment.expired`, `refund.succeeded`, `refund.failed`, `dispute.created`, `dispute.updated`, `dispute.closed` (`data` has the `dispute` and the `payment`), `alert.triggered` (Live endpoints only; `data` has `kind`, `threshold`, `window_minutes` and a readable `message`), and `webhook.test` from the **Send test** button.
 
 ```
 POST https://acme.in/hooks/paylink
@@ -170,6 +174,8 @@ Each is its own NuGet package that depends only on `WebSvc.PayLink.Abstractions`
 | **PhonePe** | `WebSvc.PayLink.Connector.PhonePe` | Standard Checkout v2 (OAuth client id and secret), or v1 (salt key) for older accounts. PhonePe's redirect isn't signed, so PayLink asks PhonePe for the order status; its callback (v2: hashed username and password; v1: X-VERIFY) confirms it too. | Full and partial |
 | **PayU** | `WebSvc.PayLink.Connector.PayU` | A hashed form posted to PayU. PayU posts the result back with a SHA-512 reverse hash, checked before anything changes; `verify_payment` covers the rest. | Full and partial |
 | **CCAvenue** | `WebSvc.PayLink.Connector.CCAvenue` | An encrypted order (AES-128, key = MD5 of the working key). CCAvenue posts back `encResp`, which only decrypts with your working key; the order status API covers the rest. | Full and partial |
+| **Stripe** | `WebSvc.PayLink.Connector.Stripe` | A Stripe Checkout Session per attempt (cards, wallets; any currency your Stripe account takes). Stripe's return isn't signed, so PayLink asks Stripe; its webhook (`Stripe-Signature`, refused if older than 5 minutes) confirms it too. | Full and partial |
+| **PayPal** | `WebSvc.PayLink.Connector.PayPal` | A PayPal order per attempt (Test uses the sandbox). PayLink captures the approved order when the payer returns, or at its next status check if they closed the window. Webhooks are verified by PayPal itself, with your webhook ID. | Full and partial |
 | **Simulator** | `WebSvc.PayLink.Connector.Simulator` | Test only. The payer picks Succeed, Fail or Stay pending. | Manual |
 
 **How PayLink follows a payment.** After the payer leaves for a gateway, three things can settle it, whichever comes first: the payer coming back (`/pay/{id}/return`), the gateway's webhook (`POST /hooks/{tenant}/{connector}/{test|live}`, the URL shown on the Payment methods page for you to paste into the gateway's dashboard), or PayLink asking the gateway: every minute for half an hour, then every 15 minutes. An attempt with no result after 24 hours expires, so the payer can try again; one that may already have taken money (`processing`) is never given up on. Every notification is stored, verified or not; only a verified one changes a payment.

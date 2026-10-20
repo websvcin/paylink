@@ -23,6 +23,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.Pa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.CCAvenue", "WebSvc.PayLink.Connector.CCAvenue\WebSvc.PayLink.Connector.CCAvenue.csproj", "{63F3234F-268D-4341-914A-07C4E2628BAB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.Stripe", "WebSvc.PayLink.Connector.Stripe\WebSvc.PayLink.Connector.Stripe.csproj", "{6FF26F7A-DC62-4115-88F0-2A162796F6B0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSvc.PayLink.Connector.PayPal", "WebSvc.PayLink.Connector.PayPal\WebSvc.PayLink.Connector.PayPal.csproj", "{7CD6ECFC-6D7C-483D-A51C-ABA4BC6FCFEE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -72,5 +76,13 @@ Global
 		{63F3234F-268D-4341-914A-07C4E2628BAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{63F3234F-268D-4341-914A-07C4E2628BAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{63F3234F-268D-4341-914A-07C4E2628BAB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6FF26F7A-DC62-4115-88F0-2A162796F6B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FF26F7A-DC62-4115-88F0-2A162796F6B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FF26F7A-DC62-4115-88F0-2A162796F6B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FF26F7A-DC62-4115-88F0-2A162796F6B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7CD6ECFC-6D7C-483D-A51C-ABA4BC6FCFEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CD6ECFC-6D7C-483D-A51C-ABA4BC6FCFEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CD6ECFC-6D7C-483D-A51C-ABA4BC6FCFEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CD6ECFC-6D7C-483D-A51C-ABA4BC6FCFEE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

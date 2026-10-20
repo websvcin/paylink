@@ -63,6 +63,8 @@ public sealed class GatewayHooksController(
         }
 
         var source = new EventSource(new Actor("gateway", connectorId, connector.Manifest.Name, HttpContext.Connection.RemoteIpAddress?.ToString()));
+        if (ev.Dispute is not null)
+            return Ok(new { received = true, matched = await payments.ApplyDisputeEventAsync(c, connectorId, ev, source) });
         if (ev.RefundState is not null || ev.RefundId is not null || ev.RefundGatewayReference is not null)
             return Ok(new { received = true, matched = await payments.ApplyRefundEventAsync(c, connectorId, ev, source) });
 

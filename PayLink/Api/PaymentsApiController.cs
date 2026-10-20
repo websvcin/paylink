@@ -74,6 +74,13 @@ public sealed class PaymentsApiController(PaymentService payments, PlatformSetti
         return new JsonResult(new { @object = "list", data = list.Select(p => PaymentJson.From(p, baseUrl)) }, PaymentJson.Options);
     }
 
+    [HttpGet("disputes")]
+    public async Task<IActionResult> Disputes([FromQuery(Name = "payment_id")] string? paymentId)
+    {
+        var list = await payments.DisputesAsync(Tenant, Key.Livemode, string.IsNullOrEmpty(paymentId) ? null : paymentId);
+        return new JsonResult(new { @object = "list", data = list.Select(PaymentJson.From) }, PaymentJson.Options);
+    }
+
     [HttpPost("payments/{id}/cancel")]
     public async Task<IActionResult> Cancel(string id)
     {

@@ -15,14 +15,16 @@
   <!-- WebSvc.PayLink.* packages: built from ../packages into ../artifacts/packages today, from nuget.org once published.
        Each has its own version; bump the one you changed. -->
   <ItemGroup>
-    <PayLinkLocalPackage Include="WebSvc.PayLink.Abstractions" Version="0.2.0" />
+    <PayLinkLocalPackage Include="WebSvc.PayLink.Abstractions" Version="0.3.0" />
     <PayLinkLocalPackage Include="WebSvc.PayLink.Storage" Version="0.4.0" />
     <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.Simulator" Version="0.1.0" />
     <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.Upi" Version="0.1.0" />
-    <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.Razorpay" Version="0.1.0" />
+    <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.Razorpay" Version="0.2.0" />
     <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.PhonePe" Version="0.1.0" />
     <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.PayU" Version="0.1.0" />
     <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.CCAvenue" Version="0.1.0" />
+    <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.Stripe" Version="0.1.0" />
+    <PayLinkLocalPackage Include="WebSvc.PayLink.Connector.PayPal" Version="0.1.0" />
     <PackageReference Include="@(PayLinkLocalPackage)" />
   </ItemGroup>
 

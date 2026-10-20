@@ -14,6 +14,7 @@ public sealed class PaymentModel(PaymentService payments, WebhookService webhook
     public IReadOnlyList<WebhookDelivery> Deliveries { get; private set; } = [];
     public string CheckoutUrl { get; private set; } = "";
     public IReadOnlyList<Refund> Refunds { get; private set; } = [];
+    public IReadOnlyList<Dispute> Disputes { get; private set; } = [];
     /// <summary>Whether the paying connector can refund through PayLink (otherwise only a manual refund can be recorded).</summary>
     public bool GatewayRefunds { get; private set; }
     public long Refundable { get; private set; }
@@ -25,6 +26,7 @@ public sealed class PaymentModel(PaymentService payments, WebhookService webhook
         if (Payment.Livemode != Livemode) ViewData["Livemode"] = Payment.Livemode;   // show this payment's own mode
         Deliveries = await webhooks.DeliveriesAsync(Tenant, Id);
         Refunds = await payments.RefundsAsync(Tenant, Id);
+        Disputes = await payments.DisputesAsync(Tenant, Payment.Livemode, Payment.Id);
         GatewayRefunds = Payment.Connector is { } c && registry.Get(c) is { Manifest.Capabilities.Refunds: true };
         Refundable = Payment.Amount - Payment.AmountRefunded - Refunds.Where(r => r.Status == RefundStatuses.Pending).Sum(r => r.Amount);
         CheckoutUrl = $"{await settings.GetPublicBaseUrlAsync()}/pay/{Id}";

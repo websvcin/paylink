@@ -1,0 +1,38 @@
+@page "/{slug}/console/disputes"
+@model PayLink.Pages.Console.DisputesModel
+@{
+    ViewData["Title"] = "Disputes";
+    ViewData["Where"] = Model.Tenant.Name;
+    var root = $"/{Model.Tenant.Slug}/console";
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Disputes</h1><p>When a payer asks their bank or card issuer to take a payment back, the gateway tells PayLink. Respond with your evidence on the gateway's dashboard before the date shown; PayLink follows the outcome and sends <code>dispute.*</code> webhooks. Keep a note here of what you sent.</p></div></div>
+
+<div class="card flush">
+    <div class="tbl"><table><thead><tr><th>Payment</th><th>Amount</th><th>Reason</th><th>Status</th><th>Respond by</th><th>Note</th></tr></thead><tbody>
+        @foreach (var d in Model.Disputes)
+        {
+            <tr>
+                <td><a class="mono" href="@root/payments/@d.PaymentId">@d.PaymentId</a><div class="hint">@Model.ConnectorName(d.Connector) · <span class="mono">@d.GatewayRef</span></div></td>
+                <td class="num">@Money.Format(d.Amount, d.Currency)</td>
+                <td>@(d.Reason ?? "—")</td>
+                <td><span class="chip @(d.Status switch { DisputeStatuses.NeedsResponse => "bad", DisputeStatuses.UnderReview => "warn", DisputeStatuses.Won => "good", _ => "" })">@DisputeStatuses.Label(d.Status)</span></td>
+                <td>@(d.IsOpen && d.RespondBy is not null ? Clock.Display(d.RespondBy) : "—")</td>
+                <td>
+                    @if (Model.CanOperate)
+                    {
+                        <form method="post" asp-page-handler="Note" class="actions">
+                            <input type="hidden" name="id" value="@d.Id">
+                            <input name="note" value="@d.Note" maxlength="1000" placeholder="e.g. Sent invoice and delivery proof on 20 Oct" aria-label="Note" style="flex:1 1 200px;width:auto">
+                            <button class="btn sm" type="submit">Save</button>
+                        </form>
+                    }
+                    else { @d.Note }
+                </td>
+            </tr>
+        }
+        @if (Model.Disputes.Count == 0) { <tr><td colspan="6" class="empty">No @Model.ModeName disputes</td></tr> }
+    </tbody></table></div>
+</div>
