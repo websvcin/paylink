@@ -145,6 +145,9 @@ public sealed class Payment
     public string? FailureMessage { get; set; }
     public string? HoldReason { get; set; }
     public long AmountRefunded { get; set; }
+    public string? SettledAt { get; set; }
+    public string? SettlementRef { get; set; }
+    public long? SettlementFee { get; set; }
 
     public bool IsFinal => PaymentStatuses.IsFinal(Status);
     public string? RefundLabel => AmountRefunded <= 0 ? null : AmountRefunded >= Amount ? "Refunded" : "Partly refunded";
@@ -168,6 +171,9 @@ public sealed class Attempt
     public string? ProviderPaymentId { get; set; }
     public string? PaidMethod { get; set; }
     public string? PolledAt { get; set; }
+    public string? IpCountry { get; set; }
+    public string? DeviceId { get; set; }
+    public int? RiskScore { get; set; }
     public string? Ip { get; set; }
     public string? UserAgent { get; set; }
     public string CreatedAt { get; set; } = "";
@@ -362,8 +368,9 @@ public static class WebhookEvents
     public const string Test = "webhook.test";
     public const string RefundSucceeded = "refund.succeeded";
     public const string RefundFailed = "refund.failed";
+    public const string AlertTriggered = "alert.triggered";
 
-    public static readonly string[] All = [Processing, OnHold, Succeeded, Failed, Cancelled, Expired, RefundSucceeded, RefundFailed];
+    public static readonly string[] All = [Processing, OnHold, Succeeded, Failed, Cancelled, Expired, RefundSucceeded, RefundFailed, AlertTriggered];
 
     public static string? ForStatus(string status) => status switch
     {

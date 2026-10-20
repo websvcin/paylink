@@ -1,0 +1,33 @@
+@page "/admin/location"
+@model PayLink.Pages.Admin.LocationModel
+@{
+    ViewData["Title"] = "Location data";
+    ViewData["Where"] = "Platform console";
+    var s = Model.Status;
+}
+@section Nav { <partial name="_AdminNav" /> }
+@section Who { <partial name="_AdminWho" /> }
+
+<div class="head"><div><h1>Location data</h1><p>Optional. With it, tenants' risk rules can use the payer's country and Tor, and the risk score counts an Indian phone paying from abroad. Location comes from the IP address, so it can be wrong behind a VPN; rules that need it are skipped when the country is unknown.</p></div></div>
+
+<div class="grid2">
+    <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="card">
+        <h3>Country database</h3>
+        <p>@(s.Countries ? $"Installed: {s.Database}, built {s.Built:d MMM yyyy}." : "Not installed.")</p>
+        <p class="hint">Download a free country database and upload the .mmdb file: MaxMind <b>GeoLite2 Country</b> (free account at maxmind.com) or <b>DB-IP IP to Country Lite</b> (db-ip.com, CC BY 4.0, credit DB-IP where you show it). Update it monthly.</p>
+        <div class="field"><label for="database">.mmdb file</label><input id="database" name="database" type="file" accept=".mmdb"></div>
+        @if (Model.CanChange) { <div class="actions"><button class="btn pri" type="submit">Upload</button></div> }
+    </form>
+    <form method="post" asp-page-handler="Tor" class="card">
+        <h3>Tor exit list</h3>
+        <p>@(s.TorExits > 0 ? $"{s.TorExits} addresses, updated {s.TorUpdated:d MMM yyyy, HH:mm} UTC." : "Not downloaded.")</p>
+        <p class="hint">Tor's public list of exit nodes, from <code>@PayLink.Infrastructure.GeoLocator.TorListUrl</code>. Refresh it now and then. Other VPNs and proxies aren't detected; that needs a paid database.</p>
+        @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Download now</button></div> }
+    </form>
+</div>
+
+<form method="get" class="card">
+    <h3>Look up an address</h3>
+    <div class="searchbar"><input name="ip" value="@Model.Ip" class="mono" placeholder="203.0.113.7"><button class="btn" type="submit">Look up</button></div>
+    @if (Model.Lookup is not null) { <p>@Model.Lookup</p> }
+</form>

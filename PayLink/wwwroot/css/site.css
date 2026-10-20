@@ -188,3 +188,10 @@ details > summary { cursor: pointer; color: var(--accent); font-size: .9rem; }
 .result .big { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6rem; font-weight: 700; }
 .result .big.good { background: var(--good-soft); color: var(--good); } .result .big.bad { background: var(--bad-soft); color: var(--bad); } .result .big.warn { background: var(--warn-soft); color: var(--warn); }
 @media (max-width: 600px) { .journey li { grid-template-columns: 14px minmax(0, 1fr); } .journey li time { grid-column: 2; order: 2; } .journey li::before { left: 6px; } }
+
+/* Reports: one-series daily bars (accent), 2px gaps, 4px rounded tops anchored to the baseline. */
+.bars { display: flex; align-items: flex-end; gap: 2px; height: 160px; border-bottom: 1px solid var(--line); }
+.bar { flex: 1 1 0; min-width: 2px; height: max(var(--h), 1px); background: var(--accent); border-radius: 4px 4px 0 0; }
+.bar:hover { opacity: .8; }
+.bars-axis { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

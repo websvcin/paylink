@@ -99,7 +99,7 @@ Failure reasons: `payer_cancelled`, `bank_declined`, `insufficient_funds`, `auth
 
 Add endpoints in **Console → Developers**, separately for Test and Live (Live needs https). Each endpoint gets a signing secret (`whsec_…`, shown once).
 
-Events: `payment.processing`, `payment.on_hold`, `payment.succeeded`, `payment.failed`, `payment.cancelled`, `payment.expired`, `refund.succeeded`, `refund.failed`, and `webhook.test` from the **Send test** button.
+Events: `payment.processing`, `payment.on_hold`, `payment.succeeded`, `payment.failed`, `payment.cancelled`, `payment.expired`, `refund.succeeded`, `refund.failed`, `alert.triggered` (Live endpoints only; `data` has `kind`, `threshold`, `window_minutes` and a readable `message`), and `webhook.test` from the **Send test** button.
 
 ```
 POST https://acme.in/hooks/paylink

@@ -1,0 +1,47 @@
+@page "/{slug}/console/alerts"
+@model PayLink.Pages.Console.AlertsModel
+@{
+    ViewData["Title"] = "Alerts";
+    ViewData["Where"] = Model.Tenant.Name;
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Alerts</h1><p>Hear about trouble on live payments without watching the console. Each alert fires at most once an hour, as an <code>alert.triggered</code> webhook to your live endpoints and an email to this account's owners and admins (when the platform has email set up).</p></div></div>
+
+<div class="card flush">
+    <div class="tbl"><table><thead><tr><th>Alert when</th><th>Window</th><th>By</th><th>Last fired</th><th></th></tr></thead><tbody>
+        @foreach (var r in Model.Rules)
+        {
+            var k = AlertService.Kinds.FirstOrDefault(x => x.Kind == r.Kind);
+            <tr>
+                <td>@k.Label <b>@(r.Kind == "refund_above" ? Money.Format(r.Threshold, "INR") : r.Threshold.ToString())</b> @(r.Kind == "refund_above" ? "" : k.Unit)</td>
+                <td>@r.WindowMinutes min</td><td>@r.Channel</td><td class="hint">@Clock.Short(r.LastFiredAt)</td>
+                <td>@if (Model.CanConfigure) { <form method="post" asp-page-handler="Remove" class="inline"><input type="hidden" name="id" value="@r.Id"><button class="btn sm danger" type="submit">Remove</button></form> }</td>
+            </tr>
+        }
+        @if (Model.Rules.Count == 0) { <tr><td colspan="5" class="empty">No alerts yet</td></tr> }
+    </tbody></table></div>
+</div>
+
+@if (Model.CanConfigure)
+{
+    <form method="post" asp-page-handler="Add" class="card">
+        <h3>Add an alert</h3>
+        <div class="grid3">
+            <div class="field"><label for="kind">When</label><select id="kind" name="kind">@foreach (var k in AlertService.Kinds) { <option value="@k.Kind">@k.Label (@k.Unit)</option> }</select></div>
+            <div class="field"><label for="threshold">Value</label><input id="threshold" name="threshold" required placeholder="e.g. 80, 30, 10000"></div>
+            <div class="field"><label for="windowMinutes">Window (minutes)</label><input id="windowMinutes" name="windowMinutes" type="number" value="60" min="5" max="1440"></div>
+        </div>
+        <div class="field"><label for="channel">Send</label><select id="channel" name="channel"><option value="both">Webhook and email</option><option value="webhook">Webhook only</option><option value="email">Email only</option></select></div>
+        <div class="actions"><button class="btn pri" type="submit">Add alert</button></div>
+    </form>
+}
+
+<div class="card">
+    <h3>Recent alerts</h3>
+    <div class="activity">
+        @foreach (var e in Model.Recent) { <div><time>@Clock.Short(e.At)</time><span>@e.Message@(e.Emailed ? " · emailed" : "")</span></div> }
+        @if (Model.Recent.Count == 0) { <p class="hint">None yet.</p> }
+    </div>
+</div>

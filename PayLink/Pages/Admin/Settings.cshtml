@@ -47,6 +47,21 @@
     </div>
 </div>
 
+<form method="post" asp-page-handler="Smtp" class="card">
+    <h3>Email (SMTP)</h3>
+    <p class="hint">Optional. Used for tenants' alerts. The password is stored encrypted.</p>
+    <div class="grid3">
+        <div class="field"><label for="smtpHost">Server</label><input id="smtpHost" name="host" class="mono" value="@Model.Smtp?.Host" placeholder="smtp.example.com (blank: off)"></div>
+        <div class="field"><label for="smtpPort">Port</label><input id="smtpPort" name="port" type="number" value="@(Model.Smtp?.Port ?? 587)"></div>
+        <div class="field"><label for="smtpFrom">From</label><input id="smtpFrom" name="from" type="email" value="@Model.Smtp?.From" placeholder="alerts@example.com"></div>
+        <div class="field"><label for="smtpUser">User</label><input id="smtpUser" name="user" value="@Model.Smtp?.User" autocomplete="off"></div>
+        <div class="field"><label for="smtpPassword">Password</label><input id="smtpPassword" name="password" type="password" autocomplete="new-password" placeholder="@(string.IsNullOrEmpty(Model.Smtp?.Password) ? "" : "Saved. Leave blank to keep it.")"></div>
+        <div class="field"><label for="testTo">Send a test to</label><input id="testTo" name="testTo" type="email"></div>
+    </div>
+    <label class="check"><input type="checkbox" name="ssl" value="true" checked="@(Model.Smtp?.Ssl ?? true)"><span>Use TLS</span></label>
+    @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Save</button></div> }
+</form>
+
 <form method="post" asp-page-handler="Domain" class="card">
     <h3>Tenant subdomains</h3>
     <p class="hint">Give tenants their own console address, <code>acme.@(Model.TenantDomain.Length == 0 ? "paylink.example.com" : Model.TenantDomain)</code>. Point wildcard DNS (<code>*.your-domain</code>) at PayLink and serve a wildcard TLS certificate, then switch each tenant on its page. Leave blank to keep everyone on <code>/{slug}/console</code>.</p>

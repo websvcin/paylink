@@ -6,16 +6,21 @@
 
 ## Status
 
-**Phase 2 (this release): gateways.** On top of the Phase 1 payment core, Razorpay, PhonePe, PayU and CCAvenue are connector packages a merchant turns on in the console, with signed callbacks and webhooks, status polling and refunds. Switching a merchant from UPI to Razorpay is a console setting.
+**Phase 3 (this release): platform operations and insight.** On top of the Phase 2 gateways: a connector catalog the platform controls, limits, subdomain consoles, moving databases, a live dashboard, and for merchants a risk score with location rules, reports, alerts and settlement reconciliation.
 
-| Works today | Coming next |
+| Works today | Coming next (Phase 4) |
 |---|---|
-| **Gateways**: Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form); signed callbacks and webhooks; status polling; full and partial refunds | Connector catalog: install, allow, drain from Admin; runtime install from nuget.org (Phase 3) |
-| **Payments API** (`/api/v1`): create, get, list, cancel, refund; `Idempotency-Key`; test and live keys. See [docs/payments-api.md](../docs/payments-api.md) | Platform limits, subdomains, moving databases, platform dashboard (Phase 3) |
-| **Hosted checkout** at `/pay/{id}`: the merchant's methods, retry with another method, return to the merchant | Risk score, location and VPN rules, funnel and failure reports, alerts, settlement reconciliation (Phase 3) |
-| **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds | Payment links, JS drop-in, routing and failover, PayPal and Stripe, UPI statement matching, PostgreSQL, custom domains, reporting API, CrudApi, disputes, FileLink (Phase 4) |
-| **Simulator** for Test | |
-| Payment journey (append-only events), statuses that only move forward, signed webhooks with retries, risk rules and review holds | |
+| **Gateways**: Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form); signed callbacks and webhooks; status polling; full and partial refunds | Payment links (`/l/{code}`) and a JS drop-in button |
+| **Payments API** (`/api/v1`): create, get, list, cancel, refund; `Idempotency-Key`; test and live keys. See [docs/payments-api.md](../docs/payments-api.md) | Routing and failover between gateways |
+| **Hosted checkout** at `/pay/{id}`: the merchant's methods, retry with another method, return to the merchant | PayPal and Stripe connectors |
+| **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds | UPI bank-statement matching |
+| **Connector catalog** (Admin): install, allow, drain, uninstall; install connector packages from nuget.org at runtime (allowed ID prefixes only) | PostgreSQL |
+| **Platform**: amount and currency limits, tenant consoles on subdomains, move a tenant's or the platform's database, live dashboard, backup download | Custom domains, reporting API |
+| **Risk**: rules by amount, velocity, country (block/allow), Tor, phone country vs. location, and a 0–100 score from those signals; review holds. Location from an optional MaxMind-format database (Admin → Location data) | Connect CrudApi, disputes, FileLink file storage |
+| **Reports**: funnel, success rate, failure reasons, methods, daily volume; CSV export | |
+| **Alerts**: low success rate, UPI waiting, large refunds, risk blocks, gateway errors; by webhook (`alert.triggered`) and email (Admin → Settings → Email) | |
+| **Reconciliation**: upload a gateway's settlement CSV, map its columns (guessed for you), match lines to payments, see mismatches and unknown lines, daily close and unsettled payments | |
+| **Simulator** for Test; payment journey (append-only events), statuses that only move forward, signed webhooks with retries | |
 | Tenant developer keys (`tdk_`) and API; API request log; console with Test/Live switch | |
 | Setup: new or restore (backup .zip or bootstrap.db), encryption key inside bootstrap.db (or `PayLink__MasterKey`), SQLite/MySQL platform and tenant databases, auto-provisioning (tested before saving), LoginLink with clear credential checks | |
 
@@ -42,7 +47,9 @@ Open `http://localhost:8080/setup`. Or, from this folder, `docker compose up -d`
 
 Admin → Settings chooses which database options tenants see at signup (SQLite, their own MySQL, auto-provisioned MySQL).
 
-Back up `App_Data/keys`. `master.key` encrypts every stored secret (connection strings, client secrets); without it they can't be read.
+Back up the data folder, or download a backup from **Admin → Settings → Backup** (a .zip of every SQLite database). The encryption key for stored secrets (connection strings, client secrets) lives inside `bootstrap.db`, unless you set `PayLink__MasterKey`; then keep that value safe too, since without it they can't be read. A backup restores at setup step 2.
+
+Optional extras in the data folder: `geo/` (a MaxMind-format country database and the Tor exit list, from **Admin → Location data**), `connectors/` (connector packages installed from nuget.org), `files/` (UPI screenshots).
 
 ## How tenants are created
 

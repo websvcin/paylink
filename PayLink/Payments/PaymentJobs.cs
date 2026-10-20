@@ -36,6 +36,7 @@ public sealed class PaymentJobs(IServiceProvider services, BootstrapStore bootst
         var payments = scope.ServiceProvider.GetRequiredService<PaymentService>();
         var webhooks = scope.ServiceProvider.GetRequiredService<WebhookService>();
         var health = scope.ServiceProvider.GetRequiredService<HealthState>();
+        var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
         foreach (var tenant in await repo.TenantsAsync(take: int.MaxValue))
         {
             if (!tenant.IsActive || health.DegradedTenants.Contains(tenant.Slug) || ct.IsCancellationRequested) continue;
@@ -44,6 +45,7 @@ public sealed class PaymentJobs(IServiceProvider services, BootstrapStore bootst
                 await payments.ExpireDueAsync(tenant);
                 await payments.PollAsync(tenant, ct);
                 await payments.PollRefundsAsync(tenant, ct);
+                await alerts.EvaluateAsync(tenant, ct);
                 await webhooks.DeliverDueAsync(tenant, ct);
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)

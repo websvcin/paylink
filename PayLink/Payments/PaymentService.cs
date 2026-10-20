@@ -29,8 +29,27 @@ public sealed record PaymentResult(Payment? Payment, PaymentError? Error, bool R
 /// <summary>Who caused a change, for the payment's journey.</summary>
 public sealed record EventSource(Actor Actor, string? UserAgent = null)
 {
-    public static EventSource Payer(HttpContext http) =>
-        new(new Actor("payer", null, "Payer", http.Connection.RemoteIpAddress?.ToString()), Trim(http.Request.Headers.UserAgent.ToString(), 500));
+    public const string DeviceCookie = "paylink_device";
+    /// <summary>The payer's browser, from a cookie the checkout sets; NewDevice when it had none yet (risk also treats a device with no earlier attempts as new).</summary>
+    public string? DeviceId { get; init; }
+    public bool NewDevice { get; init; }
+
+    public static EventSource Payer(HttpContext http)
+    {
+        var device = http.Request.Cookies[DeviceCookie] ?? http.Items[DeviceCookie] as string;
+        var isNew = string.IsNullOrEmpty(http.Request.Cookies[DeviceCookie]);
+        if (string.IsNullOrEmpty(device))
+        {
+            device = Ids.New("dev", 16);
+            http.Items[DeviceCookie] = device;   // once per request
+            http.Response.Cookies.Append(DeviceCookie, device, new CookieOptions
+            {
+                HttpOnly = true, Secure = http.Request.IsHttps, SameSite = SameSiteMode.Lax, MaxAge = TimeSpan.FromDays(365), Path = "/pay",
+            });
+        }
+        return new(new Actor("payer", null, "Payer", http.Connection.RemoteIpAddress?.ToString()), Trim(http.Request.Headers.UserAgent.ToString(), 500))
+        { DeviceId = device, NewDevice = isNew };
+    }
     public static readonly EventSource System = new(Actor.System);
     private static string? Trim(string? value, int max) => string.IsNullOrEmpty(value) ? null : value.Length <= max ? value : value[..max];
 }
@@ -46,6 +65,7 @@ public sealed partial class PaymentService(
     ConnectorRegistry registry,
     ConnectorSettingsService methods,
     WebhookService webhooks,
+    IGeoLocator geo,
     ILogger<PaymentService> logger)
 {
     public const int MaxAttempts = 5;
@@ -178,7 +198,14 @@ public sealed partial class PaymentService(
             return (PaymentResult.Fail(p, "too_many_attempts", "Too many attempts. Ask the merchant for a new payment link."), null);
         }
 
-        var decision = await RiskEngine.OnAttemptAsync(c, await RulesAsync(c), source.Actor.Ip);
+        var country = geo.Country(source.Actor.Ip);
+        // New device: this browser has never made an attempt with this tenant (the cookie alone is set on the first page view).
+        var newDevice = source.NewDevice || (source.DeviceId is { } deviceId &&
+            await c.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM attempts WHERE device_id = @deviceId;", new { deviceId }) == 0);
+        var decision = await RiskEngine.OnAttemptAsync(c, await RulesAsync(c),
+            new RiskEngine.AttemptContext(p, source.Actor.Ip, country, geo.IsTor(source.Actor.Ip), newDevice, p.Livemode));
+        await AppendAsync(c, p, null, "risk.scored", p.Status, p.Status, source,
+            new { score = decision.Score, signals = decision.Signals, country, decision = decision.Action });
         if (decision.Blocked)
         {
             await MoveAsync(c, p, PaymentStatuses.Failed, "risk.blocked", source, RuleData(decision), x =>
@@ -203,10 +230,11 @@ public sealed partial class PaymentService(
         {
             Id = Ids.New("att", 14), PaymentId = p.Id, Connector = connector.Manifest.Id, Method = ConnectorRegistry.MethodOf(connector.Manifest),
             Status = AttemptStatuses.RequiresAction, Ip = source.Actor.Ip, UserAgent = source.UserAgent, CreatedAt = now, UpdatedAt = now,
+            IpCountry = country, DeviceId = source.DeviceId, RiskScore = decision.Score,
         };
         await c.ExecuteAsync(
-            "INSERT INTO attempts (id, payment_id, connector, method, status, ip, user_agent, created_at, updated_at) " +
-            "VALUES (@Id, @PaymentId, @Connector, @Method, @Status, @Ip, @UserAgent, @CreatedAt, @UpdatedAt);", attempt);
+            "INSERT INTO attempts (id, payment_id, connector, method, status, ip, user_agent, created_at, updated_at, ip_country, device_id, risk_score) " +
+            "VALUES (@Id, @PaymentId, @Connector, @Method, @Status, @Ip, @UserAgent, @CreatedAt, @UpdatedAt, @IpCountry, @DeviceId, @RiskScore);", attempt);
         p.AttemptCount++;
 
         NextAction next;

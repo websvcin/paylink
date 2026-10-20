@@ -31,6 +31,7 @@ public static class JourneyText
             "payment.cancelled" => ($"Cancelled{(D("note") is { Length: > 0 } n ? " · " + n : "")}", "bad"),
             "payment.expired" => ("Expired before it was paid", ""),
             "payment.too_many_attempts" => ("Stopped: too many attempts", "bad"),
+            "risk.scored" => ($"Risk score {D("score")}{(D("country") is { Length: > 0 } co ? " · from " + co : "")}{(D("signals") is { Length: > 2 } sg ? " · " + sg.Trim('[', ']').Replace("\"", "") : "")}", int.TryParse(D("score"), out var sv) && sv >= 50 ? "warn" : ""),
             "risk.blocked" => ($"Blocked by risk rule: {D("kind")} = {D("value")}", "bad"),
             "risk.review" => ($"Held for review by rule: {D("kind")} = {D("value")}", "warn"),
             "risk.released" => ($"Released from review · {D("note")}", "good"),

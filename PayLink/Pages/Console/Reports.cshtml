@@ -1,0 +1,69 @@
+@page "/{slug}/console/reports"
+@model PayLink.Pages.Console.ReportsModel
+@{
+    ViewData["Title"] = "Reports";
+    ViewData["Where"] = Model.Tenant.Name;
+    var r = Model.Report;
+    var f = r.Funnel;
+    string Pct(long part, long whole) => whole == 0 ? "—" : $"{100.0 * part / whole:0}%";
+    var maxDay = Math.Max(1, r.Days.Max(d => d.Amount));
+    string Dur(double? s) => s is null ? "—" : s < 90 ? $"{s:0} s" : s < 5400 ? $"{s / 60:0} min" : $"{s / 3600:0.#} h";
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Reports</h1><p>@(Model.Livemode ? "Live" : "Test") payments created in the last @Model.Days days.</p></div>
+    <div class="actions">
+        @foreach (var d in new[] { 7, 30, 90 }) { <a class="btn sm @(Model.Days == d ? "pri" : "")" href="?days=@d">@d days</a> }
+        <a class="btn sm" href="?handler=Csv&days=@Model.Days">Download CSV</a>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat"><span>Received</span><b>@Money.Format(r.Days.Sum(d => d.Amount), "INR")</b><span style="text-transform:none;letter-spacing:0">@f.Succeeded payment(s)@(r.Refunded > 0 ? $" · {Money.Format(r.Refunded, "INR")} refunded" : "")</span></div>
+    <div class="stat"><span>Success rate</span><b>@Pct(f.Succeeded, f.Created)</b><span style="text-transform:none;letter-spacing:0">of payments created</span></div>
+    <div class="stat"><span>Time to pay</span><b>@Dur(r.MedianTimeToPaySeconds)</b><span style="text-transform:none;letter-spacing:0">median, created → paid</span></div>
+    <div class="stat"><span>Payers who chose a method</span><b>@Pct(f.Chose, f.Opened)</b><span style="text-transform:none;letter-spacing:0">of checkouts opened</span></div>
+</div>
+
+<div class="card">
+    <h3>Received per day</h3>
+    <div class="bars" role="img" aria-label="Amount received per day; the table below has the numbers">
+        @foreach (var d in r.Days)
+        {
+            <div class="bar" style="--h:@((int)Math.Round(100.0 * d.Amount / maxDay))%" title="@d.Date.ToString("d MMM"): @Money.Format(d.Amount, "INR") from @d.Count payment(s)"><span class="sr">@d.Date.ToString("d MMM"): @Money.Format(d.Amount, "INR")</span></div>
+        }
+    </div>
+    <div class="bars-axis"><span>@r.Days.First().Date.ToString("d MMM")</span><span>@r.Days.Last().Date.ToString("d MMM")</span></div>
+    <details><summary>As a table</summary>
+        <div class="tbl"><table><thead><tr><th>Day</th><th>Payments</th><th>Received</th></tr></thead><tbody>
+            @foreach (var d in r.Days.Where(d => d.Count > 0)) { <tr><td>@d.Date.ToString("ddd d MMM")</td><td class="num">@d.Count</td><td class="num">@Money.Format(d.Amount, "INR")</td></tr> }
+        </tbody></table></div>
+    </details>
+</div>
+
+<div class="grid2">
+    <div class="card">
+        <h3>Checkout funnel</h3>
+        <div class="tbl"><table><tbody>
+            <tr><td>Payments created</td><td class="num">@f.Created</td><td class="hint"></td></tr>
+            <tr><td>Checkout opened</td><td class="num">@f.Opened</td><td class="hint">@Pct(f.Opened, f.Created)</td></tr>
+            <tr><td>Chose a method</td><td class="num">@f.Chose</td><td class="hint">@Pct(f.Chose, f.Opened)</td></tr>
+            <tr><td>Paid</td><td class="num">@f.Succeeded</td><td class="hint">@Pct(f.Succeeded, f.Chose)</td></tr>
+        </tbody></table></div>
+    </div>
+    <div class="card">
+        <h3>By method</h3>
+        <div class="tbl"><table><thead><tr><th>Method</th><th>Attempts</th><th>Succeeded</th><th>Time</th></tr></thead><tbody>
+            @foreach (var c in r.Connectors) { <tr><td>@c.Connector</td><td class="num">@c.Attempts</td><td class="num">@c.Succeeded (@Pct(c.Succeeded, c.Attempts))</td><td class="num">@Dur(c.MedianSeconds)</td></tr> }
+            @if (r.Connectors.Count == 0) { <tr><td colspan="4" class="empty">No attempts yet</td></tr> }
+        </tbody></table></div>
+    </div>
+</div>
+
+<div class="card flush">
+    <div class="tbl"><table><thead><tr><th>Why attempts didn't succeed</th><th>Method</th><th>Attempts</th></tr></thead><tbody>
+        @foreach (var x in r.Failures) { <tr><td>@x.Reason</td><td>@x.Connector</td><td class="num">@x.Count</td></tr> }
+        @if (r.Failures.Count == 0) { <tr><td colspan="3" class="empty">No failed attempts</td></tr> }
+    </tbody></table></div>
+</div>

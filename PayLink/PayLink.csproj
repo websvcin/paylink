@@ -7,7 +7,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>PayLink</RootNamespace>
     <AssemblyName>PayLink</AssemblyName>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <!-- The test project lives inside this folder; keep its files (and its bin/obj) out of the app. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);PayLink.Tests/**;App_Data/**</DefaultItemExcludes>
   </PropertyGroup>
@@ -29,6 +29,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.1.2" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="MaxMind.Db" Version="4.1.0" />
   </ItemGroup>
 
   <PropertyGroup>

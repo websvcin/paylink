@@ -23,6 +23,10 @@ public static class DataFolder
                 "In setup step 4 (Platform database), if you choose SQLite."),
             Folder("tenants/", "One SQLite file per tenant that chose SQLite: its team, settings, payments and audit log.",
                 "When the first tenant on SQLite is created."),
+            Folder("geo/", "Optional location data for risk rules: country.mmdb (uploaded in Admin → Location data) and Tor's exit list.",
+                "When a platform admin adds location data."),
+            Folder("connectors/", "Connector packages installed at runtime (Admin → Connector catalog), one folder per package and version.",
+                "When a connector package is installed."),
             Folder("files/", "Screenshots payers attach to PayLink UPI payments, one folder per tenant. Shown only to the tenant's team; every view is audited.",
                 "When a payer first uploads a screenshot."),
         ];

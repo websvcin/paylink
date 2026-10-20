@@ -1,0 +1,76 @@
+@page "/{slug}/console/reconciliation"
+@model PayLink.Pages.Console.ReconciliationModel
+@{
+    ViewData["Title"] = "Reconciliation";
+    ViewData["Where"] = Model.Tenant.Name;
+    var root = $"/{Model.Tenant.Slug}/console";
+}
+@section Nav { <partial name="_ConsoleNav" /> }
+@section Who { <partial name="_ConsoleWho" /> }
+
+<div class="head"><div><h1>Reconciliation</h1><p>Did the money arrive? Upload a gateway's settlement report and PayLink matches each line to a payment: by the gateway's payment id, PayLink's ids, or the UTR. Amounts that differ, and lines PayLink doesn't know, are listed for you.</p></div></div>
+
+@if (Model.Headers is { } headers && Model.Guess is { } g)
+{
+    string Opts(int? selected, bool optional) =>
+        (optional ? $"<option value=\"-1\"{(selected is null ? " selected" : "")}>(none)</option>" : "") +
+        string.Join("", headers.Select((h, i) => $"<option value=\"{i}\"{(selected == i ? " selected" : "")}>{System.Net.WebUtility.HtmlEncode(h)}</option>"));
+    <form method="post" asp-page-handler="Import" class="card">
+        <input type="hidden" name="token" value="@Model.Mapping">
+        <h3>Which column is which?</h3>
+        <p class="hint">PayLink guessed from the column names; check them.</p>
+        <div class="grid3">
+            <div class="field"><label>Gateway</label><select name="connector"><option value="">(any)</option>@foreach (var gw in Model.Gateways) { <option value="@gw">@gw</option> }</select></div>
+            <div class="field"><label>Payment reference</label><select name="reference">@Html.Raw(Opts(g.Reference, false))</select></div>
+            <div class="field"><label>Gross amount</label><select name="gross">@Html.Raw(Opts(g.Gross, false))</select></div>
+            <div class="field"><label>Fee</label><select name="fee">@Html.Raw(Opts(g.Fee, true))</select></div>
+            <div class="field"><label>Tax (GST)</label><select name="tax">@Html.Raw(Opts(g.Tax, true))</select></div>
+            <div class="field"><label>Net</label><select name="net">@Html.Raw(Opts(g.Net, true))</select></div>
+            <div class="field"><label>Settlement date</label><select name="date">@Html.Raw(Opts(g.Date, true))</select></div>
+            <div class="field"><label>Settlement reference</label><select name="settlementRef">@Html.Raw(Opts(g.SettlementRef, true))</select></div>
+        </div>
+        <label class="check"><input type="checkbox" name="paise" value="true"><span>Amounts are in paise (not rupees)</span></label>
+        <div class="actions"><button class="btn pri" type="submit">Match</button></div>
+    </form>
+}
+else if (Model.CanOperate)
+{
+    <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="card">
+        <h3>Upload a settlement report</h3>
+        <div class="field"><label for="report">CSV file</label><input id="report" name="report" type="file" accept=".csv,text/csv"><span class="hint">From the gateway's dashboard: Razorpay Settlements → Download (recon report), PayU Settlements, PhonePe or CCAvenue settlement reports.</span></div>
+        <div class="actions"><button class="btn pri" type="submit">Upload</button></div>
+    </form>
+}
+
+<div class="grid2">
+    <div class="card flush">
+        <div class="tbl"><table><thead><tr><th>Daily close</th><th>Lines</th><th>Gross</th><th>Fees + tax</th><th>Net</th></tr></thead><tbody>
+            @foreach (var d in Model.Close) { <tr><td>@d.Day</td><td class="num">@d.Lines</td><td class="num">@Money.Format(d.Gross, "INR")</td><td class="num">@Money.Format(d.Fees + d.Tax, "INR")</td><td class="num">@Money.Format(d.Net, "INR")</td></tr> }
+            @if (Model.Close.Count == 0) { <tr><td colspan="5" class="empty">No settlements matched yet</td></tr> }
+        </tbody></table></div>
+    </div>
+    <div class="card flush">
+        <div class="tbl"><table><thead><tr><th>Report</th><th>Lines</th><th>Matched</th><th>To check</th><th>Not found</th></tr></thead><tbody>
+            @foreach (var b in Model.Batches) { <tr><td>@b.FileName<br><span class="hint">@Clock.Short(b.UploadedAt) · @b.UploadedBy</span></td><td class="num">@b.LineCount</td><td class="num">@b.Matched</td><td class="num">@b.Mismatched</td><td class="num">@b.Unmatched</td></tr> }
+            @if (Model.Batches.Count == 0) { <tr><td colspan="5" class="empty">No reports uploaded</td></tr> }
+        </tbody></table></div>
+    </div>
+</div>
+
+<div class="card flush">
+    <div class="tbl"><table><thead><tr><th>Needs a look</th><th>Gross</th><th>Status</th><th>Why</th></tr></thead><tbody>
+        @foreach (var l in Model.Problems)
+        {
+            <tr><td class="mono">@l.Reference@if (l.PaymentId is not null) { <br><a href="@root/payments/@l.PaymentId">@l.PaymentId</a> }</td><td class="num">@Money.Format(l.Gross, "INR")</td>
+                <td><span class="chip @(l.MatchStatus == "unmatched" ? "bad" : "warn")">@l.MatchStatus.Replace('_', ' ')</span></td><td>@(l.Note ?? "Not a PayLink payment, or paid outside PayLink")</td></tr>
+        }
+        @if (Model.Problems.Count == 0) { <tr><td colspan="4" class="empty">Nothing to check</td></tr> }
+    </tbody></table></div>
+</div>
+
+<div class="card flush">
+    <div class="tbl"><table><thead><tr><th>Paid over 3 days ago, not settled yet</th><th>Amount</th><th>Method</th><th>Paid</th></tr></thead><tbody>
+        @foreach (var p in Model.Unsettled) { <tr><td><a class="mono" href="@root/payments/@p.Id">@p.Id</a></td><td class="num">@Money.Format(p.Amount, p.Currency)</td><td>@p.Connector</td><td class="hint">@Clock.Short(p.PaidAt)</td></tr> }
+        @if (Model.Unsettled.Count == 0) { <tr><td colspan="4" class="empty">Every live gateway payment older than 3 days is settled</td></tr> }
+    </tbody></table></div>
+</div>

@@ -35,6 +35,25 @@ public sealed class SettingsModel(PlatformSettings settings, PlatformDb platform
     public string TenantDomain { get; private set; } = "";
     public string PlatformDescription { get; private set; } = "";
 
+    public SmtpSettings? Smtp { get; private set; }
+
+    public async Task<IActionResult> OnPostSmtpAsync(string? host, int port, bool ssl, string? user, string? password, string? from, string? testTo)
+    {
+        var sender = HttpContext.RequestServices.GetRequiredService<SmtpEmailSender>();
+        if (string.IsNullOrWhiteSpace(host)) { await sender.SaveAsync(null); return Done("Email is off. Alerts go by webhook only."); }
+        if (string.IsNullOrWhiteSpace(from) || !from.Contains('@')) return Failed("Enter the From address, e.g. alerts@paylink.websvc.in.");
+        var saved = await sender.GetAsync();
+        await sender.SaveAsync(new SmtpSettings
+        {
+            Host = host.Trim(), Port = port <= 0 ? 587 : port, Ssl = ssl, User = string.IsNullOrWhiteSpace(user) ? null : user.Trim(),
+            Password = string.IsNullOrEmpty(password) ? saved?.Password : password, From = from.Trim(),
+        });
+        await platformDb.AuditAsync(Me, "settings.smtp_changed", host.Trim());
+        if (!string.IsNullOrWhiteSpace(testTo))
+            return await sender.SendAsync([testTo.Trim()], "PayLink test email", "Email from PayLink works.") ? Done($"Saved, and a test email went to {testTo}.") : Failed("Saved, but the test email failed. Check the server log.");
+        return Done("Saved.");
+    }
+
     public async Task<IActionResult> OnPostDomainAsync(string? tenantDomain)
     {
         var d = (tenantDomain ?? "").Trim().TrimStart('*').TrimStart('.').TrimEnd('.').ToLowerInvariant();
@@ -76,6 +95,7 @@ public sealed class SettingsModel(PlatformSettings settings, PlatformDb platform
         LimitMax = max is { } m ? (m / 100m).ToString("0.##") : "";
         LimitCurrencies = cur is null ? "" : string.Join(", ", cur);
         TenantDomain = await settings.GetTenantDomainAsync();
+        Smtp = await HttpContext.RequestServices.GetRequiredService<SmtpEmailSender>().GetAsync();
         PlatformDescription = (await platformDb.TargetAsync()).Describe();
         SignupOpen = await settings.IsSignupOpenAsync();
         PublicBaseUrl = await settings.GetPublicBaseUrlAsync();
