@@ -4,8 +4,23 @@ using PayLink.Platform;
 
 namespace PayLink.Pages.Admin;
 
-public sealed class SettingsModel(PlatformSettings settings, PlatformDb platformDb, AppPaths paths, PayLink.Payments.ConnectorRegistry connectors) : AdminPage
+public sealed class SettingsModel(PlatformSettings settings, PlatformDb platformDb, AppPaths paths, PayLink.Payments.ConnectorRegistry connectors,
+    BackupService backups, SecretProtector secrets) : AdminPage
 {
+    public string KeySource => secrets.Source;
+    public string KeyFingerprint => secrets.Fingerprint;
+
+    /// <summary>A .zip of the data folder (consistent SQLite copies and uploaded files). Admins only; every download is audited.</summary>
+    public async Task<IActionResult> OnGetBackupAsync()
+    {
+        if (!CanChange) return Forbid();
+        var temp = Path.GetTempFileName();
+        await using (var f = System.IO.File.Create(temp)) await backups.WriteBackupAsync(f);
+        await platformDb.AuditAsync(Me, "backup.downloaded", null);
+        var stream = new FileStream(temp, FileMode.Open, FileAccess.Read, FileShare.None, 81920, FileOptions.DeleteOnClose);
+        return File(stream, "application/zip", $"paylink-backup-{DateTime.UtcNow:yyyyMMdd-HHmm}.zip");
+    }
+
     public IReadOnlyList<WebSvc.PayLink.Abstractions.IPaymentConnector> Connectors => connectors.All;
     public string DataRoot => paths.DataRoot;
     public IReadOnlyList<DataFolderItem> DataFolderItems => DataFolder.Describe(paths);

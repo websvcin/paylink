@@ -236,7 +236,7 @@ public sealed class TenantProvisioning(
             {
                 Slug = slug, Name = request.Name.Trim(), Status = "active",
                 DbMode = request.Database.Mode.ToString().ToLowerInvariant(), DbEngine = target.Engine.ToString(),
-                DbDisplay = target.Describe(), DbConnectionEnc = secrets.ProtectJson(target),
+                DbDisplay = target.Describe(), DbConnectionEnc = secrets.ProtectJson(paths.Portable(target)),
                 DbProviderRefEnc = secrets.ProtectOrNull(providerRef is null ? null : $"{provisioner!.Kind}|{providerRef}"),
                 LoginlinkOrg = request.Org.OrgSlug, LoginlinkIssuer = request.Org.Issuer, LoginlinkMode = request.Org.Mode,
                 ConsoleAppId = request.Org.AppId, ConsoleClientId = request.Org.ClientId,

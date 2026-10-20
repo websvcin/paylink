@@ -16,6 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<AppPaths>();
 builder.Services.AddSingleton<SecretProtector>();
 builder.Services.AddSingleton<BootstrapStore>();
+builder.Services.AddSingleton<BackupService>();
 builder.Services.AddSingleton<PlatformDb>();
 builder.Services.AddSingleton<PlatformSettings>();
 builder.Services.AddSingleton<PlatformRepository>();
@@ -46,12 +47,13 @@ builder.Services.AddHttpClient(WebhookService.HttpClientName, c => c.Timeout = T
 builder.Services.AddHttpClient("loginlink", c => c.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient("hosting", c => c.Timeout = TimeSpan.FromSeconds(60));
 
-// Cookie encryption keys live next to the other keys, so a restart doesn't sign everyone out.
+// Cookie and form-signing keys live in bootstrap.db with the secret key, so the data folder is self-contained.
 var dataRoot = builder.Configuration["PayLink:DataRoot"] is { Length: > 0 } configured
     ? configured : Path.Combine(builder.Environment.ContentRootPath, "App_Data");
-builder.Services.AddDataProtection()
-    .SetApplicationName("PayLink")
-    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(dataRoot, "keys", "dataprotection")));
+Directory.CreateDirectory(dataRoot);
+builder.Services.AddDataProtection().SetApplicationName("PayLink");
+builder.Services.Configure<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>(o =>
+    o.XmlRepository = new BootstrapKeyRepository(Path.Combine(Path.GetFullPath(dataRoot), "bootstrap.db"), Path.Combine(Path.GetFullPath(dataRoot), "keys", "dataprotection")));
 
 builder.Services
     .AddAuthentication(AuthSchemes.Console)

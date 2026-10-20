@@ -15,6 +15,9 @@ public static class Flows
         Dictionary<string, string?>? hosting = null, Dictionary<string, string?>? database = null, bool withPlatformApi = true)
     {
         var r = await browser.SubmitAsync("/setup", "Unlock", F(("Code", await app.SetupCodeAsync())));
+        Assert.Equal("/setup?step=start", r.Headers.Location?.OriginalString);
+
+        r = await browser.SubmitAsync("/setup?step=start", "StartNew", F(("keyPlace", "bootstrap"), ("understood", "true")));
         Assert.Equal("/setup?step=hosting", r.Headers.Location?.OriginalString);
 
         r = await browser.SubmitAsync("/setup?step=hosting", "Hosting", hosting ?? F(("action", "skip")));

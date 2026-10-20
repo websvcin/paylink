@@ -28,10 +28,16 @@ public sealed class TenantDb(SecretProtector secrets, AppPaths paths, ILogger<Te
     private readonly ConcurrentDictionary<long, DatabaseTarget> _targets = new();
 
     public DatabaseTarget Target(TenantRecord tenant) =>
-        _targets.GetOrAdd(tenant.Id, _ => secrets.UnprotectJson<DatabaseTarget>(tenant.DbConnectionEnc)
-            ?? throw new InvalidOperationException($"Tenant {tenant.Slug} has no database connection."));
+        _targets.GetOrAdd(tenant.Id, _ => paths.Resolve(secrets.UnprotectJson<DatabaseTarget>(tenant.DbConnectionEnc)
+            ?? throw new InvalidOperationException($"Tenant {tenant.Slug} has no database connection.")));
 
     public async Task<DbConnection> OpenAsync(TenantRecord tenant) => await Db.OpenAsync(Target(tenant));
+
+    /// <summary>Forgets cached connections, e.g. after a restore or after a tenant's database moved.</summary>
+    public void ClearCache(long? tenantId = null)
+    {
+        if (tenantId is { } id) _targets.TryRemove(id, out _); else _targets.Clear();
+    }
 
     public async Task<MigrationResult> MigrateAsync(DatabaseTarget target, string label)
     {

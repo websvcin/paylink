@@ -50,7 +50,8 @@ public sealed class MySqlFlowTests
                 // "Test & verify" first, then "Save" with the password fields blank, as a browser re-renders them:
                 // the tested secrets must be kept (this used to store a blank password, so Plesk answered 401 later).
                 var unlocked = await platformAdmin.SubmitAsync("/setup", "Unlock", F(("Code", await app.SetupCodeAsync())));
-                Assert.Equal("/setup?step=hosting", unlocked.Headers.Location?.OriginalString);
+                Assert.Equal("/setup?step=start", unlocked.Headers.Location?.OriginalString);
+                await platformAdmin.SubmitAsync("/setup?step=start", "StartNew", F(("keyPlace", "bootstrap"), ("understood", "true")));
                 var tested = await platformAdmin.FollowAsync(await platformAdmin.SubmitAsync("/setup?step=hosting", "Hosting",
                     new Dictionary<string, string?>(hosting) { ["action"] = "test" }));
                 Assert.Contains("Your secrets are kept", await platformAdmin.TextAsync(tested));

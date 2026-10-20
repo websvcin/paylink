@@ -94,8 +94,9 @@ public sealed class BootstrapStore
 
     public bool SetupCodeIsConfigured => _configuredSetupCode is not null;
 
-    public async Task<DatabaseTarget?> GetPlatformDatabaseAsync() => _secrets.UnprotectJson<DatabaseTarget>(await Get(PlatformDb));
-    public Task SetPlatformDatabaseAsync(DatabaseTarget target) => Set(PlatformDb, _secrets.ProtectJson(target));
+    public async Task<DatabaseTarget?> GetPlatformDatabaseAsync() =>
+        _secrets.UnprotectJson<DatabaseTarget>(await Get(PlatformDb)) is { } t ? _paths.Resolve(t) : null;
+    public Task SetPlatformDatabaseAsync(DatabaseTarget target) => Set(PlatformDb, _secrets.ProtectJson(_paths.Portable(target)));
 
     public async Task<HostingSettings> GetHostingAsync() => _secrets.UnprotectJson<HostingSettings>(await Get(Hosting)) ?? new HostingSettings();
 

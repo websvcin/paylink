@@ -70,7 +70,9 @@
 </div>
 
 <div class="card">
-    <h3>Data folder</h3>
-    <p class="hint">Everything PayLink writes to disk is in <code>@Model.DataRoot</code> (set with <code>PayLink__DataRoot</code>). Back up the whole folder; keep <code>keys/</code> private.</p>
+    <div class="actions" style="justify-content:space-between"><h3>Data folder and backups</h3>
+        @if (Model.CanChange) { <a class="btn pri" href="?handler=Backup">Download backup</a> }</div>
+    <p class="hint">Everything PayLink writes to disk is in <code>@Model.DataRoot</code> (set with <code>PayLink__DataRoot</code>). A backup is a .zip with consistent copies of its databases and files; restore it on a fresh install at setup step 2. Databases on MySQL aren't inside it: back them up with your MySQL tools.</p>
+    <p class="hint">Encryption key: @(Model.KeySource == "environment" ? "from PayLink__MasterKey (not in backups: keep it with them)" : "inside bootstrap.db (included in backups: keep them private)") · fingerprint <code>@Model.KeyFingerprint</code></p>
     <div class="tbl"><partial name="_DataFolderContents" model="Model.DataFolderItems" /></div>
 </div>

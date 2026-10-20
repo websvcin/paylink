@@ -1,8 +1,9 @@
 @using WebSvc.PayLink.Storage.Provisioning
-@model (PayLink.Pages.HostingInput Input, bool AllowNone, bool HasSaved)
+@model (PayLink.Pages.HostingInput Input, bool AllowNone, HostingSettings Saved)
 @{
     var i = Model.Input;
-    var keep = Model.HasSaved ? "Kept. Leave blank to keep it." : "";
+    // Each secret says whether one is saved, so a blank field is never mistaken for a kept password.
+    string Keep(string? saved) => string.IsNullOrEmpty(saved) ? "Not saved yet" : "Saved. Leave blank to keep it.";
 }
 <div class="opts">
     @if (Model.AllowNone)
@@ -15,7 +16,7 @@
             <div class="field"><label for="h_MySqlHost">Host</label><input id="h_MySqlHost" name="Hosting.MySqlHost" class="mono" value="@i.MySqlHost" placeholder="db.example.com"><partial name="_HostHint" model="@("h_MySqlHost")" /></div>
             <div class="field"><label for="h_MySqlPort">Port</label><input id="h_MySqlPort" name="Hosting.MySqlPort" type="number" class="mono" value="@i.MySqlPort"></div>
             <div class="field"><label for="h_MySqlAdminUser">Admin user</label><input id="h_MySqlAdminUser" name="Hosting.MySqlAdminUser" class="mono" value="@i.MySqlAdminUser" placeholder="root" autocomplete="off"></div>
-            <div class="field"><label for="h_MySqlAdminPassword">Admin password</label><input id="h_MySqlAdminPassword" name="Hosting.MySqlAdminPassword" type="password" class="mono" placeholder="@keep" autocomplete="new-password"></div>
+            <div class="field"><label for="h_MySqlAdminPassword">Admin password</label><input id="h_MySqlAdminPassword" name="Hosting.MySqlAdminPassword" type="password" class="mono" placeholder="@Keep(Model.Saved.MySqlServer?.AdminPassword)" autocomplete="new-password"></div>
             <div class="field"><label for="h_MySqlSslMode">SSL mode</label>
                 <select id="h_MySqlSslMode" name="Hosting.MySqlSslMode">
                     @foreach (var mode in new[] { MySqlConnector.MySqlSslMode.Required, MySqlConnector.MySqlSslMode.Preferred, MySqlConnector.MySqlSslMode.VerifyFull, MySqlConnector.MySqlSslMode.None })
@@ -40,11 +41,11 @@
             <label class="opt"><input type="radio" name="Hosting.PleskAuth" value="login" checked="@(i.PleskAuth != "key")"><div><b>Admin login and password</b><span>The same login you use for the Plesk panel.</span></div></label>
             <div class="reveal card grid2">
                 <div class="field"><label for="h_PleskLogin">Login</label><input id="h_PleskLogin" name="Hosting.PleskLogin" class="mono" value="@i.PleskLogin" placeholder="admin" autocomplete="off"></div>
-                <div class="field"><label for="h_PleskPassword">Password</label><input id="h_PleskPassword" name="Hosting.PleskPassword" type="password" class="mono" placeholder="@keep" autocomplete="new-password"></div>
+                <div class="field"><label for="h_PleskPassword">Password</label><input id="h_PleskPassword" name="Hosting.PleskPassword" type="password" class="mono" placeholder="@Keep(Model.Saved.Plesk?.Password)" autocomplete="new-password"></div>
             </div>
             <label class="opt"><input type="radio" name="Hosting.PleskAuth" value="key" checked="@(i.PleskAuth == "key")"><div><b>Secret key</b><span>A narrower, revocable key. Generate it on the server with <code>plesk bin secret_key --create</code>.</span></div></label>
             <div class="reveal card">
-                <div class="field"><label for="h_PleskSecretKey">Secret key</label><input id="h_PleskSecretKey" name="Hosting.PleskSecretKey" type="password" class="mono" placeholder="@keep" autocomplete="new-password"></div>
+                <div class="field"><label for="h_PleskSecretKey">Secret key</label><input id="h_PleskSecretKey" name="Hosting.PleskSecretKey" type="password" class="mono" placeholder="@Keep(Model.Saved.Plesk?.SecretKey)" autocomplete="new-password"></div>
             </div>
         </div>
     </div>
@@ -56,10 +57,30 @@
             <div class="field"><label for="h_CPanelPort">Port</label><input id="h_CPanelPort" name="Hosting.CPanelPort" type="number" class="mono" value="@i.CPanelPort"></div>
             <div class="field"><label for="h_CPanelUsername">Account user name</label><input id="h_CPanelUsername" name="Hosting.CPanelUsername" class="mono" value="@i.CPanelUsername" autocomplete="off"></div>
         </div>
-        <div class="field"><label for="h_CPanelApiToken">API token</label><input id="h_CPanelApiToken" name="Hosting.CPanelApiToken" type="password" class="mono" placeholder="@keep" autocomplete="new-password"><span class="hint">cPanel → Security → Manage API Tokens.</span></div>
+        <div class="field"><label for="h_CPanelApiToken">API token</label><input id="h_CPanelApiToken" name="Hosting.CPanelApiToken" type="password" class="mono" placeholder="@Keep(Model.Saved.CPanel?.ApiToken)" autocomplete="new-password"><span class="hint">cPanel → Security → Manage API Tokens.</span></div>
     </div>
 </div>
-<details>
-    <summary>Advanced: how PayLink reaches the databases it creates</summary>
-    <div class="field" style="margin-top:8px"><label for="h_ConnectionHostOverride">Connection host override</label><input id="h_ConnectionHostOverride" name="Hosting.ConnectionHostOverride" class="mono" value="@i.ConnectionHostOverride"><span class="hint">Leave blank to use the panel's host. Set it when PayLink must reach the databases at another address, for example from a container on the same server.</span><partial name="_HostHint" model="@("h_ConnectionHostOverride")" /></div>
-</details>
+<div class="field" id="h_override">
+    <label for="h_ConnectionHostOverride">Host PayLink connects to (optional)</label>
+    <input id="h_ConnectionHostOverride" name="Hosting.ConnectionHostOverride" class="mono" value="@i.ConnectionHostOverride" placeholder="Same as the host above">
+    <span class="hint">Databases PayLink creates are reached at the host above (Plesk: the address its MySQL reports). Fill this in only when PayLink must use another address,
+        for example when PayLink runs in Docker on the same server: then <code>localhost</code> means the container, and the server is the Docker host,
+        usually <code>172.17.0.1</code> (the bridge gateway). On Docker Desktop use <code>host.docker.internal</code>.</span>
+    <partial name="_HostHint" model="@("h_ConnectionHostOverride")" />
+</div>
+<script>
+    // Show, as the placeholder, the host PayLink will connect to when this is left blank, as you type.
+    (function () {
+        var o = document.getElementById('h_ConnectionHostOverride');
+        var hosts = { MySqlServer: 'h_MySqlHost', Plesk: 'h_PleskHost', CPanel: 'h_CPanelHost' };
+        function update() {
+            var kind = document.querySelector('input[name="Hosting.Kind"]:checked');
+            var box = document.getElementById('h_override');
+            box.hidden = !kind || kind.value === 'None';
+            var host = kind && hosts[kind.value] ? document.getElementById(hosts[kind.value]).value.trim() : '';
+            o.placeholder = host ? 'Blank: PayLink connects to ' + host : 'Same as the host above';
+        }
+        document.querySelectorAll('input[name="Hosting.Kind"], #h_MySqlHost, #h_PleskHost, #h_CPanelHost').forEach(function (e) { e.addEventListener('input', update); e.addEventListener('change', update); });
+        update();
+    })();
+</script>

@@ -24,6 +24,30 @@ public sealed class LoginLinkClient(IHttpClientFactory httpFactory, IConfigurati
 
     public static string NormalizeServer(string url) => url.Trim().TrimEnd('/');
 
+    /// <summary>
+    /// Which organization an access token belongs to: its "org" claim, else the slug in its issuer
+    /// ({server}/{slug}; "" for the platform root). Null when the token isn't a readable JWT. For messages and checks only;
+    /// the token itself is verified by LoginLink when it's used.
+    /// </summary>
+    public static string? TokenOrganization(string token, string serverUrl)
+    {
+        var parts = token.Split('.');
+        if (parts.Length != 3) return null;
+        try
+        {
+            var payload = JsonNode.Parse(Microsoft.IdentityModel.Tokens.Base64UrlEncoder.Decode(parts[1]));
+            if ((string?)payload?["org"] is { } org) return org.ToLowerInvariant();
+            if ((string?)payload?["iss"] is { } iss)
+            {
+                var server = NormalizeServer(serverUrl);
+                if (string.Equals(iss.TrimEnd('/'), server, StringComparison.OrdinalIgnoreCase)) return "";
+                if (iss.StartsWith(server + "/", StringComparison.OrdinalIgnoreCase)) return iss[(server.Length + 1)..].Trim('/').ToLowerInvariant();
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or FormatException or ArgumentException) { }
+        return null;
+    }
+
     /// <summary>An organization's own issuer is {server}/{slug}; an empty slug means the platform root organization.</summary>
     public static string DiscoveryUrl(string serverUrl, string? orgSlug) =>
         string.IsNullOrWhiteSpace(orgSlug)

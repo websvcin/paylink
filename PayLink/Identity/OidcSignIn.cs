@@ -126,6 +126,16 @@ public sealed class OidcSignIn(LoginLinkClient loginLink, IDataProtectionProvide
             parameters.IssuerSigningKeys = config.SigningKeys;
             id = await handler.ValidateTokenAsync(idToken, parameters);
         }
+        if (!id.IsValid && id.Exception is SecurityTokenInvalidIssuerException)
+        {
+            // Someone signed in with an account of another organization than the one this sign-in is for.
+            var got = new JsonWebToken(idToken).Issuer;
+            var server = LoginLinkClient.NormalizeServer(pending.ServerUrl);
+            string Name(string iss) => iss.TrimEnd('/') == server ? "LoginLink's platform root" : $"the organization \"{iss[(server.Length + 1)..].Trim('/')}\"";
+            throw new LoginLinkException(got.StartsWith(server, StringComparison.OrdinalIgnoreCase)
+                ? $"You signed in with an account of {Name(got)}, but this sign-in is for {Name(config.Issuer)}. Sign out of LoginLink and sign in with an account of {Name(config.Issuer)}. (A platform admin can change which organization signs in to /admin in Admin → LoginLink.)"
+                : $"LoginLink answered from an unexpected address ({got}). Check the LoginLink server address in PayLink.");
+        }
         if (!id.IsValid)
             throw new LoginLinkException("LoginLink's ID token couldn't be verified: " + (id.Exception?.Message ?? "invalid token"));
         if (!string.Equals(id.ClaimsIdentity.FindFirst("nonce")?.Value, pending.Nonce, StringComparison.Ordinal))

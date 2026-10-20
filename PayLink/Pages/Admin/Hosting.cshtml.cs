@@ -10,13 +10,16 @@ public sealed class HostingModel(BootstrapStore bootstrap, PlatformDb platformDb
     [BindProperty] public HostingInput Hosting { get; set; } = new();
     public HostingSettings Saved { get; private set; } = new();
     public bool DraftExists { get; private set; }
+    /// <summary>The secrets the form can fall back to: the last tested settings, else the saved ones.</summary>
+    public HostingSettings DraftOrSaved { get; private set; } = new();
 
     public async Task OnGetAsync()
     {
         Saved = await bootstrap.GetHostingAsync();
         var draft = await bootstrap.GetHostingDraftAsync();
         DraftExists = draft is not null;
-        Hosting = HostingInput.From(draft ?? Saved);
+        DraftOrSaved = draft ?? Saved;
+        Hosting = HostingInput.From(DraftOrSaved);
     }
 
     public async Task<IActionResult> OnPostAsync(string action)
@@ -35,8 +38,14 @@ public sealed class HostingModel(BootstrapStore bootstrap, PlatformDb platformDb
             return check.Ok ? Done(check.Message + " Not saved yet: press Save to use it.") : Failed(check.Message);
         }
 
+        // Saving always tests first, so settings that can't create a database are never stored.
+        if (DatabaseProvisioners.Create(next, httpFactory.CreateClient("hosting")) is { } p)
+        {
+            var check = await p.TestAsync();
+            if (!check.Ok) { await bootstrap.SetHostingDraftAsync(next); return Failed("Not saved: " + check.Message); }
+        }
         await bootstrap.SetHostingAsync(next);
         await platformDb.AuditAsync(Me, "hosting.changed", next.Describe());
-        return Done("Saved. New auto-provisioned databases use this hosting.");
+        return Done(next.Kind == HostingKind.None ? "Auto-provisioning is off." : "Tested and saved. New auto-provisioned databases use this hosting.");
     }
 }
