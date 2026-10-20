@@ -1,4 +1,7 @@
 # PayLink: one image, published as websvcin/paylink (Docker Hub) and ghcr.io/websvcin/paylink.
+# Build from the repository root, because the image also needs packages/ and scripts/:
+#   docker build -f PayLink/Dockerfile -t websvcin/paylink .
+# Run:
 #   docker run -d -p 8080:8080 -v $(pwd)/App_Data:/app/App_Data --name paylink websvcin/paylink:latest
 # Then read the setup code from `docker logs paylink` and open http://localhost:8080/setup.
 
@@ -6,14 +9,12 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # The WebSvc.PayLink.* packages are built from packages/ into a local feed until they're on nuget.org.
-COPY nuget.config ./
 COPY scripts/ scripts/
 COPY packages/ packages/
 RUN bash scripts/pack-packages.sh
 
-COPY db/ db/
-COPY src/ src/
-RUN dotnet publish src/PayLink/PayLink.csproj -c Release -o /app/publish --nologo
+COPY PayLink/ PayLink/
+RUN dotnet publish PayLink/PayLink.csproj -c Release -o /app/publish --nologo
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app

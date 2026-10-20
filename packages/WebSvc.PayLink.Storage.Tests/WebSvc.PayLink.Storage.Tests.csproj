@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\WebSvc.PayLink.Storage\WebSvc.PayLink.Storage.csproj" />
+    <ProjectReference Include="..\WebSvc.PayLink.Storage\WebSvc.PayLink.Storage.csproj" />
   </ItemGroup>
 
 </Project>

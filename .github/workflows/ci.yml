@@ -38,7 +38,7 @@ jobs:
         run: bash scripts/pack-packages.sh
 
       - name: Test PayLink
-        run: dotnet test PayLink.sln -c Release
+        run: dotnet test PayLink/PayLink.sln -c Release
 
       - name: Build the Docker image
-        run: docker build -t paylink:ci .
+        run: docker build -f PayLink/Dockerfile -t paylink:ci .
