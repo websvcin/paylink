@@ -16,6 +16,7 @@ public static class JourneyText
             "attempt.started" => ($"Payer chose {D("connector")}", "info"),
             "attempt.abandoned" => ("Payer switched to another method", ""),
             "attempt.failed" => ($"Attempt failed: {D("reason")}{(D("message") is { Length: > 0 } m ? " · " + m : "")}", "bad"),
+            "attempt.failover" => ($"{D("from")} couldn't start; PayLink moved the payer to {D("to")} (failover)", "warn"),
             "attempt.cancelled" => ("Attempt cancelled", ""),
             "attempt.expired" => ("Attempt expired", ""),
             "payment.retry_allowed" => ("Payer can try another method", ""),

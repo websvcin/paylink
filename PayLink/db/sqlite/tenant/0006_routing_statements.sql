@@ -1,0 +1,23 @@
+-- Phase 4: routing (per-method amount ranges) and UPI bank statement matching. SQLite.
+-- Same as db/mysql/tenant/0006_routing_statements.sql. ALTER TABLE runs once; PayLink records applied scripts.
+
+ALTER TABLE connector_settings ADD COLUMN min_amount BIGINT NULL;
+ALTER TABLE connector_settings ADD COLUMN max_amount BIGINT NULL;
+
+-- Each credit line of an uploaded bank statement and what PayLink did with it.
+CREATE TABLE IF NOT EXISTS bank_statement_lines (
+    id            INTEGER        NOT NULL PRIMARY KEY AUTOINCREMENT,
+    upload_id     VARCHAR(40)    NOT NULL,
+    line_no       INTEGER        NOT NULL,
+    txn_date      VARCHAR(40)    NULL,
+    utr           VARCHAR(40)    NULL,
+    amount        BIGINT         NOT NULL,
+    narration     VARCHAR(500)   NULL,
+    result        VARCHAR(20)    NOT NULL,
+    payment_id    VARCHAR(40)    NULL,
+    note          VARCHAR(300)   NULL,
+    created_at    VARCHAR(40)    NOT NULL,
+    created_by    VARCHAR(320)   NULL
+);
+CREATE INDEX IF NOT EXISTS ix_bank_statement_lines_upload ON bank_statement_lines (upload_id);
+CREATE INDEX IF NOT EXISTS ix_bank_statement_lines_utr ON bank_statement_lines (utr);

@@ -11,6 +11,8 @@ public sealed class FakeRazorpay : HttpMessageHandler
     public ConcurrentDictionary<string, string> LinkStatus { get; } = new();
     public string RefundStatus { get; set; } = "pending";
     public List<string> Calls { get; } = [];
+    /// <summary>When true, creating a payment link fails with a 500, as a gateway outage would.</summary>
+    public bool Down { get; set; }
     private int _links;
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -21,6 +23,7 @@ public sealed class FakeRazorpay : HttpMessageHandler
         if (path == "/v1/payments") return Json("""{"items":[]}""");
         if (path == "/v1/payment_links" && request.Method == HttpMethod.Post)
         {
+            if (Down) return new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = new StringContent("""{"error":{"code":"SERVER_ERROR","description":"Something went wrong"}}""") };
             var id = "plink_T" + Interlocked.Increment(ref _links);
             LinkStatus[id] = "created";
             return Json($$"""{"id":"{{id}}","short_url":"https://rzp.io/i/{{id}}","status":"created"}""");

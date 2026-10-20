@@ -175,7 +175,8 @@ public sealed partial class PaymentService(
     // ---------- checkout ----------
 
     /// <summary>Starts an attempt with the chosen method and returns what the payer's browser should do next.</summary>
-    public async Task<(PaymentResult Result, NextAction? Next)> StartAttemptAsync(TenantRecord tenant, string paymentId, string connectorId, EventSource source)
+    public async Task<(PaymentResult Result, NextAction? Next)> StartAttemptAsync(TenantRecord tenant, string paymentId, string connectorId, EventSource source,
+        IReadOnlySet<string>? triedForFailover = null)
     {
         await using var c = await tenantDb.OpenAsync(tenant);
         var p = await GetAsync(c, paymentId);
@@ -258,6 +259,17 @@ public sealed partial class PaymentService(
         if (next is NextAction.Failed failed)
         {
             await FailAttemptAsync(c, p, attempt, FailureReasons.From(failed.Reason), failed.GatewayCode, failed.GatewayMessage, source);
+            // Failover: a gateway that couldn't even start hands the payer to the next gateway in the tenant's order.
+            if (failed.Reason == FailureReason.GatewayError && !p.IsFinal && ConnectorSettingsService.IsGateway(connector) && await methods.FailoverOnAsync(tenant))
+            {
+                var tried = new HashSet<string>(triedForFailover ?? new HashSet<string>()) { connector.Manifest.Id };
+                var fallback = (await methods.ForCheckoutAsync(tenant, p)).FirstOrDefault(x => ConnectorSettingsService.IsGateway(x) && !tried.Contains(x.Manifest.Id));
+                if (fallback is not null)
+                {
+                    await AppendAsync(c, p, attempt.Id, "attempt.failover", p.Status, p.Status, source, new { from = connector.Manifest.Id, to = fallback.Manifest.Id });
+                    return await StartAttemptAsync(tenant, paymentId, fallback.Manifest.Id, source, tried);
+                }
+            }
             return (PaymentResult.Fail(p, "attempt_failed", $"{connector.Manifest.Name} couldn't start. Please try another method."), null);
         }
 

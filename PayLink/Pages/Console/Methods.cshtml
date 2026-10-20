@@ -15,6 +15,30 @@
     <div class="notice warn">Live payments are off until one method has Live settings that pass their check. Test payments work now, with the Simulator.</div>
 }
 
+@if (Model.Routing.Count > 0)
+{
+    <form method="post" asp-page-handler="Routing" class="card">
+        <h3>Routing (@Model.ModeName)</h3>
+        <p class="muted">The order payers see methods in, and the amounts each one is offered for. A gateway that fails to start @ConnectorSettingsService.BreakerErrors times in a row rests for @((int)ConnectorSettingsService.BreakerCooldown.TotalMinutes) minutes and checkout leaves it out, unless no other method is left.</p>
+        <div class="tbl"><table><thead><tr><th>Method</th><th>Order</th><th>From (₹)</th><th>Up to (₹)</th><th>Now</th></tr></thead><tbody>
+            @foreach (var (c, s) in Model.Routing)
+            {
+                var id = c.Manifest.Id;
+                <tr>
+                    <td><b>@c.Manifest.Name</b></td>
+                    <td><input name="order_@id" type="number" min="0" max="999" value="@(s?.SortOrder ?? 0)" style="width:6em" aria-label="Order for @c.Manifest.Name"></td>
+                    <td><input name="min_@id" inputmode="decimal" value="@(s?.MinAmount is { } mn ? (mn / 100m).ToString("0.##") : "")" placeholder="any" style="width:8em" aria-label="Lowest amount for @c.Manifest.Name"></td>
+                    <td><input name="max_@id" inputmode="decimal" value="@(s?.MaxAmount is { } mx ? (mx / 100m).ToString("0.##") : "")" placeholder="any" style="width:8em" aria-label="Highest amount for @c.Manifest.Name"></td>
+                    <td>@if (Model.Tripped.Contains(id)) { <span class="chip warn">Resting after errors</span> } else { <span class="chip good">Healthy</span> }</td>
+                </tr>
+            }
+        </tbody></table></div>
+        <input type="hidden" name="failover" value="off">
+        <label><input type="checkbox" name="failover" value="on" checked="@Model.Failover"> If a gateway can't start a payment, send the payer to the next gateway automatically</label>
+        @if (Model.CanConfigure) { <div class="actions"><button class="btn pri" type="submit">Save routing</button></div> }
+    </form>
+}
+
 @foreach (var c in Model.Connectors)
 {
     var m = c.Manifest;

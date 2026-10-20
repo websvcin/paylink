@@ -10,6 +10,28 @@
 
 <div class="head"><div><h1>UPI verification</h1><p>PayLink UPI payments go straight to your UPI ID, so no bank tells PayLink they arrived. Check each UTR in your bank or UPI app, then approve or reject. Your webhook fires only after you decide.</p></div></div>
 
+@if (Model.CanOperate)
+{
+    <form method="post" asp-page-handler="Statement" enctype="multipart/form-data" class="card">
+        <h3>Match a bank statement</h3>
+        <p class="muted">Upload your bank statement as CSV. Every credit whose UTR and amount match a waiting payment below is approved for you, with the statement line as the note. Anything else stays here for you to decide.</p>
+        <div class="actions"><input type="file" name="statement" accept=".csv,text/csv" required aria-label="Bank statement (CSV)"><button class="btn pri" type="submit">Match</button></div>
+    </form>
+}
+
+@if (Model.NeedALook.Count > 0)
+{
+    <div class="card flush">
+        <div class="tbl"><table><thead><tr><th colspan="4">From statements: matched a UTR, but not approved</th></tr><tr><th>UTR</th><th>Bank</th><th>Payment</th><th>Why</th></tr></thead><tbody>
+            @foreach (var l in Model.NeedALook)
+            {
+                <tr><td class="mono">@l.Utr</td><td>@Money.Format(l.Amount, "INR")@(l.TxnDate is null ? "" : " · " + l.TxnDate)</td>
+                    <td>@if (l.PaymentId is not null) { <a class="mono" href="@root/payments/@l.PaymentId">@l.PaymentId</a> }</td><td>@l.Note</td></tr>
+            }
+        </tbody></table></div>
+    </div>
+}
+
 @foreach (var (p, a) in Model.Queue)
 {
     <div class="card">

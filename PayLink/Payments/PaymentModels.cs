@@ -236,6 +236,9 @@ public sealed class ConnectorSetting
     public string? CheckMessage { get; set; }
     public string? CheckedAt { get; set; }
     public int SortOrder { get; set; }
+    /// <summary>Routing: checkout offers the method only for amounts in this range (either end optional).</summary>
+    public long? MinAmount { get; set; }
+    public long? MaxAmount { get; set; }
     public string UpdatedAt { get; set; } = "";
     public string? UpdatedBy { get; set; }
 }

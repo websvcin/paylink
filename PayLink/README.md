@@ -11,9 +11,9 @@
 | Works today | Coming next (Phase 4) |
 |---|---|
 | **Gateways**: Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form); signed callbacks and webhooks; status polling; full and partial refunds | |
-| **Payments API** (`/api/v1`): create, get, list, cancel, refund; `Idempotency-Key`; test and live keys. See [docs/payments-api.md](../docs/payments-api.md) | Routing and failover between gateways |
+| **Payments API** (`/api/v1`): create, get, list, cancel, refund; `Idempotency-Key`; test and live keys. See [docs/payments-api.md](../docs/payments-api.md) | |
 | **Hosted checkout** at `/pay/{id}`: the merchant's methods, retry with another method, return to the merchant | PayPal and Stripe connectors |
-| **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds | UPI bank-statement matching |
+| **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds; **bank statement matching** (upload the CSV, matching UTR and amount approve automatically) | |
 | **Connector catalog** (Admin): install, allow, drain, uninstall; install connector packages from nuget.org at runtime (allowed ID prefixes only) | PostgreSQL |
 | **Platform**: amount and currency limits, tenant consoles on subdomains, move a tenant's or the platform's database, live dashboard, backup download | Custom domains, reporting API |
 | **Risk**: rules by amount, velocity, country (block/allow), Tor, phone country vs. location, and a 0–100 score from those signals; review holds. Location from an optional MaxMind-format database (Admin → Location data) | Connect CrudApi, disputes, FileLink file storage |
@@ -21,6 +21,7 @@
 | **Alerts**: low success rate, UPI waiting, large refunds, risk blocks, gateway errors; by webhook (`alert.triggered`) and email (Admin → Settings → Email) | |
 | **Reconciliation**: upload a gateway's settlement CSV, map its columns (guessed for you), match lines to payments, see mismatches and unknown lines, daily close and unsettled payments | |
 | **Payment links** at `/l/{code}` (fixed or payer-chosen amount, one-time or limited, QR code) and a **Pay button** for any site (`js/paylink.js`) | |
+| **Routing**: method order and amount ranges per mode, a circuit breaker that rests a gateway after repeated errors, automatic failover to the next gateway | |
 | **Simulator** for Test; payment journey (append-only events), statuses that only move forward, signed webhooks with retries | |
 | Tenant developer keys (`tdk_`) and API; API request log; console with Test/Live switch | |
 | Setup: new or restore (backup .zip or bootstrap.db), encryption key inside bootstrap.db (or `PayLink__MasterKey`), SQLite/MySQL platform and tenant databases, auto-provisioning (tested before saving), LoginLink with clear credential checks | |

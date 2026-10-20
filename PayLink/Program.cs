@@ -42,6 +42,7 @@ builder.Services.AddSingleton<PlatformPayments>();
 builder.Services.AddSingleton<Reports>();
 builder.Services.AddSingleton<AlertService>();
 builder.Services.AddSingleton<PaymentLinkService>();
+builder.Services.AddSingleton<UpiStatementService>();
 builder.Services.AddSingleton<Settlements>();
 builder.Services.AddSingleton<SmtpEmailSender>();
 builder.Services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<SmtpEmailSender>());

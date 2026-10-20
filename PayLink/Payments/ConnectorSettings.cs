@@ -98,7 +98,21 @@ public sealed class ConnectorSettingsService(TenantDb tenantDb, ConnectorRegistr
         await AuditLog.WriteAsync(c, actor, "method.disabled", $"{connectorId}/{ModeKey(mode)}");
     }
 
-    /// <summary>Methods the checkout offers for a payment: turned on for its mode and able to take its currency. The Simulator is always there in Test.</summary>
+    public const string FailoverSetting = "routing_failover";
+    private static readonly string GatewayError = FailureReasons.From(FailureReason.GatewayError);
+
+    /// <summary>Gateways can stand in for each other in failover; PayLink UPI and the Simulator can't.</summary>
+    public static bool IsGateway(IPaymentConnector c) => c.Manifest.Id is not (UpiConnectorId or SimulatorConnector.Id);
+    private const string UpiConnectorId = "upi";
+    /// <summary>The breaker opens after this many gateway errors in a row on one method, for <see cref="BreakerCooldown"/>.</summary>
+    public const int BreakerErrors = 3;
+    public static readonly TimeSpan BreakerCooldown = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Methods the checkout offers for a payment, in the tenant's order: turned on for its mode, able to take its currency, inside the
+    /// method's amount range, and not tripped (a method whose last <see cref="BreakerErrors"/> starts were gateway errors rests for
+    /// <see cref="BreakerCooldown"/>). If every method is resting, they are all offered rather than none. The Simulator is always there in Test.
+    /// </summary>
     public async Task<IReadOnlyList<IPaymentConnector>> ForCheckoutAsync(TenantRecord tenant, Payment payment)
     {
         var mode = ModeKey(payment.Mode);
@@ -112,10 +126,47 @@ public sealed class ConnectorSettingsService(TenantDb tenantDb, ConnectorRegistr
             var on = connector.Manifest.Id == SimulatorConnector.Id
                 ? !payment.Livemode && setting?.Enabled != false
                 : setting is { Enabled: true } && !(payment.Livemode && connector.Manifest.TestOnly);
-            if (on) result.Add((setting?.SortOrder ?? (connector.Manifest.TestOnly ? 1000 : 0), connector));
+            if (!on) continue;
+            if (setting?.MinAmount is { } min && payment.Amount < min) continue;
+            if (setting?.MaxAmount is { } max && payment.Amount > max) continue;
+            result.Add((setting?.SortOrder ?? (connector.Manifest.TestOnly ? 1000 : 0), connector));
         }
-        return result.OrderBy(r => r.Order).Select(r => r.Connector).ToList();
+        var ordered = result.OrderBy(r => r.Order).Select(r => r.Connector).ToList();
+        var tripped = await TrippedAsync(tenant, payment.Livemode);
+        var healthy = ordered.Where(c => !tripped.Contains(c.Manifest.Id)).ToList();
+        return healthy.Count > 0 ? healthy : ordered;
     }
+
+    /// <summary>Methods resting after repeated gateway errors (the circuit breaker), worked out from recent attempts.</summary>
+    public async Task<IReadOnlySet<string>> TrippedAsync(TenantRecord tenant, bool livemode)
+    {
+        await using var c = await tenantDb.OpenAsync(tenant);
+        var recent = await c.QueryAsync<(string Connector, string? FailureReason, string CreatedAt)>(
+            "SELECT a.connector, a.failure_reason, a.created_at FROM attempts a JOIN payments p ON p.id = a.payment_id " +
+            "WHERE p.livemode = @livemode AND a.created_at >= @since ORDER BY a.created_at DESC LIMIT 500;",
+            new { livemode, since = Clock.Format(DateTime.UtcNow - BreakerCooldown - TimeSpan.FromHours(1)) });
+        var cutoff = Clock.Format(DateTime.UtcNow - BreakerCooldown);
+        return recent.GroupBy(a => a.Connector)
+            .Where(g => g.Take(BreakerErrors).Count(a => a.FailureReason == GatewayError) == BreakerErrors
+                        && string.CompareOrdinal(g.First().CreatedAt, cutoff) > 0)
+            .Select(g => g.Key).ToHashSet();
+    }
+
+    /// <summary>Routing for one method in one mode: its place in the checkout list and the amounts it's offered for.</summary>
+    public async Task SetRoutingAsync(TenantRecord tenant, string connectorId, PaymentMode mode, int order, long? min, long? max, Actor actor)
+    {
+        await using var c = await tenantDb.OpenAsync(tenant);
+        var n = await c.ExecuteAsync(
+            "UPDATE connector_settings SET sort_order = @order, min_amount = @min, max_amount = @max, updated_at = @at, updated_by = @by WHERE connector_id = @connectorId AND mode = @mode;",
+            new { connectorId, mode = ModeKey(mode), order, min, max, at = Clock.Now(), by = actor.Name });
+        if (n == 0 && connectorId == SimulatorConnector.Id)   // the Simulator is on without a saved row; keep it on
+            await c.ExecuteAsync(
+                "INSERT INTO connector_settings (connector_id, mode, enabled, sort_order, min_amount, max_amount, updated_at, updated_by) VALUES (@connectorId, @mode, TRUE, @order, @min, @max, @at, @by);",
+                new { connectorId, mode = ModeKey(mode), order, min, max, at = Clock.Now(), by = actor.Name });
+        await AuditLog.WriteAsync(c, actor, "method.routing", $"{connectorId}/{ModeKey(mode)}", $"order {order}, {min?.ToString() ?? "any"} to {max?.ToString() ?? "any"}");
+    }
+
+    public async Task<bool> FailoverOnAsync(TenantRecord tenant) => await tenantDb.GetSettingAsync(tenant, FailoverSetting) != "off";
 
     /// <summary>Live payments need at least one live method whose settings passed the connector's check.</summary>
     public async Task<bool> IsLiveReadyAsync(TenantRecord tenant)
