@@ -15,7 +15,7 @@ public sealed class TenantNewModel(OrgConnector orgs, TenantProvisioning provisi
     [BindProperty] public string? MgmtClientId { get; set; }
     [BindProperty] public string? MgmtClientSecret { get; set; }
     [BindProperty] public string DbChoice { get; set; } = "sqlite";
-    [BindProperty] public MySqlInput Byo { get; set; } = new();
+    [BindProperty] public ServerDbInput Byo { get; set; } = new();
 
     public bool HostingConfigured { get; private set; }
     public string? Error { get; private set; }

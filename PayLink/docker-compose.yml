@@ -7,6 +7,11 @@
 # With a MySQL server PayLink can use for the platform database and for auto-provisioned tenant databases:
 #   MYSQL_ROOT_PASSWORD=choose-one docker compose --profile mysql up -d
 # In setup → Database hosting, choose "A MySQL server": host mysql, port 3306, user root, the password above.
+#
+# With a PostgreSQL server for the platform database (or tenants' own databases):
+#   POSTGRES_PASSWORD=choose-one docker compose --profile postgres up -d
+# In setup → Platform database, choose "MySQL or PostgreSQL: a server I run", PostgreSQL, host postgres, port 5432,
+# database paylink, user postgres, the password above.
 
 services:
   paylink:
@@ -33,4 +38,15 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
     volumes:
       - ./mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    profiles: ["postgres"]
+    container_name: paylink-postgres
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      - POSTGRES_DB=paylink
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
     restart: unless-stopped

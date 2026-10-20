@@ -149,7 +149,7 @@ public sealed class PlatformOpsTests
         await using var app = new PayLinkApp();
         var admin = new Browser(app);
         await SetupAsync(app, admin, ll);
-        var priya = await CreateTenantAsync(app, ll, "acme", "Acme Learning", Priya);
+        var priya = await CreateTenantAsync(app, ll, "acme", "Acme Learning", Priya, db: "sqlite");   // moves start from a SQLite file
         var tenant = (await app.Get<PlatformRepository>().TenantBySlugAsync("acme"))!;
         var svc = app.Get<PaymentService>();
         for (var i = 0; i < 3; i++)
@@ -168,6 +168,35 @@ public sealed class PlatformOpsTests
         Assert.Contains("Acme Learning", console);
         await using var c = await app.Get<TenantDb>().OpenAsync(moved);
         Assert.Contains("tenant.database_moved", await c.QueryAsync<string>("SELECT action FROM audit_log;"));
+    }
+
+    /// <summary>Runs only when PAYLINK_TEST_PG_ADMIN is set: SQLite's 0/1 flags and ids land in PostgreSQL's booleans and identities.</summary>
+    [Fact]
+    public async Task A_tenant_moves_from_sqlite_to_postgresql()
+    {
+        if (!PgTest.On) return;
+        await using var ll = await FakeLoginLink.StartAsync();
+        await using var app = new PayLinkApp();
+        var admin = new Browser(app);
+        await SetupAsync(app, admin, ll, database: SqlitePlatform);
+        var priya = await CreateTenantAsync(app, ll, "acme", "Acme Learning", Priya, db: "sqlite");
+        var tenant = (await app.Get<PlatformRepository>().TenantBySlugAsync("acme"))!;
+        await priya.SubmitAsync("/acme/console/risk", "Add", F(("kind", "amount_above"), ("value", "50000"), ("action", "review")));
+        await CreateKeyAsync(priya, "acme");
+        var svc = app.Get<PaymentService>();
+        await svc.CreateAsync(tenant, new CreatePaymentRequest(1000, null, "M-1", null, null, null, null, null, null, null, null), false, null, EventSource.System, "api");
+
+        var r = await admin.FollowAsync(await admin.SubmitAsync("/admin/tenants/acme", "Move", F(("to", "byo"),
+            ("Byo.Engine", "postgresql"), ("Byo.UseConnectionString", "true"), ("Byo.ConnectionString", PgTest.NewDatabase()))));
+        Assert.Contains("rows copied and counted", await admin.TextAsync(r));
+        var moved = (await app.Get<PlatformRepository>().TenantBySlugAsync("acme"))!;
+        Assert.Equal(WebSvc.PayLink.Storage.DbEngine.PostgreSql, app.Get<TenantDb>().Target(moved).Engine);
+        Assert.Single(await svc.SearchAsync(moved, false, null, null));
+        Assert.Contains("amount_above", await priya.TextAsync(await priya.GetAsync("/acme/console/risk")));
+        // New rows after the move get fresh ids (the identity moved past the copied ones).
+        await CreateKeyAsync(priya, "acme");
+        r = await priya.FollowAsync(await priya.SubmitAsync("/acme/console/risk", "Add", F(("kind", "amount_above"), ("value", "90000"), ("action", "block"))));
+        Assert.Contains("Rule added", await priya.TextAsync(r));
     }
 
     [Fact]

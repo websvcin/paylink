@@ -97,8 +97,8 @@
                 }
                 @if (Model.DbOptions.Contains(TenantDbOptions.Byo))
                 {
-                    <label class="opt"><input type="radio" name="DbChoice" value="byo" checked="@(Model.DbChoice == "byo")"><div><b>Use my own MySQL</b><span>You run and back up the database. It must be empty. The password is stored encrypted.</span></div></label>
-                    <div class="reveal card"><partial name="_MySqlFields" model='("Byo", Model.Byo)' /></div>
+                    <label class="opt"><input type="radio" name="DbChoice" value="byo" checked="@(Model.DbChoice == "byo")"><div><b>Use my own MySQL or PostgreSQL</b><span>You run and back up the database. It must be empty. The password is stored encrypted.</span></div></label>
+                    <div class="reveal card"><partial name="_ServerDbFields" model='("Byo", Model.Byo)' /></div>
                 }
             </div>
             <div class="actions">

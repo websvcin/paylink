@@ -76,8 +76,8 @@ public sealed class SetupTests
         await using (var app = new PayLinkApp())
         {
             var admin = new Browser(app);
-            await SetupAsync(app, admin, ll);
-            await CreateTenantAsync(app, ll, "acme", "Acme Learning", Priya);
+            await SetupAsync(app, admin, ll, database: SqlitePlatform);   // a backup is the SQLite files
+            await CreateTenantAsync(app, ll, "acme", "Acme Learning", Priya, db: "sqlite");
             var download = await admin.GetAsync("/admin/settings?handler=Backup");
             Assert.Equal(HttpStatusCode.OK, download.StatusCode);
             Assert.Equal("application/zip", download.Content.Headers.ContentType?.MediaType);

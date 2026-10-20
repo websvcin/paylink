@@ -35,8 +35,8 @@
     <div class="opts">
         <label class="opt"><input type="radio" name="to" value="sqlite"><div><b>SQLite, managed by PayLink</b><span>A new file in the data folder.</span></div></label>
         <label class="opt @(Model.HostingReady ? "" : "disabled")"><input type="radio" name="to" value="auto" disabled="@(!Model.HostingReady)"><div><b>MySQL, auto-provisioned</b><span>@(Model.HostingReady ? "A new database on the platform's hosting." : "Set up database hosting first.")</span></div></label>
-        <label class="opt"><input type="radio" name="to" value="byo"><div><b>A MySQL database you give</b><span>It must be empty.</span></div></label>
-        <div class="reveal card"><partial name="_MySqlFields" model='("Byo", Model.Byo)' /></div>
+        <label class="opt"><input type="radio" name="to" value="byo"><div><b>A MySQL or PostgreSQL database you give</b><span>It must be empty.</span></div></label>
+        <div class="reveal card"><partial name="_ServerDbFields" model='("Byo", Model.Byo)' /></div>
     </div>
     @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Move the data</button></div> }
 </form>

@@ -11,6 +11,7 @@ public static class Flows
     public static Dictionary<string, string?> F(params (string Key, string? Value)[] pairs) => pairs.ToDictionary(p => p.Key, p => p.Value);
 
     /// <summary>Runs /setup to completion and leaves <paramref name="browser"/> signed in to /admin as Naren.</summary>
+    /// <summary>Runs setup; the platform database is SQLite, or PostgreSQL when the suite runs on it, unless <paramref name="database"/> says otherwise.</summary>
     public static async Task SetupAsync(PayLinkApp app, Browser browser, FakeLoginLink ll,
         Dictionary<string, string?>? hosting = null, Dictionary<string, string?>? database = null, bool withPlatformApi = true)
     {
@@ -23,7 +24,10 @@ public static class Flows
         r = await browser.SubmitAsync("/setup?step=hosting", "Hosting", hosting ?? F(("action", "skip")));
         Assert.Equal("/setup?step=database", r.Headers.Location?.OriginalString);
 
-        r = await browser.SubmitAsync("/setup?step=database", "Database", database ?? F(("DbChoice", "sqlite"), ("action", "save")));
+        database ??= PgTest.On
+            ? F(("DbChoice", "mysql"), ("Mysql.Engine", "postgresql"), ("Mysql.UseConnectionString", "true"), ("Mysql.ConnectionString", PgTest.NewDatabase()), ("action", "save"))
+            : F(("DbChoice", "sqlite"), ("action", "save"));
+        r = await browser.SubmitAsync("/setup?step=database", "Database", database);
         Assert.True(r.Headers.Location?.OriginalString == "/setup?step=loginlink", await Problem(browser, r));
 
         var mgmt = ll.AddManagementCredential("websvc");
@@ -63,13 +67,25 @@ public static class Flows
         return await browser.TextAsync(r);
     }
 
-    /// <summary>Connects <paramref name="org"/> and creates a SQLite tenant; returns the owner's signed-in console browser.</summary>
-    public static async Task<Browser> CreateTenantAsync(PayLinkApp app, FakeLoginLink ll, string slug, string name, FakeLoginLink.Person owner, string db = "sqlite")
+    /// <summary>
+    /// Connects <paramref name="org"/> and creates a tenant; returns the owner's signed-in console browser. The default database is
+    /// SQLite, or PostgreSQL when the suite runs on it (<see cref="PgTest"/>); pass "sqlite" to insist on SQLite.
+    /// </summary>
+    public static readonly Dictionary<string, string?> SqlitePlatform = F(("DbChoice", "sqlite"), ("action", "save"));
+
+    public static async Task<Browser> CreateTenantAsync(PayLinkApp app, FakeLoginLink ll, string slug, string name, FakeLoginLink.Person owner, string db = "default")
     {
         var b = new Browser(app);
         await ConnectExistingAsync(b, ll, slug, owner);
-        var r = await b.FollowAsync(await b.SubmitAsync("/signup", "Create",
-            F(("TenantName", name), ("TenantSlug", slug), ("DbChoice", db), ("action", "create"))));
+        var fields = F(("TenantName", name), ("TenantSlug", slug), ("DbChoice", db == "default" ? "sqlite" : db), ("action", "create"));
+        if (db == "default" && PgTest.On)
+        {
+            fields["DbChoice"] = "byo";
+            fields["Byo.Engine"] = "postgresql";
+            fields["Byo.UseConnectionString"] = "true";
+            fields["Byo.ConnectionString"] = PgTest.NewDatabase();
+        }
+        var r = await b.FollowAsync(await b.SubmitAsync("/signup", "Create", fields));
         Assert.True(b.LastUrl!.AbsolutePath == $"/{slug}/console", await Problem(b, r));
         return b;
     }

@@ -8,7 +8,7 @@
 <div class="opts">
     @if (Model.AllowNone)
     {
-        <label class="opt"><input type="radio" name="Hosting.Kind" value="None" checked="@(i.Kind == HostingKind.None)"><div><b>Off</b><span>No databases are created on demand. Tenants choose SQLite or bring their own MySQL. You can turn this on later in Admin → Database hosting.</span></div></label>
+        <label class="opt"><input type="radio" name="Hosting.Kind" value="None" checked="@(i.Kind == HostingKind.None)"><div><b>Off</b><span>No databases are created on demand. Tenants choose SQLite or bring their own MySQL or PostgreSQL. You can turn this on later in Admin → Database hosting.</span></div></label>
     }
     <label class="opt"><input type="radio" name="Hosting.Kind" value="MySqlServer" checked="@(i.Kind == HostingKind.MySqlServer)"><div><b>A MySQL server</b><span>Any MySQL 8 server and an admin account that can create databases and users. Tested end to end.</span></div></label>
     <div class="reveal card">

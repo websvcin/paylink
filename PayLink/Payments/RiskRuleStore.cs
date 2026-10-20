@@ -19,7 +19,7 @@ public sealed class RiskRuleStore(TenantDb tenantDb)
         value = value?.Trim() ?? "";
         if (RiskEngine.Problem(kind, value, action) is { } problem) return problem;
         await using var c = await tenantDb.OpenAsync(tenant);
-        await c.ExecuteAsync("INSERT INTO risk_rules (kind, value, action, enabled, note, created_at, created_by) VALUES (@kind, @value, @action, 1, @note, @at, @by);",
+        await c.ExecuteAsync("INSERT INTO risk_rules (kind, value, action, enabled, note, created_at, created_by) VALUES (@kind, @value, @action, TRUE, @note, @at, @by);",
             new { kind, value, action, note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(), at = Clock.Now(), by = actor.Name });
         await AuditLog.WriteAsync(c, actor, "risk.rule_added", $"{kind} = {value}", action);
         return null;

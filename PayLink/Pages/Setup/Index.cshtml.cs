@@ -66,7 +66,7 @@ public sealed class IndexModel(
     [BindProperty] public string? Code { get; set; }
     [BindProperty] public HostingInput Hosting { get; set; } = new();
     [BindProperty] public string DbChoice { get; set; } = "sqlite";
-    [BindProperty] public MySqlInput Mysql { get; set; } = new();
+    [BindProperty] public ServerDbInput Mysql { get; set; } = new();
     [BindProperty] public LoginLinkInput LL { get; set; } = new();
     [BindProperty] public string TenantAutoProvision { get; set; } = AutoProvisionModes.Approved;
     [BindProperty] public string? PlatformDbName { get; set; }

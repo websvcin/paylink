@@ -11,7 +11,7 @@ public sealed class TenantModel(PlatformRepository repo, PlatformSettings settin
     LoginLinkClient loginLink, SecretProtector secrets, BootstrapStore bootstrap) : AdminPage
 {
     [FromRoute] public string Slug { get; set; } = "";
-    [BindProperty] public MySqlInput Byo { get; set; } = new();
+    [BindProperty] public ServerDbInput Byo { get; set; } = new();
 
     public TenantRecord Tenant { get; private set; } = null!;
     public string TenantDomain { get; private set; } = "";

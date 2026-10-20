@@ -23,7 +23,12 @@ public sealed class PlatformDb(BootstrapStore bootstrap, AppPaths paths, ILogger
 
     public async Task<SqlDialect> DialectAsync() => Db.Dialect((await TargetAsync()).Engine);
 
-    public static string EngineFolder(DbEngine engine) => engine == DbEngine.Sqlite ? "sqlite" : "mysql";
+    public static string EngineFolder(DbEngine engine) => engine switch
+    {
+        DbEngine.Sqlite => "sqlite",
+        DbEngine.PostgreSql => "postgresql",
+        _ => "mysql",
+    };
 
     /// <summary>Applies any new scripts from db/{engine}/platform.</summary>
     public async Task<MigrationResult> MigrateAsync(DatabaseTarget? target = null)

@@ -75,8 +75,8 @@
     <div class="opts">
         <label class="opt"><input type="radio" name="to" value="sqlite"><div><b>SQLite</b><span>A new file in the data folder.</span></div></label>
         <label class="opt"><input type="radio" name="to" value="auto"><div><b>MySQL, auto-provisioned</b><span>On the platform's database hosting.</span></div></label>
-        <label class="opt"><input type="radio" name="to" value="byo"><div><b>A MySQL database you give</b><span>It must be empty.</span></div></label>
-        <div class="reveal card"><partial name="_MySqlFields" model='("Platform", new PayLink.Pages.MySqlInput())' /></div>
+        <label class="opt"><input type="radio" name="to" value="byo"><div><b>A MySQL or PostgreSQL database you give</b><span>It must be empty.</span></div></label>
+        <div class="reveal card"><partial name="_ServerDbFields" model='("Platform", new PayLink.Pages.ServerDbInput())' /></div>
     </div>
     @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Move the platform database</button></div> }
 </form>

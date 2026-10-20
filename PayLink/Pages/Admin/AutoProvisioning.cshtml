@@ -7,7 +7,7 @@
 @section Nav { <partial name="_AdminNav" /> }
 @section Who { <partial name="_AdminWho" /> }
 
-<div class="head"><div><h1>Auto-provisioning</h1><p>Who may have a MySQL database created for them at signup. Everyone else can still choose SQLite or bring their own MySQL.</p></div></div>
+<div class="head"><div><h1>Auto-provisioning</h1><p>Who may have a MySQL database created for them at signup. Everyone else can still choose SQLite or bring their own MySQL or PostgreSQL.</p></div></div>
 @if (!Model.HostingConfigured)
 {
     <div class="notice warn">No database hosting is set up, so nobody can auto-provision yet. <a href="/admin/hosting">Set up database hosting</a>.</div>

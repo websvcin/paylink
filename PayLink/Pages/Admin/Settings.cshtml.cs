@@ -64,7 +64,7 @@ public sealed class SettingsModel(PlatformSettings settings, PlatformDb platform
         return Done(d.Length == 0 ? "Subdomains are off." : $"Saved. Switch tenants to their own subdomain (slug.{d}) on their page in Tenants.");
     }
 
-    public async Task<IActionResult> OnPostMovePlatformAsync(string to, [FromForm(Name = "Platform")] MySqlInput? platform)
+    public async Task<IActionResult> OnPostMovePlatformAsync(string to, [FromForm(Name = "Platform")] ServerDbInput? platform)
     {
         WebSvc.PayLink.Storage.DatabaseTarget? own = null;
         if (to == "byo" && (platform is null || !platform.TryBuild(out own, out var error))) return Failed(platform is null ? "Enter the MySQL details." : "Check the MySQL details.");

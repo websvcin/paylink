@@ -1,8 +1,12 @@
-@model (string Prefix, PayLink.Pages.MySqlInput Input)
+@model (string Prefix, PayLink.Pages.ServerDbInput Input)
 @{
     var p = Model.Prefix;
     var i = Model.Input;
 }
+<div class="actions" role="group" aria-label="Database engine">
+    <label><input type="radio" name="@(p).Engine" value="mysql" checked="@(!i.IsPostgreSql)" data-engine-for="@p"> MySQL</label>
+    <label><input type="radio" name="@(p).Engine" value="postgresql" checked="@i.IsPostgreSql" data-engine-for="@p"> PostgreSQL</label>
+</div>
 <div class="opts">
     <label class="opt"><input type="radio" name="@(p).UseConnectionString" value="false" checked="@(!i.UseConnectionString)"><div><b>Enter details</b><span>Host, port, database, user, password and SSL mode</span></div></label>
     <div class="reveal card">
@@ -22,8 +26,18 @@
             </div>
         </div>
     </div>
-    <label class="opt"><input type="radio" name="@(p).UseConnectionString" value="true" checked="@i.UseConnectionString"><div><b>Paste a connection string</b><span>For example Server=db.example.com;Port=3306;Database=paylink;Uid=paylink;Pwd=…;SslMode=Required</span></div></label>
+    <label class="opt"><input type="radio" name="@(p).UseConnectionString" value="true" checked="@i.UseConnectionString"><div><b>Paste a connection string</b><span id="@(p)_CsExample">@(i.IsPostgreSql ? "For example Host=db.example.com;Port=5432;Database=paylink;Username=paylink;Password=…;SSL Mode=Require" : "For example Server=db.example.com;Port=3306;Database=paylink;Uid=paylink;Pwd=…;SslMode=Required")</span></div></label>
     <div class="reveal card">
-        <div class="field"><label for="@(p)_ConnectionString">MySQL connection string</label><input id="@(p)_ConnectionString" name="@(p).ConnectionString" class="mono" autocomplete="off"></div>
+        <div class="field"><label for="@(p)_ConnectionString">Connection string</label><input id="@(p)_ConnectionString" name="@(p).ConnectionString" class="mono" autocomplete="off"></div>
     </div>
 </div>
+<script>
+    // The usual port and connection string example follow the engine.
+    document.querySelectorAll('input[data-engine-for="@p"]').forEach(r => r.addEventListener('change', () => {
+        const pg = r.value === 'postgresql', port = document.getElementById('@(p)_Port');
+        if (port && (port.value === '3306' || port.value === '5432' || port.value === '')) port.value = pg ? '5432' : '3306';
+        document.getElementById('@(p)_CsExample').textContent = pg
+            ? 'For example Host=db.example.com;Port=5432;Database=paylink;Username=paylink;Password=…;SSL Mode=Require'
+            : 'For example Server=db.example.com;Port=3306;Database=paylink;Uid=paylink;Pwd=…;SslMode=Required';
+    }));
+</script>

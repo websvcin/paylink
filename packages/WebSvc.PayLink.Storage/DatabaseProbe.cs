@@ -21,9 +21,7 @@ public static class DatabaseProbe
 
             await using var connection = await Db.OpenAsync(target, ct);
             var version = connection.ServerVersion;
-            var tables = target.Engine == DbEngine.Sqlite
-                ? await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
-                : await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE();");
+            var tables = await connection.ExecuteScalarAsync<long>(Db.CountTablesSql(target.Engine));
 
             var canCreate = false;
             try
@@ -31,7 +29,7 @@ public static class DatabaseProbe
                 await connection.ExecuteAsync("CREATE TABLE __paylink_probe (id INT); DROP TABLE __paylink_probe;");
                 canCreate = true;
             }
-            catch (Exception ex) when (ex is MySqlException or SqliteException)
+            catch (Exception ex) when (ex is MySqlException or SqliteException or Npgsql.PostgresException)
             {
                 return new ProbeResult(true, "Connected, but this user can't create tables: " + ex.Message, version, tables, false);
             }
@@ -39,7 +37,7 @@ public static class DatabaseProbe
             var message = tables == 0 ? "Connected. The database is empty." : $"Connected. The database already has {tables} table(s).";
             return new ProbeResult(true, message, version, tables, canCreate);
         }
-        catch (Exception ex) when (ex is MySqlException or SqliteException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is MySqlException or SqliteException or Npgsql.NpgsqlException or InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             return new ProbeResult(false, Explain(ex));
         }

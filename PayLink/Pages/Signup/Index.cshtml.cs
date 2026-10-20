@@ -32,7 +32,7 @@ public sealed class IndexModel(
     [BindProperty] public string? TenantName { get; set; }
     [BindProperty] public string? TenantSlug { get; set; }
     [BindProperty] public string DbChoice { get; set; } = "sqlite";
-    [BindProperty] public MySqlInput Byo { get; set; } = new();
+    [BindProperty] public ServerDbInput Byo { get; set; } = new();
 
     public bool SignupOpen { get; private set; }
     public bool CanCreateOrganizations { get; private set; }

@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Version>0.4.0</Version>
-    <Description>Engine-neutral storage for PayLink: SQLite and MySQL connections, SQL-script migrations, connection probes, and database provisioning through a MySQL server, Plesk or cPanel.</Description>
+    <Version>0.5.0</Version>
+    <Description>Engine-neutral storage for PayLink: SQLite, MySQL and PostgreSQL connections, SQL-script migrations, connection probes, and database provisioning through a MySQL server, Plesk or cPanel.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.35" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
     <PackageReference Include="MySqlConnector" Version="2.3.7" />
+    <PackageReference Include="Npgsql" Version="8.0.5" />
   </ItemGroup>
 
 </Project>

@@ -14,7 +14,7 @@
 | **Payments API** (`/api/v1`): create, get, list, cancel, refund; `Idempotency-Key`; test and live keys. See [docs/payments-api.md](../docs/payments-api.md) | |
 | **Hosted checkout** at `/pay/{id}`: the merchant's methods, retry with another method, return to the merchant | |
 | **PayLink UPI** (free): QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds; **bank statement matching** (upload the CSV, matching UTR and amount approve automatically) | |
-| **Connector catalog** (Admin): install, allow, drain, uninstall; install connector packages from nuget.org at runtime (allowed ID prefixes only) | PostgreSQL |
+| **Connector catalog** (Admin): install, allow, drain, uninstall; install connector packages from nuget.org at runtime (allowed ID prefixes only) | |
 | **Platform**: amount and currency limits, tenant consoles on subdomains, move a tenant's or the platform's database, live dashboard, backup download | Custom domains, reporting API |
 | **Risk**: rules by amount, velocity, country (block/allow), Tor, phone country vs. location, and a 0–100 score from those signals; review holds. Location from an optional MaxMind-format database (Admin → Location data) | Connect CrudApi, disputes, FileLink file storage |
 | **Reports**: funnel, success rate, failure reasons, methods, daily volume; CSV export | |
@@ -22,9 +22,10 @@
 | **Reconciliation**: upload a gateway's settlement CSV, map its columns (guessed for you), match lines to payments, see mismatches and unknown lines, daily close and unsettled payments | |
 | **Payment links** at `/l/{code}` (fixed or payer-chosen amount, one-time or limited, QR code) and a **Pay button** for any site (`js/paylink.js`) | |
 | **Routing**: method order and amount ranges per mode, a circuit breaker that rests a gateway after repeated errors, automatic failover to the next gateway | |
+| **PostgreSQL** (13+) for the platform and tenant databases, next to SQLite and MySQL; move a tenant between any of them | |
 | **Simulator** for Test; payment journey (append-only events), statuses that only move forward, signed webhooks with retries | |
 | Tenant developer keys (`tdk_`) and API; API request log; console with Test/Live switch | |
-| Setup: new or restore (backup .zip or bootstrap.db), encryption key inside bootstrap.db (or `PayLink__MasterKey`), SQLite/MySQL platform and tenant databases, auto-provisioning (tested before saving), LoginLink with clear credential checks | |
+| Setup: new or restore (backup .zip or bootstrap.db), encryption key inside bootstrap.db (or `PayLink__MasterKey`), SQLite/MySQL/PostgreSQL platform and tenant databases, auto-provisioning (tested before saving), LoginLink with clear credential checks | |
 
 ## Run it
 
@@ -33,13 +34,13 @@ docker run -d -p 8080:8080 -v $(pwd)/App_Data:/app/App_Data --name paylink websv
 docker logs paylink        # shows the one-time setup code (also in App_Data/setup-code.txt)
 ```
 
-Open `http://localhost:8080/setup`. Or, from this folder, `docker compose up -d` (add `--profile mysql` for a MySQL server next to it; see `docker-compose.yml`). To build the image yourself, run `docker build -f PayLink/Dockerfile -t websvcin/paylink .` from the repository root, because it also needs `packages/` and `scripts/`.
+Open `http://localhost:8080/setup`. Or, from this folder, `docker compose up -d` (add `--profile mysql` or `--profile postgres` for a database server next to it; see `docker-compose.yml`). To build the image yourself, run `docker build -f PayLink/Dockerfile -t websvcin/paylink .` from the repository root, because it also needs `packages/` and `scripts/`.
 
 ### What setup asks for
 
 1. **Data folder and setup code.** The page shows where data is kept and how to move it (`PayLink__DataRoot`). In Docker it warns when `/app/App_Data` isn't a mounted volume. The setup code stops a stranger from claiming a fresh server: it's in the startup log and in `App_Data/setup-code.txt`, it's filled in for you when you open setup on the server itself (`localhost`), and you can choose it yourself with `PayLink__SetupCode`.
 2. **Auto-provisioning** (optional): a MySQL server, Plesk (login and password, or a secret key) or cPanel PayLink may create databases on, for the platform database and, if you allow it, for tenants (approved LoginLink organizations, everyone, or none). In a container, host fields offer the Docker host's address (e.g. `172.17.0.1`) instead of `localhost`. Change it later in Admin → Database hosting and Admin → Auto-provisioning.
-3. **Platform database**: SQLite (default), a MySQL database you run (fields or a connection string), or one created through auto-provisioning with a name you can edit. An existing PayLink platform database is reattached. Engines this build doesn't have (PostgreSQL today) are listed but greyed out; they come from the storage package, not from the pages.
+3. **Platform database**: SQLite (default), a MySQL or PostgreSQL database you run (fields or a connection string), or a MySQL one created through auto-provisioning with a name you can edit. An existing PayLink platform database is reattached. The engines come from the storage package, not from the pages.
 4. **LoginLink** (required):
    - the server address and the **platform organization** whose people may use `/admin` (any existing organization, or blank for LoginLink's platform root),
    - PayLink's public address (sign-in returns to `{address}/auth/callback`),
@@ -95,6 +96,7 @@ cd PayLink
 dotnet run                                 # http://localhost:5000, data in PayLink/App_Data
 dotnet test PayLink.sln                    # SQLite tests
 PAYLINK_TEST_MYSQL_ADMIN="Server=127.0.0.1;Uid=root;Pwd=…" dotnet test PayLink.sln   # adds the MySQL journey
+PAYLINK_TEST_PG_ADMIN="Host=127.0.0.1;Username=postgres;Password=…" dotnet test PayLink.sln   # every test on PostgreSQL
 ```
 
 The app uses the `WebSvc.PayLink.*` packages from a local feed, `../artifacts/packages`. **The first build fills it automatically** by packing `../packages`. After you change anything in `packages/`, repack so the app picks it up:

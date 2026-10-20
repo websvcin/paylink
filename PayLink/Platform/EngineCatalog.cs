@@ -14,7 +14,7 @@ public static class EngineCatalog
     [
         ("SQLite", nameof(DbEngine.Sqlite), "A file in the data folder. Nothing to set up."),
         ("MySQL", nameof(DbEngine.MySql), "Your own server, or created through auto-provisioning."),
-        ("PostgreSQL", "PostgreSql", "Not in this version. It arrives with a PostgreSQL provider in WebSvc.PayLink.Storage."),
+        ("PostgreSQL", nameof(DbEngine.PostgreSql), "Your own server (PostgreSQL 13 or later). Auto-provisioning creates MySQL only."),
     ];
 
     public static IReadOnlyList<EngineInfo> All { get; } =
@@ -31,7 +31,7 @@ public static class TenantDbOptions
     public static readonly IReadOnlyList<(string Key, string Label, string Help)> All =
     [
         (Sqlite, "SQLite, managed by PayLink", "A file in the data folder. Easiest to start with."),
-        (Byo, "Their own MySQL", "The tenant enters a connection to an empty database they run."),
+        (Byo, "Their own MySQL or PostgreSQL", "The tenant enters a connection to an empty database they run."),
         (Auto, "Auto-provisioned MySQL", "Created on this platform's hosting, for organizations the auto-provisioning rules allow."),
     ];
 }

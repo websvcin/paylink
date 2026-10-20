@@ -4,9 +4,11 @@ using WebSvc.PayLink.Storage.Provisioning;
 
 namespace PayLink.Pages;
 
-/// <summary>A MySQL database entered as separate fields or as a pasted connection string.</summary>
-public sealed class MySqlInput
+/// <summary>A MySQL or PostgreSQL database someone runs themselves, entered as separate fields or as a pasted connection string.</summary>
+public sealed class ServerDbInput
 {
+    /// <summary>"mysql" or "postgresql".</summary>
+    public string Engine { get; set; } = "mysql";
     public bool UseConnectionString { get; set; }
     public string? ConnectionString { get; set; }
     public string? Host { get; set; }
@@ -16,12 +18,31 @@ public sealed class MySqlInput
     public string? Password { get; set; }
     public MySqlSslMode SslMode { get; set; } = MySqlSslMode.Preferred;
 
+    public bool IsPostgreSql => Engine == "postgresql";
+    private string EngineName => IsPostgreSql ? "PostgreSQL" : "MySQL";
+
+    /// <summary>The SSL choices are MySQL's names; PostgreSQL has the same levels under other names.</summary>
+    private Npgsql.SslMode PgSsl => SslMode switch
+    {
+        MySqlSslMode.None => Npgsql.SslMode.Disable,
+        MySqlSslMode.Required => Npgsql.SslMode.Require,
+        MySqlSslMode.VerifyCA => Npgsql.SslMode.VerifyCA,
+        MySqlSslMode.VerifyFull => Npgsql.SslMode.VerifyFull,
+        _ => Npgsql.SslMode.Prefer,
+    };
+
     public bool TryBuild(out DatabaseTarget? target, out string error)
     {
         target = null;
         if (UseConnectionString)
         {
-            if (string.IsNullOrWhiteSpace(ConnectionString)) { error = "Paste a MySQL connection string."; return false; }
+            if (string.IsNullOrWhiteSpace(ConnectionString)) { error = $"Paste a {EngineName} connection string."; return false; }
+            if (IsPostgreSql)
+            {
+                if (!PostgreSqlConnectionDetails.TryParse(ConnectionString, out var pg, out error)) return false;
+                target = DatabaseTarget.ForPostgreSql(pg!);
+                return true;
+            }
             if (!MySqlConnectionDetails.TryParse(ConnectionString, out var parsed, out error)) return false;
             target = DatabaseTarget.ForMySql(parsed!);
             return true;
@@ -31,7 +52,10 @@ public sealed class MySqlInput
             error = "Enter the host, database name and user.";
             return false;
         }
-        target = DatabaseTarget.ForMySql(new MySqlConnectionDetails(Host.Trim(), Port == 0 ? 3306 : Port, Database.Trim(), User.Trim(), Password ?? "", SslMode));
+        target = IsPostgreSql
+            ? DatabaseTarget.ForPostgreSql(new PostgreSqlConnectionDetails(Host.Trim(), Port is 0 or 3306 ? PostgreSqlConnectionDetails.DefaultPort : (int)Port,
+                Database.Trim(), User.Trim(), Password ?? "", PgSsl))
+            : DatabaseTarget.ForMySql(new MySqlConnectionDetails(Host.Trim(), Port is 0 or 5432 ? 3306 : Port, Database.Trim(), User.Trim(), Password ?? "", SslMode));
         error = "";
         return true;
     }

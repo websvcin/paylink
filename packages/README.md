@@ -5,7 +5,7 @@ Libraries PayLink uses through `PackageReference`, each with its own version. Th
 | Package | What it is |
 |---|---|
 | `WebSvc.PayLink.Abstractions` | The connector contract every payment connector depends on: manifest, config schema, attempts, next actions, normalized statuses and failure reasons. Kept small; a breaking change means a new major version. |
-| `WebSvc.PayLink.Storage` | Engine-neutral storage: SQLite and MySQL connections, SQL-script migrations with checksums, connection probes, and database provisioning through a MySQL server, Plesk or cPanel. |
+| `WebSvc.PayLink.Storage` | Engine-neutral storage: SQLite, MySQL and PostgreSQL connections, SQL-script migrations with checksums, connection probes, and database provisioning through a MySQL server, Plesk or cPanel. |
 | `WebSvc.PayLink.Connector.Upi` | PayLink UPI: a `upi://pay` QR code paying straight into the merchant's UPI ID; UTR and VPA checks. |
 | `WebSvc.PayLink.Connector.Simulator` | Test-only connector: the checkout offers Succeed, Fail and Stay pending. |
 | `WebSvc.PayLink.Connector.Razorpay` | Razorpay Payment Links, signed callbacks and webhooks, status, refunds, disputes. |

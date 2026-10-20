@@ -29,8 +29,8 @@
         {
             <label class="opt"><input type="radio" name="DbChoice" value="auto" checked="@(Model.DbChoice == "auto")"><div><b>Create a MySQL database</b><span>On this platform's database hosting. As a platform admin you don't need an approval entry.</span></div></label>
         }
-        <label class="opt"><input type="radio" name="DbChoice" value="byo" checked="@(Model.DbChoice == "byo")"><div><b>Their own MySQL</b><span>Must be empty.</span></div></label>
-        <div class="reveal card"><partial name="_MySqlFields" model='("Byo", Model.Byo)' /></div>
+        <label class="opt"><input type="radio" name="DbChoice" value="byo" checked="@(Model.DbChoice == "byo")"><div><b>Their own MySQL or PostgreSQL</b><span>Must be empty.</span></div></label>
+        <div class="reveal card"><partial name="_ServerDbFields" model='("Byo", Model.Byo)' /></div>
     </div>
     <div class="actions"><button class="btn pri" type="submit">Create tenant</button></div>
 </form>

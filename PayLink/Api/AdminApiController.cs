@@ -83,7 +83,8 @@ public sealed class AdminApiController(
 
     public sealed record CreateTenantBody(string Name, string Slug, CreateTenantLoginLink LoginLink, CreateTenantDatabase? Database);
     public sealed record CreateTenantLoginLink(string Organization, string ClientId, string ClientSecret);
-    public sealed record CreateTenantDatabase(string Mode, string? ConnectionString);
+    /// <summary>Mode sqlite, auto or byo; for byo, Engine mysql (default) or postgresql and its connection string.</summary>
+    public sealed record CreateTenantDatabase(string Mode, string? ConnectionString, string? Engine = null);
 
     /// <summary>Creates a tenant for an existing LoginLink organization. Needs Tenants and LoginLink.</summary>
     [HttpPost("tenants")]
@@ -100,9 +101,18 @@ public sealed class AdminApiController(
         DatabaseTarget? byo = null;
         if (mode == "byo")
         {
-            if (!MySqlConnectionDetails.TryParse(body.Database?.ConnectionString ?? "", out var details, out var parseError))
-                return Error(400, "invalid_request", parseError);
-            byo = DatabaseTarget.ForMySql(details!);
+            if (string.Equals(body.Database?.Engine, "postgresql", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!PostgreSqlConnectionDetails.TryParse(body.Database?.ConnectionString ?? "", out var pg, out var pgError))
+                    return Error(400, "invalid_request", pgError);
+                byo = DatabaseTarget.ForPostgreSql(pg!);
+            }
+            else
+            {
+                if (!MySqlConnectionDetails.TryParse(body.Database?.ConnectionString ?? "", out var details, out var parseError))
+                    return Error(400, "invalid_request", parseError);
+                byo = DatabaseTarget.ForMySql(details!);
+            }
         }
         else if (mode is not ("sqlite" or "auto")) return Error(400, "invalid_request", "database.mode must be sqlite, auto or byo.");
 

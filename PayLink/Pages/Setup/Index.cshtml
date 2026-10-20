@@ -158,8 +158,8 @@
                 <p class="muted">Holds the tenant registry, platform admins, developer keys and the platform audit log. Each tenant gets its own separate database later.</p>
                 <div class="opts">
                     <label class="opt"><input type="radio" name="DbChoice" value="sqlite" checked="@(Model.DbChoice == "sqlite")"><div><b>SQLite</b><span>Nothing to set up. Creates <code>platform.db</code> in the data folder.</span></div></label>
-                    <label class="opt"><input type="radio" name="DbChoice" value="mysql" checked="@(Model.DbChoice == "mysql")"><div><b>MySQL: a server I run</b><span>An empty database, or an existing PayLink platform database to reattach.</span></div></label>
-                    <div class="reveal card"><partial name="_MySqlFields" model='("Mysql", Model.Mysql)' /></div>
+                    <label class="opt"><input type="radio" name="DbChoice" value="mysql" checked="@(Model.DbChoice == "mysql")"><div><b>MySQL or PostgreSQL: a server I run</b><span>An empty database, or an existing PayLink platform database to reattach.</span></div></label>
+                    <div class="reveal card"><partial name="_ServerDbFields" model='("Mysql", Model.Mysql)' /></div>
                     @if (Model.SavedHosting.Kind != HostingKind.None)
                     {
                         <label class="opt"><input type="radio" name="DbChoice" value="mysql-create" checked="@(Model.DbChoice == "mysql-create")"><div><b>MySQL: create it for me (auto-provision)</b><span>On @Model.SavedHosting.Describe(), with its own user and generated password.</span></div></label>

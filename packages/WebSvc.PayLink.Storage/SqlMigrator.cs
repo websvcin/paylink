@@ -64,8 +64,9 @@ public static partial class SqlMigrator
                 continue;
             }
 
-            if (target.Engine == DbEngine.Sqlite)
+            if (target.Engine is DbEngine.Sqlite or DbEngine.PostgreSql)
             {
+                // Both roll back DDL with the transaction, so a script applies completely or not at all.
                 await using var tx = await connection.BeginTransactionAsync(ct);
                 await connection.ExecuteAsync(script.Sql, transaction: tx);
                 await Record(connection, script, tx);
@@ -87,9 +88,12 @@ public static partial class SqlMigrator
     public static async Task<string?> CurrentVersionAsync(DatabaseTarget target, CancellationToken ct = default)
     {
         await using var connection = await Db.OpenAsync(target, ct);
-        var exists = target.Engine == DbEngine.Sqlite
-            ? await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_migrations';")
-            : await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'schema_migrations';");
+        var exists = await connection.ExecuteScalarAsync<long>(target.Engine switch
+        {
+            DbEngine.Sqlite => "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_migrations';",
+            DbEngine.PostgreSql => "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'schema_migrations';",
+            _ => "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'schema_migrations';",
+        });
         if (exists == 0) return null;
         return await connection.ExecuteScalarAsync<string?>("SELECT MAX(version) FROM schema_migrations;");
     }

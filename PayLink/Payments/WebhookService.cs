@@ -79,7 +79,7 @@ public sealed class WebhookService(TenantDb tenantDb, SecretProtector secrets, P
     /// <summary>Queues an event for every enabled endpoint of the same mode that wants it. Runs on the caller's connection.</summary>
     public async Task EnqueueAsync(DbConnection c, string eventType, bool livemode, string? paymentId, object data, long? onlyEndpointId = null)
     {
-        var endpoints = (await c.QueryAsync<WebhookEndpoint>("SELECT * FROM webhook_endpoints WHERE enabled = 1 AND livemode = @livemode;", new { livemode }))
+        var endpoints = (await c.QueryAsync<WebhookEndpoint>("SELECT * FROM webhook_endpoints WHERE enabled = TRUE AND livemode = @livemode;", new { livemode }))
             .Where(e => onlyEndpointId is null ? e.Wants(eventType) : e.Id == onlyEndpointId).ToList();
         if (endpoints.Count == 0) return;
         var eventId = Ids.New("evt");

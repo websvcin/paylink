@@ -93,7 +93,7 @@ public sealed class ConnectorSettingsService(TenantDb tenantDb, ConnectorRegistr
     public async Task DisableAsync(TenantRecord tenant, string connectorId, PaymentMode mode, Actor actor)
     {
         await using var c = await tenantDb.OpenAsync(tenant);
-        await c.ExecuteAsync("UPDATE connector_settings SET enabled = 0, updated_at = @at, updated_by = @by WHERE connector_id = @connectorId AND mode = @mode;",
+        await c.ExecuteAsync("UPDATE connector_settings SET enabled = FALSE, updated_at = @at, updated_by = @by WHERE connector_id = @connectorId AND mode = @mode;",
             new { connectorId, mode = ModeKey(mode), at = Clock.Now(), by = actor.Name });
         await AuditLog.WriteAsync(c, actor, "method.disabled", $"{connectorId}/{ModeKey(mode)}");
     }
