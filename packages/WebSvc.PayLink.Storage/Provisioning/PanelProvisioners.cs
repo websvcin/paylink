@@ -47,7 +47,11 @@ public sealed class PleskProvisioner(PleskHosting hosting, HttpClient http, stri
         try
         {
             db = await CreateAsync("paylink_", "check", ct);
-            return new ProvisioningCheck(true, $"Plesk created a test database ({db.DatabaseName}) and user, and removed them again.");
+            var left = await DropReportingAsync(db);
+            db = null;
+            return new ProvisioningCheck(true, left is null
+                ? "Plesk created a test database and user, and removed them again."
+                : $"Plesk created a test database and user, but didn't remove {left}. Delete it in Plesk; saving still works.");
         }
         catch (Exception ex) when (ex is ProvisioningException or HttpRequestException or TaskCanceledException or JsonException)
         {
@@ -57,6 +61,16 @@ public sealed class PleskProvisioner(PleskHosting hosting, HttpClient http, stri
         {
             if (db is not null) await DropAsync(db, CancellationToken.None);
         }
+    }
+
+    /// <summary>Removes a database and its user; returns what's left behind (null when both are gone).</summary>
+    private async Task<string?> DropReportingAsync(ProvisionedDatabase db)
+    {
+        var parts = db.ProviderReference.Split('|');
+        var left = new List<string>();
+        if (parts.Length > 1 && parts[1] != "0" && !await TryDelete($"dbusers/{parts[1]}")) left.Add($"the user {db.UserName}");
+        if (!await TryDelete($"databases/{parts[0]}")) left.Add($"the database {db.DatabaseName}");
+        return left.Count == 0 ? null : string.Join(" and ", left);
     }
 
     public string ProposeName(string prefix, string label) => ProvisioningNames.DatabaseName(prefix, label);
@@ -104,10 +118,10 @@ public sealed class PleskProvisioner(PleskHosting hosting, HttpClient http, stri
         await TryDelete($"databases/{parts[0]}");
     }
 
-    private async Task TryDelete(string path)
+    private async Task<bool> TryDelete(string path)
     {
-        try { await Send(HttpMethod.Delete, path, null, CancellationToken.None); }
-        catch (Exception ex) when (ex is ProvisioningException or HttpRequestException or TaskCanceledException) { }
+        try { await Send(HttpMethod.Delete, path, null, CancellationToken.None); return true; }
+        catch (Exception ex) when (ex is ProvisioningException or HttpRequestException or TaskCanceledException) { return false; }
     }
 
     private static string Trim(string text) => text.Length > 300 ? text[..300] + "…" : text;
@@ -147,7 +161,14 @@ public sealed class CPanelProvisioner(CPanelHosting hosting, HttpClient http, st
         try
         {
             db = await CreateAsync("pl_", "check", ct);
-            return new ProvisioningCheck(true, $"cPanel created a test database ({db.DatabaseName}) and user, and removed them again.");
+            var parts = db.ProviderReference.Split('|');
+            var left = new List<string>();
+            if (!await TryCall("delete_user", new() { ["name"] = parts[1] })) left.Add($"the user {parts[1]}");
+            if (!await TryCall("delete_database", new() { ["name"] = parts[0] })) left.Add($"the database {parts[0]}");
+            db = null;
+            return new ProvisioningCheck(true, left.Count == 0
+                ? "cPanel created a test database and user, and removed them again."
+                : $"cPanel created a test database and user, but didn't remove {string.Join(" and ", left)}. Delete it in cPanel; saving still works.");
         }
         catch (Exception ex) when (ex is ProvisioningException or HttpRequestException or TaskCanceledException or JsonException)
         {
@@ -199,9 +220,9 @@ public sealed class CPanelProvisioner(CPanelHosting hosting, HttpClient http, st
         await TryCall("delete_database", new() { ["name"] = parts[0] });
     }
 
-    private async Task TryCall(string function, Dictionary<string, string> args)
+    private async Task<bool> TryCall(string function, Dictionary<string, string> args)
     {
-        try { await Call(function, args, CancellationToken.None); }
-        catch (Exception ex) when (ex is ProvisioningException or HttpRequestException or TaskCanceledException or JsonException) { }
+        try { await Call(function, args, CancellationToken.None); return true; }
+        catch (Exception ex) when (ex is ProvisioningException or HttpRequestException or TaskCanceledException or JsonException) { return false; }
     }
 }

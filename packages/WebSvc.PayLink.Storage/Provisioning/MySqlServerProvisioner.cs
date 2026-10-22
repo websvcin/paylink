@@ -27,6 +27,15 @@ public sealed class MySqlServerProvisioner(MySqlServerHosting hosting, string? c
             db = await CreateAsync("paylink_", "check", ct);
             var probe = await DatabaseProbe.TestAsync(db.Target, ct);
             if (!probe.Ok) return new ProvisioningCheck(false, "Created a test database but couldn't connect to it as its new user: " + probe.Message);
+            var name = db.DatabaseName;
+            await DropAsync(db, CancellationToken.None);
+            db = null;
+            await using (var admin = new MySqlConnection(AdminConnectionString))
+            {
+                await admin.OpenAsync(ct);
+                if (await admin.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = @name;", new { name }) > 0)
+                    return new ProvisioningCheck(true, $"Connected to MySQL {probe.ServerVersion} and created a test database, but couldn't remove it ({name}). Drop it by hand; saving still works.");
+            }
             return new ProvisioningCheck(true, $"Connected to MySQL {probe.ServerVersion}, created a test database and user, and removed them again.");
         }
         catch (Exception ex) when (ex is MySqlException or ProvisioningException)

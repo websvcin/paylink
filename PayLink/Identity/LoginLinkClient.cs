@@ -10,7 +10,11 @@ namespace PayLink.Identity;
 
 public sealed class LoginLinkException(string message) : Exception(message);
 
-public sealed record RegisteredApp(string AppId, string ClientId, string ClientSecret);
+public sealed record RegisteredApp(string AppId, string ClientId, string ClientSecret)
+{
+    /// <summary>Set when PayLink couldn't turn on a sign-in method for the app: what the person should do in LoginLink.</summary>
+    public string? SignInNote { get; init; }
+}
 
 public sealed record CreatedOrganization(string Slug, string Issuer, string DiscoveryUrl, RegisteredApp? App);
 
@@ -146,7 +150,48 @@ public sealed class LoginLinkClient(IHttpClientFactory httpFactory, IConfigurati
 
         await CallAsync(HttpMethod.Patch, $"{NormalizeServer(serverUrl)}/api/v1/apps/{app.AppId}", token,
             new { allowEndUserSignIn = true, allowTenantAdminSignIn = true }, ct);
-        return app;
+        return app with { SignInNote = await EnsureSignInMethodAsync(serverUrl, token, app.AppId, ct) };
+    }
+
+    /// <summary>Sign-in connectors PayLink turns on for its apps, in order of preference, when none is on yet.</summary>
+    public static readonly string[] PreferredConnectors = ["Password", "MagicLink", "EmailOtp", "WebAuthn"];
+
+    /// <summary>
+    /// A new LoginLink app has no sign-in method switched on, and people then see "has no sign-in method available for this app".
+    /// This keeps one that's on, or turns on the first approved one (approving Password for this app if nothing is). Needs
+    /// ManageConnectors; without it, returns what to do in LoginLink instead of failing.
+    /// </summary>
+    public async Task<string?> EnsureSignInMethodAsync(string serverUrl, string token, string appId, CancellationToken ct = default)
+    {
+        var server = NormalizeServer(serverUrl);
+        try
+        {
+            var current = await CallAsync(HttpMethod.Get, $"{server}/api/v1/apps/{appId}/connectors", token, null, ct) as JsonArray ?? [];
+            if (current.Any(c => (bool?)c?["enabled"] == true)) return null;
+
+            var policy = (await CallAsync(HttpMethod.Get, $"{server}/api/v1/connector-policy", token, null, ct))?["connectors"] as JsonArray ?? [];
+            bool AllowedHere(JsonNode? c) => (bool?)c?["approved"] == true
+                && ((string?)c?["scopeMode"] != "specific" || (c?["appIds"] as JsonArray)?.Any(i => i?.ToString() == appId) == true);
+            var pick = PreferredConnectors.FirstOrDefault(n => policy.Any(c => (string?)c?["name"] == n && AllowedHere(c)));
+            if (pick is null)
+            {
+                pick = "Password";
+                var password = policy.FirstOrDefault(c => (string?)c?["name"] == pick);
+                if ((string?)password?["scopeMode"] == "specific")
+                {
+                    var ids = ((password?["appIds"] as JsonArray) ?? []).Select(i => i!.GetValue<int>()).Append(int.Parse(appId)).Distinct().ToArray();
+                    await CallAsync(HttpMethod.Patch, $"{server}/api/v1/connector-policy/{pick}", token, new { approved = true, scopeMode = "specific", appIds = ids }, ct);
+                }
+                else await CallAsync(HttpMethod.Patch, $"{server}/api/v1/connector-policy/{pick}", token, new { approved = true }, ct);
+            }
+            await CallAsync(HttpMethod.Patch, $"{server}/api/v1/apps/{appId}/connectors", token, new { name = pick, enabled = true }, ct);
+            return null;
+        }
+        catch (Exception ex) when (ex is LoginLinkException or FormatException or InvalidOperationException)
+        {
+            return "Turn on a sign-in method (for example Email & Password) for the app in LoginLink: Console → Apps → the app → Connectors. " +
+                   "PayLink couldn't do it with this credential (it needs Manage connectors): " + ex.Message;
+        }
     }
 
     /// <summary>Replaces an app's redirect URIs (needs Register apps / Manage apps), e.g. to add a tenant's subdomain callback.</summary>

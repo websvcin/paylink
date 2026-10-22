@@ -111,7 +111,7 @@ public sealed class BootstrapStore
     /// so saving falls back to these secrets instead of storing blanks.
     /// </summary>
     public async Task<HostingSettings?> GetHostingDraftAsync() => _secrets.UnprotectJson<HostingSettings>(await Get(HostingDraft));
-    public Task SetHostingDraftAsync(HostingSettings settings) => Set(HostingDraft, _secrets.ProtectJson(settings));
+    public Task SetHostingDraftAsync(HostingSettings? settings) => Set(HostingDraft, settings is null ? null : _secrets.ProtectJson(settings));
 
     /// <summary>The tenant auto-provisioning rule chosen during setup, before the platform database exists to hold it.</summary>
     public Task<string?> GetInitialTenantAutoProvisionAsync() => Get(InitialTenantAutoProvision);

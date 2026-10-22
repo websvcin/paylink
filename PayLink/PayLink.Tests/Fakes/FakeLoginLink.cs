@@ -35,6 +35,13 @@ public sealed class FakeLoginLink : IAsyncDisposable
     public string BaseUrl { get; }
     public ConcurrentDictionary<string, List<string>> RegisteredApis { get; } = new();
     public ConcurrentDictionary<string, JsonObject> AppPatches { get; } = new();
+    /// <summary>Sign-in connectors switched on per app id. LoginLink starts a new app with none, and then refuses sign-in.</summary>
+    public ConcurrentDictionary<string, HashSet<string>> AppConnectors { get; } = new();
+    /// <summary>Connectors approved per organization (connector policy). Password is approved unless a test removes it.</summary>
+    public ConcurrentDictionary<string, HashSet<string>> ApprovedConnectors { get; } = new();
+    /// <summary>When false, management credentials lack ManageConnectors (403 on the connector endpoints).</summary>
+    public bool ManageConnectorsAllowed { get; set; } = true;
+    private readonly ConcurrentDictionary<string, string> _clientOfApp = new();
 
     private FakeLoginLink(WebApplication app, string baseUrl) { _app = app; BaseUrl = baseUrl; }
 
@@ -68,6 +75,10 @@ public sealed class FakeLoginLink : IAsyncDisposable
         app.MapPost("/token", (HttpRequest r) => Token("", r));
         app.MapPost("/api/v1/apps", RegisterApp);
         app.MapMethods("/api/v1/apps/{id}", ["PATCH"], PatchApp);
+        app.MapGet("/api/v1/apps/{id}/connectors", AppConnectorList);
+        app.MapMethods("/api/v1/apps/{id}/connectors", ["PATCH"], PatchAppConnector);
+        app.MapGet("/api/v1/connector-policy", ConnectorPolicy);
+        app.MapMethods("/api/v1/connector-policy/{name}", ["PATCH"], PatchConnectorPolicy);
         app.MapGet("/api/v1/apis", ListApis);
         app.MapPost("/api/v1/apis", AddApi);
         app.MapPost("/api/v1/tenants", CreateTenant);
@@ -130,6 +141,9 @@ public sealed class FakeLoginLink : IAsyncDisposable
         var redirect = q["redirect_uri"].ToString();
         if (!client.RedirectUris.Contains(redirect)) return Results.BadRequest(new { error = "invalid_redirect_uri" });
         if (q["code_challenge_method"] != "S256" || string.IsNullOrEmpty(q["code_challenge"])) return Results.BadRequest(new { error = "pkce_required" });
+        var appId = _clientOfApp.FirstOrDefault(kv => kv.Value == clientId).Key;
+        if (appId is not null && AppConnectors.GetValueOrDefault(appId) is not { Count: > 0 })
+            return Results.Content("This account has no sign-in method available for this app.", "text/plain", statusCode: 400);
         if (!_nextSignIn.TryRemove(org, out var person))
             return Results.Redirect($"{redirect}?error=access_denied&error_description=No+test+user&state={Uri.EscapeDataString(q["state"]!)}");
 
@@ -195,6 +209,7 @@ public sealed class FakeLoginLink : IAsyncDisposable
         var clientId = "app_" + Guid.NewGuid().ToString("N")[..10];
         var secret = "appsecret-" + Guid.NewGuid().ToString("N");
         _clients[clientId] = new Client(secret, caller.Org, "app", redirects);
+        _clientOfApp[appId.ToString()] = clientId;
         return Results.Json(new { appId, clientId, clientSecret = secret }, statusCode: 201);
     }
 
@@ -203,6 +218,53 @@ public sealed class FakeLoginLink : IAsyncDisposable
         if (Caller(r, "mgmt") is null) return Results.Json(new { error = "insufficient_scope" }, statusCode: 403);
         AppPatches[id] = (await JsonNode.ParseAsync(r.Body))!.AsObject();
         return Results.Json(new { appId = int.Parse(id) });
+    }
+
+    // An organization created with an owner password: assumed to come with Password on for its first app.
+    private int NewPlatformApp(string clientId)
+    {
+        var id = Interlocked.Increment(ref _appIds);
+        _clientOfApp[id.ToString()] = clientId;
+        AppConnectors[id.ToString()] = ["Password"];
+        return id;
+    }
+
+    private string? OrgOf(string appId) => _clientOfApp.TryGetValue(appId, out var c) && _clients.TryGetValue(c, out var client) ? client.Org : null;
+    private HashSet<string> Approved(string org) => ApprovedConnectors.GetOrAdd(org, _ => ["Password"]);
+
+    private IResult AppConnectorList(string id, HttpRequest r)
+    {
+        if (Caller(r, "mgmt") is null || !ManageConnectorsAllowed) return Results.Json(new { error = "insufficient_scope" }, statusCode: 403);
+        var on = AppConnectors.GetValueOrDefault(id) ?? [];
+        return Results.Json(Approved(OrgOf(id) ?? "").Select(n => new { name = n, enabled = on.Contains(n) }));
+    }
+
+    private async Task<IResult> PatchAppConnector(string id, HttpRequest r)
+    {
+        if (Caller(r, "mgmt") is null || !ManageConnectorsAllowed) return Results.Json(new { error = "insufficient_scope" }, statusCode: 403);
+        var body = (await JsonNode.ParseAsync(r.Body))!;
+        var name = (string)body["name"]!;
+        if (!Approved(OrgOf(id) ?? "").Contains(name)) return Results.Json(new { error = "connector_not_approved" }, statusCode: 400);
+        var set = AppConnectors.GetOrAdd(id, _ => []);
+        if ((bool)body["enabled"]!) set.Add(name); else set.Remove(name);
+        return Results.Json(new { name, enabled = set.Contains(name) });
+    }
+
+    private IResult ConnectorPolicy(HttpRequest r)
+    {
+        var caller = Caller(r, "mgmt");
+        if (caller is null || !ManageConnectorsAllowed) return Results.Json(new { error = "insufficient_scope" }, statusCode: 403);
+        var approved = Approved(caller.Org ?? "");
+        return Results.Json(new { connectors = new[] { "Password", "MagicLink", "EmailOtp" }.Select(n => new { name = n, approved = approved.Contains(n), scopeMode = "all", appIds = Array.Empty<int>() }) });
+    }
+
+    private async Task<IResult> PatchConnectorPolicy(string name, HttpRequest r)
+    {
+        var caller = Caller(r, "mgmt");
+        if (caller is null || !ManageConnectorsAllowed) return Results.Json(new { error = "insufficient_scope" }, statusCode: 403);
+        var body = (await JsonNode.ParseAsync(r.Body))!;
+        if ((bool?)body["approved"] == true) Approved(caller.Org ?? "").Add(name); else Approved(caller.Org ?? "").Remove(name);
+        return Results.Json(new { name });
     }
 
     private IResult ListApis(HttpRequest r)
@@ -236,7 +298,7 @@ public sealed class FakeLoginLink : IAsyncDisposable
         return Results.Json(new
         {
             tenantId = 99, slug, adminUserId = 1,
-            app = new { appId = Interlocked.Increment(ref _appIds), clientId, clientSecret = secret },
+            app = new { appId = NewPlatformApp(clientId), clientId, clientSecret = secret },
             issuer = Issuer(slug), discoveryUrl = Issuer(slug) + "/.well-known/openid-configuration",
         }, statusCode: 201);
     }

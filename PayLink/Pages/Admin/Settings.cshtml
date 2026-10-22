@@ -55,7 +55,7 @@
         <div class="field"><label for="smtpPort">Port</label><input id="smtpPort" name="port" type="number" value="@(Model.Smtp?.Port ?? 587)"></div>
         <div class="field"><label for="smtpFrom">From</label><input id="smtpFrom" name="from" type="email" value="@Model.Smtp?.From" placeholder="alerts@example.com"></div>
         <div class="field"><label for="smtpUser">User</label><input id="smtpUser" name="user" value="@Model.Smtp?.User" autocomplete="off"></div>
-        <div class="field"><label for="smtpPassword">Password</label><input id="smtpPassword" name="password" type="password" autocomplete="new-password" placeholder="@(string.IsNullOrEmpty(Model.Smtp?.Password) ? "" : "Saved. Leave blank to keep it.")"></div>
+        <div class="field"><label for="smtpPassword">Password</label><input id="smtpPassword" name="password" type="password" autocomplete="new-password" placeholder="@(string.IsNullOrEmpty(Model.Smtp?.Password) ? "" : Masking.Placeholder(Model.Smtp?.Password))"></div>
         <div class="field"><label for="testTo">Send a test to</label><input id="testTo" name="testTo" type="email"></div>
     </div>
     <label class="check"><input type="checkbox" name="ssl" value="true" checked="@(Model.Smtp?.Ssl ?? true)"><span>Use TLS</span></label>
@@ -70,7 +70,7 @@
         <label class="opt"><input type="radio" name="kind" value="filelink" checked="@(Model.Files.Kind == "filelink")"><div><b>FileLink</b><span>A FileLink server (see docs/filelink-contract.md). Checked before it's saved.</span></div></label>
         <div class="reveal card"><div class="grid2">
             <div class="field"><label for="flServer">FileLink address</label><input id="flServer" name="server" class="mono" value="@Model.Files.Server" placeholder="https://files.example.in"></div>
-            <div class="field"><label for="flKey">Key</label><input id="flKey" name="key" type="password" autocomplete="new-password" placeholder="@(string.IsNullOrEmpty(Model.Files.Key) ? "" : "Saved. Leave blank to keep it.")"></div>
+            <div class="field"><label for="flKey">Key</label><input id="flKey" name="key" type="password" autocomplete="new-password" placeholder="@(string.IsNullOrEmpty(Model.Files.Key) ? "" : Masking.Placeholder(Model.Files.Key))"></div>
         </div></div>
     </div>
     @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Save</button></div> }

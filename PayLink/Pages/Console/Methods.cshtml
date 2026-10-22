@@ -91,7 +91,7 @@
                                     <label for="@id">@f.Label</label>
                                     <input id="@id" name="@mode.@f.Key" class="mono" type="@(f.Type == ConfigFieldType.Secret ? "password" : "text")"
                                            value="@(f.Type == ConfigFieldType.Secret ? "" : values.GetValueOrDefault(f.Key))"
-                                           placeholder="@(f.Type == ConfigFieldType.Secret && values.ContainsKey(f.Key) ? "Saved. Leave blank to keep it." : "")" autocomplete="off">
+                                           placeholder="@(f.Type == ConfigFieldType.Secret && values.ContainsKey(f.Key) ? PayLink.Infrastructure.Masking.Placeholder(values[f.Key]) : "")" autocomplete="off">
                                     @if (f.Help is not null) { <span class="hint">@f.Help</span> }
                                 </div>
                             }

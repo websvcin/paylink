@@ -33,9 +33,10 @@ public sealed class SetupTests
 
         var r = await b.SubmitAsync("/setup?step=start", "StartNew", F(("keyPlace", "bootstrap")));
         Assert.Contains("Tick the box", await b.TextAsync(r));
-        r = await b.SubmitAsync("/setup?step=start", "StartNew", F(("keyPlace", "environment"), ("understood", "true")));
-        Assert.Contains("PayLink__MasterKey isn&#x27;t set yet", await b.TextAsync(r));
-        r = await b.SubmitAsync("/setup?step=start", "StartNew", F(("keyPlace", "bootstrap"), ("understood", "true")));
+        // The key stays in the data folder; the page asks for no environment variable and shows no key to copy.
+        Assert.DoesNotContain("PayLink__MasterKey=", html);
+        Assert.Contains("-v /srv/paylink/App_Data:/app/App_Data", html);
+        r = await b.SubmitAsync("/setup?step=start", "StartNew", F(("understood", "true")));
         Assert.Equal("/setup?step=hosting", r.Headers.Location?.OriginalString);
 
         // The key lives in bootstrap.db, not in a keys/ folder.

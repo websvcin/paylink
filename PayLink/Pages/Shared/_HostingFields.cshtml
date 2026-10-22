@@ -3,12 +3,12 @@
 @{
     var i = Model.Input;
     // Each secret says whether one is saved, so a blank field is never mistaken for a kept password.
-    string Keep(string? saved) => string.IsNullOrEmpty(saved) ? "Not saved yet" : "Saved. Leave blank to keep it.";
+    string Keep(string? saved) => PayLink.Infrastructure.Masking.Placeholder(saved);
 }
 <div class="opts">
     @if (Model.AllowNone)
     {
-        <label class="opt"><input type="radio" name="Hosting.Kind" value="None" checked="@(i.Kind == HostingKind.None)"><div><b>Off</b><span>No databases are created on demand. Tenants choose SQLite or bring their own MySQL or PostgreSQL. You can turn this on later in Admin → Database hosting.</span></div></label>
+        <label class="opt"><input type="radio" name="Hosting.Kind" value="None" data-no-test checked="@(i.Kind == HostingKind.None)"><div><b>Off</b><span>No databases are created on demand. Tenants choose SQLite or bring their own MySQL or PostgreSQL. You can turn this on later in Admin → Database hosting.</span></div></label>
     }
     <label class="opt"><input type="radio" name="Hosting.Kind" value="MySqlServer" checked="@(i.Kind == HostingKind.MySqlServer)"><div><b>A MySQL server</b><span>Any MySQL 8 server and an admin account that can create databases and users. Tested end to end.</span></div></label>
     <div class="reveal card">
@@ -63,10 +63,23 @@
 <div class="field" id="h_override">
     <label for="h_ConnectionHostOverride">Host PayLink connects to (optional)</label>
     <input id="h_ConnectionHostOverride" name="Hosting.ConnectionHostOverride" class="mono" value="@i.ConnectionHostOverride" placeholder="Same as the host above">
-    <span class="hint">Databases PayLink creates are reached at the host above (Plesk: the address its MySQL reports). Fill this in only when PayLink must use another address,
-        for example when PayLink runs in Docker on the same server: then <code>localhost</code> means the container, and the server is the Docker host,
-        usually <code>172.17.0.1</code> (the bridge gateway). On Docker Desktop use <code>host.docker.internal</code>.</span>
-    <partial name="_HostHint" model="@("h_ConnectionHostOverride")" />
+    @{
+        var docker = ViewData["DockerHost"] as string;
+        var suggestions = new List<(string Value, string Why)>();
+        if (docker is not null) suggestions.Add((docker, "this container's gateway, detected"));
+        if (docker != "172.17.0.1") suggestions.Add(("172.17.0.1", "Docker's usual bridge gateway (Linux)"));
+        suggestions.Add(("host.docker.internal", "Docker Desktop"));
+        suggestions.Add(("localhost", "PayLink and MySQL on the same machine, no Docker"));
+    }
+    <div class="suggest" role="group" aria-label="Suggested hosts">
+        <span class="hint">Suggestions:</span>
+        @foreach (var (value, why) in suggestions)
+        {
+            <button type="button" class="btn sm" title="@why" onclick="document.getElementById('h_ConnectionHostOverride').value='@value';document.getElementById('h_ConnectionHostOverride').dispatchEvent(new Event('input',{bubbles:true}))">@value</button>
+        }
+    </div>
+    <span class="hint">Leave it blank and PayLink uses the host above (Plesk: the address its MySQL reports). Fill it in when PayLink must reach the databases another way.
+        In Docker, <code>localhost</code> is the container itself: use the Docker host, usually <code>@(docker ?? "172.17.0.1")</code> on Linux or <code>host.docker.internal</code> on Docker Desktop.</span>
 </div>
 <script>
     // Show, as the placeholder, the host PayLink will connect to when this is left blank, as you type.
@@ -78,7 +91,7 @@
             var box = document.getElementById('h_override');
             box.hidden = !kind || kind.value === 'None';
             var host = kind && hosts[kind.value] ? document.getElementById(hosts[kind.value]).value.trim() : '';
-            o.placeholder = host ? 'Blank: PayLink connects to ' + host : 'Same as the host above';
+            o.placeholder = (host ? 'Blank: PayLink connects to ' + host : 'Blank: same as the host above') + ' · in Docker usually @(ViewData["DockerHost"] as string ?? "172.17.0.1")';
         }
         document.querySelectorAll('input[name="Hosting.Kind"], #h_MySqlHost, #h_PleskHost, #h_CPanelHost').forEach(function (e) { e.addEventListener('input', update); e.addEventListener('change', update); });
         update();

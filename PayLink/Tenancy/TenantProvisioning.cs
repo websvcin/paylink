@@ -21,6 +21,8 @@ public sealed class OrgConnection
     public string? MgmtClientSecret { get; set; }
     public string ApiRegistration { get; set; } = "skipped";
     public string? ApiRegistrationError { get; set; }
+    /// <summary>Set when PayLink couldn't turn on a sign-in method for the console app: what to do in LoginLink first.</summary>
+    public string? SignInNote { get; set; }
 }
 
 public enum DatabaseMode { Sqlite, Auto, Byo }
@@ -99,7 +101,7 @@ public sealed class OrgConnector(LoginLinkClient loginLink, PlatformSettings set
         {
             OrgSlug = orgSlug, Issuer = config.Issuer, DiscoveryUrl = discoveryUrl, Mode = "existing",
             AppId = app.AppId, ClientId = app.ClientId, ClientSecret = app.ClientSecret,
-            MgmtClientId = mgmtClientId, MgmtClientSecret = mgmtClientSecret,
+            MgmtClientId = mgmtClientId, MgmtClientSecret = mgmtClientSecret, SignInNote = app.SignInNote,
         };
         try
         {

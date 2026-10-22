@@ -37,14 +37,14 @@ Open `http://localhost:8080/setup`. Or, from this folder, `docker compose up -d`
 ### What setup asks for
 
 1. **Data folder and setup code.** The page shows where data is kept and how to move it (`PayLink__DataRoot`). In Docker it warns when `/app/App_Data` isn't a mounted volume. The setup code stops a stranger from claiming a fresh server: it's in the startup log and in `App_Data/setup-code.txt`, it's filled in for you when you open setup on the server itself (`localhost`), and you can choose it yourself with `PayLink__SetupCode`.
-2. **Auto-provisioning** (optional): a MySQL server, Plesk (login and password, or a secret key) or cPanel PayLink may create databases on, for the platform database and, if you allow it, for tenants (approved LoginLink organizations, everyone, or none). In a container, host fields offer the Docker host's address (e.g. `172.17.0.1`) instead of `localhost`. Change it later in Admin → Database hosting and Admin → Auto-provisioning.
-3. **Platform database**: SQLite (default), a MySQL or PostgreSQL database you run (fields or a connection string), or a MySQL one created through auto-provisioning with a name you can edit. An existing PayLink platform database is reattached. The engines come from the storage package, not from the pages.
-4. **LoginLink** (required):
-   - the server address and the **platform organization** whose people may use `/admin` (any existing organization, or blank for LoginLink's platform root),
-   - PayLink's public address (sign-in returns to `{address}/auth/callback`),
-   - a LoginLink **management credential** with *Register apps* (PayLink registers its "PayLink admin" app itself), or the client ID and secret of an app you registered,
-   - optionally a LoginLink **Platform API credential** with *CreateTenants*, so tenants can create a new organization at signup.
-5. **First admin**: sign in with LoginLink. You become the first platform admin.
+2. **New or restore.** The encryption key for stored secrets lives in the data folder (inside `bootstrap.db`), so mounting `App_Data` is all a container needs. Setting `PayLink__MasterKey` instead is an advanced option.
+3. **Auto-provisioning** (optional): a MySQL server, Plesk (login and password, or a secret key) or cPanel PayLink may create databases on, for the platform database and, if you allow it, for tenants (approved LoginLink organizations, everyone, or none). The "Host PayLink connects to" field suggests the usual Docker addresses (`172.17.0.1`, `host.docker.internal`, or the gateway it detects). Change it later in Admin → Database hosting and Admin → Auto-provisioning.
+4. **Platform database**: SQLite (default), a MySQL or PostgreSQL database you run (fields or a connection string), or a MySQL one created through auto-provisioning with a name you can edit. An existing PayLink platform database is reattached.
+5. **LoginLink** (required), in four short steps: 5.1 the server and PayLink's public address; 5.2 an optional platform credential (*CreateTenants*), so PayLink can create LoginLink organizations; 5.3 your own organization: an existing one with its management credential (*Register apps*, and *Manage connectors* so PayLink can switch on a sign-in method for its app), a new one created for you, an app you registered yourself, or LoginLink's platform root; 5.4 who may open `/admin` (people you approve, the organization's LoginLink admins, or a LoginLink role). Nothing is created in LoginLink until 5.4.
+
+Every step that takes connection details has a **Test** button, and **Continue** opens only after the test passes (changing a field closes it again). Saved secrets are shown masked (`••••••••ab12`), never in full.
+
+6. **First admin**: sign in with LoginLink. You become the first platform admin.
 
 Admin → Settings chooses which database options tenants see at signup (SQLite, their own MySQL, auto-provisioned MySQL).
 

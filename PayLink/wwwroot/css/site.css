@@ -196,3 +196,9 @@ details > summary { cursor: pointer; color: var(--accent); font-size: .9rem; }
 .bar:hover { opacity: .8; }
 .bars-axis { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.suggest { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.substeps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.substeps a, .substeps span { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: .85rem; color: var(--muted); text-decoration: none; }
+.substeps a.now { background: var(--accent); color: #fff; border-color: var(--accent); }
+.substeps a.done { color: var(--good); border-color: var(--good); }
+button:disabled { opacity: .5; cursor: not-allowed; }

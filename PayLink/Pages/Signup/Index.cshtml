@@ -9,6 +9,15 @@
 
     @if (Model.Message is not null) { <div class="notice good" role="status">@Model.Message</div> }
     @if (Model.Error is not null) { <div class="notice bad" role="alert">@Model.Error</div> }
+    @if (Model.SignInBlocked is not null)
+    {
+        <form method="post" asp-page-handler="ContinueSignIn" class="card">
+            <h3>One thing to do in LoginLink first</h3>
+            <p class="muted">PayLink registered its console app in your organization, but couldn't switch on a way to sign in to it.</p>
+            <div class="notice warn">@Model.SignInBlocked</div>
+            <div class="actions"><button class="btn pri" type="submit">I've turned it on: continue to sign in</button></div>
+        </form>
+    }
 
     @if (!Model.SignupOpen)
     {
@@ -49,6 +58,7 @@
                     <div class="field"><label for="AdminEmail">Your email</label><input id="AdminEmail" name="AdminEmail" type="email" value="@Model.AdminEmail" autocomplete="email"></div>
                     <div class="field"><label for="AdminPassword">Password for LoginLink</label><input id="AdminPassword" name="AdminPassword" type="password" autocomplete="new-password"></div>
                 </div>
+                <p class="hint">If LoginLink then says your account "has no sign-in method available for this app", open your new organization in LoginLink (Console → Apps → PayLink console → Connectors), turn on Email &amp; Password, and sign in again.</p>
                 <div class="actions"><button class="btn" type="submit">Create organization and sign in</button></div>
             </form>
         }

@@ -42,6 +42,7 @@ public sealed class IndexModel(
     public IReadOnlySet<string> DbOptions { get; private set; } = new HashSet<string>();
     public string? Error { get; private set; }
     public string? Message { get; private set; }
+    public string? SignInBlocked { get; private set; }
     public string Step => Session?.Org is null ? "org" : !Session.Verified ? "verify" : "details";
 
     private async Task LoadAsync()
@@ -79,6 +80,12 @@ public sealed class IndexModel(
         {
             var org = await orgs.ConnectExistingAsync(OrgSlug, MgmtClientId.Trim(), MgmtClientSecret.Trim());
             var id = await signups.StartAsync(new SignupSession { Org = org });
+            if (org.SignInNote is not null)
+            {
+                // Signing in now would end at LoginLink's "no sign-in method available for this app"; say what to do first.
+                SignInBlocked = org.SignInNote;
+                return Page();
+            }
             return Redirect(await BeginSignInAsync(id, org));
         }
         catch (Exception ex) when (ex is LoginLinkException or TenantCreateException)
@@ -86,6 +93,14 @@ public sealed class IndexModel(
             Error = ex.Message;
             return Page();
         }
+    }
+
+    /// <summary>After turning on a sign-in method in LoginLink, the person carries on with the same connection.</summary>
+    public async Task<IActionResult> OnPostContinueSignInAsync()
+    {
+        await LoadAsync();
+        if (signups.CurrentId() is not { } id || await signups.LoadAsync(id) is not { Org: { } org }) return Redirect("/signup");
+        return Redirect(await BeginSignInAsync(id, org));
     }
 
     public async Task<IActionResult> OnPostCreateNewAsync()
