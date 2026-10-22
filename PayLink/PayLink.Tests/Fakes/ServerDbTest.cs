@@ -49,6 +49,6 @@ public static class ServerDbTest
             return new NpgsqlConnectionStringBuilder(PgAdmin) { Database = name }.ToString();
         }
         using (var c = new MySqlConnection(MySqlAdmin)) { c.Open(); c.Execute($"CREATE DATABASE `{name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"); }
-        return new MySqlConnectionStringBuilder(MySqlAdmin) { Database = name, SslMode = MySqlSslMode.None, AllowPublicKeyRetrieval = true }.ToString();
+        return new MySqlConnectionStringBuilder(MySqlAdmin!) { Database = name, SslMode = MySqlSslMode.None, AllowPublicKeyRetrieval = true }.ToString();
     }
 }
