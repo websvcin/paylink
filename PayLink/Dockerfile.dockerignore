@@ -4,7 +4,6 @@
 **/obj/
 **/App_Data/
 artifacts/
-legacy/
 docs/
 PayLink/PayLink.Tests/
 packages/*.Tests/

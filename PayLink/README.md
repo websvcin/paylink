@@ -6,7 +6,7 @@
 
 ## Status
 
-**Phase 4 (this release): all planned phases are in.** Everything below works and is covered by tests on SQLite, MySQL and PostgreSQL. Still open: a decision on the legacy ResellerClub code (see `legacy/README.md`), and FileLink itself, which is a separate product; PayLink already speaks the [contract](../docs/filelink-contract.md) it needs.
+**Phase 4 (this release): all planned phases are in.** Everything below works and is covered by tests on SQLite, MySQL and PostgreSQL. Still open: FileLink itself, which is a separate product; PayLink already speaks the [contract](../docs/filelink-contract.md) it needs.
 
 | Area | What works |
 |---|---|
@@ -104,8 +104,7 @@ paylink/                            repository root
 │  ├─ WebSvc.PayLink.Storage        SQLite/MySQL, migrations, probes, MySQL/Plesk/cPanel provisioning
 │  └─ WebSvc.PayLink.Storage.Tests
 ├─ docs/platform-api.md             the Platform Developer API
-├─ scripts/pack-packages.sh         builds the packages into artifacts/packages
-└─ legacy/                          old Api/ and Web/, to be deleted once their gateway code is ported
+└─ scripts/pack-packages.sh         builds the packages into artifacts/packages
 ```
 
 ## Develop
@@ -140,6 +139,6 @@ For local testing against a LoginLink on `http://localhost`, plain HTTP is accep
 
 ## Security notes
 
-- The previous code committed real secrets (database password, JWT key, gateway keys, a Google service-account key). They are removed from the files in `legacy/` but **remain in git history: rotate all of them**.
+- The previous code committed real secrets (database password, JWT key, gateway keys, a Google service-account key). The old code (including its ResellerClub integration) has been deleted, but those secrets **remain in git history: rotate all of them**.
 - PayLink stores no passwords. LoginLink handles sign-in; PayLink checks admission on every request.
 - Stored secrets are AES-256-GCM encrypted. Developer keys are stored as SHA-256 hashes and shown once.
