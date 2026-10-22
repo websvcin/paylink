@@ -1,0 +1,24 @@
+@inject PayLink.Platform.PlatformSettings Settings
+@{
+    // Payer pages carry the merchant's name and the payment, nothing else: no site header or navigation to wander off to.
+    var badge = await Settings.GetAsync(PayLink.Platform.PlatformSettings.KeyCheckoutBadge) != "off";
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex">
+    <title>@(ViewData["Title"] as string ?? "Pay")</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
+</head>
+<body class="paybody">
+<main class="paywrap">
+    @RenderBody()
+    <footer class="payfoot">
+        <span>🔒 Encrypted connection. Your UPI PIN and card details are entered only in your app or on the bank's page.</span>
+        @if (badge) { <span class="badge"><span class="mark">₹</span> Secured by PayLink</span> }
+    </footer>
+</main>
+</body>
+</html>

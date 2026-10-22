@@ -3,11 +3,12 @@
 @{
     var l = Model.Link;
     ViewData["Title"] = $"{l.Title} · {Model.Tenant.Name}";
+    Layout = "_PayLayout";
     var error = ViewData.ModelState[""]?.Errors.FirstOrDefault()?.ErrorMessage;
 }
 <div class="pay">
     @if (!l.Livemode) { <div class="testbar">TEST MODE · NO REAL MONEY MOVES</div> }
-    <div class="card">
+    <div class="card summary">
         <div class="merchant">
             <div class="logo" aria-hidden="true">@Model.Tenant.Name[..1].ToUpperInvariant()</div>
             <div><b>@Model.Tenant.Name</b><div class="hint">@l.Title</div></div>
@@ -48,6 +49,5 @@
             <div class="actions"><button class="btn pri" type="submit">@(l.Amount is { } a ? $"Pay {Money.Format(a, l.Currency)}" : "Continue to pay")</button></div>
         </form>
     }
-    <p class="hint" style="text-align:center">Secured by PayLink</p>
 </div>
 <partial name="_Embed" model="((string?)null, (string?)null, false)" />

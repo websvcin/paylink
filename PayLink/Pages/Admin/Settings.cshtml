@@ -62,6 +62,14 @@
     @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Save</button></div> }
 </form>
 
+<form method="post" asp-page-handler="Badge" class="card">
+    <h3>Payer pages</h3>
+    <p class="hint">Checkout and payment links show only the merchant and the payment. A small "Secured by PayLink" line sits under them; turn it off to offer PayLink under your own brand.</p>
+    <label class="check"><input type="checkbox" name="show" value="true" checked="@Model.CheckoutBadge"><span>Show "Secured by PayLink" on payer pages</span></label>
+    <input type="hidden" name="show" value="false">
+    @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Save</button></div> }
+</form>
+
 <form method="post" asp-page-handler="Files" class="card">
     <h3>File storage</h3>
     <p class="hint">Where payers' UPI screenshots are kept. Each stored file remembers where it is, so changing this never strands old ones.</p>

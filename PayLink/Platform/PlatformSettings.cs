@@ -55,6 +55,8 @@ public sealed class PlatformSettings(PlatformDb db, SecretProtector secrets)
     public const string KeyLimitMaxAmount = "limit_max_amount";
     public const string KeyLimitCurrencies = "limit_currencies";
     public const string KeyTenantDomain = "tenant_domain";
+    /// <summary>"off" hides the small "Secured by PayLink" badge on payer pages (white label).</summary>
+    public const string KeyCheckoutBadge = "checkout_badge";
 
     public async Task<string?> GetAsync(string key)
     {

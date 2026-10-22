@@ -4,20 +4,24 @@
 @{
     var p = Model.Payment;
     ViewData["Title"] = $"Pay {Model.Tenant.Name}";
+    Layout = "_PayLayout";
     var error = TempData["PayError"] as string;
     var showMethods = !p.IsFinal && p.Status != PaymentStatuses.OnHold && p.Status != PaymentStatuses.Processing && (Model.Current is null || Model.Choose);
 }
 <div class="pay">
     @if (!p.Livemode) { <div class="testbar">TEST MODE · NO REAL MONEY MOVES</div> }
 
-    <div class="card">
+    <div class="card summary">
         <div class="merchant">
             <div class="logo" aria-hidden="true">@Model.Tenant.Name[..1].ToUpperInvariant()</div>
             <div><b>@Model.Tenant.Name</b>@if (p.Reference is not null) { <div class="hint">Order @p.Reference</div> }</div>
         </div>
         <div class="amount">@Money.Format(p.Amount, p.Currency)</div>
         @if (p.Description is not null) { <p class="muted">@p.Description</p> }
-        @if (!p.IsFinal && p.Status != PaymentStatuses.Processing) { <p class="hint">Pay before @Clock.Display(p.ExpiresAt)</p> }
+        <div class="summary-foot">
+            @if (!p.IsFinal && p.Status != PaymentStatuses.Processing) { <span>Pay before @Clock.Display(p.ExpiresAt)</span> }
+            <span class="mono">@p.Id</span>
+        </div>
     </div>
 
     @if (Model.Unavailable is not null)
@@ -63,8 +67,9 @@
                     @foreach (var m in Model.Methods)
                     {
                         <button class="method" type="submit" name="connector" value="@m.Manifest.Id">
-                            <div><b>@m.Manifest.Name</b><br><span>@(m.Manifest.Id switch { "upi" => "Any UPI app: GPay, PhonePe, Paytm, BHIM…", "simulator" => "Test only: choose the outcome yourself", _ => string.Join(", ", m.Manifest.Methods) })</span></div>
-                            <span aria-hidden="true">→</span>
+                            <partial name="_MethodIcon" model='m.Manifest.Id is "upi" or "simulator" ? m.Manifest.Id : "card"' />
+                            <div class="mtext"><b>@m.Manifest.Name</b><span>@(m.Manifest.Id switch { "upi" => "Any UPI app: GPay, PhonePe, Paytm, BHIM…", "simulator" => "Test only: choose the outcome yourself", _ => "Cards, UPI, net banking and wallets on " + m.Manifest.Name + "'s secure page" })</span></div>
+                            <span class="go" aria-hidden="true">→</span>
                         </button>
                     }
                 </form>
@@ -141,6 +146,5 @@
             </div>
         }
     }
-    <p class="hint" style="text-align:center">Secured by PayLink · <span class="mono">@p.Id</span></p>
 </div>
 <partial name="_Embed" model="(Model.Payment.Id, Model.Payment.Status, Model.Payment.IsFinal)" />

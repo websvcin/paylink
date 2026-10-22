@@ -1,11 +1,108 @@
 @page "/"
 @model PayLink.Pages.IndexModel
 @{
-    ViewData["Title"] = "PayLink";
+    ViewData["Title"] = "PayLink: take payments today, add gateways when you're ready";
 }
-<div class="narrow main">
-    <div class="head"><div><h1>PayLink</h1><p>One integration for your app. Every payment method becomes a setting.</p></div></div>
-    <div class="grid2">
+@section Who {
+    <nav class="topnav" aria-label="Site">
+        <a href="#upi">PayLink UPI</a>
+        <a href="#gateways">Gateways</a>
+        <a href="#developers">Developers</a>
+        <a href="#signin">Sign in</a>
+        @if (Model.SignupOpen) { <a class="btn sm pri" href="/signup">Create an account</a> }
+    </nav>
+}
+<div class="home">
+    <section class="hero">
+        <div class="hero-text">
+            <span class="eyebrow">Payments for your business, in one place</span>
+            <h1>Start taking payments today.<br>Add gateways when you're ready.</h1>
+            <p class="lead">PayLink gives your website, app or shop counter one way to take payments. Begin right away with <b>PayLink UPI</b>: payers pay straight into your own UPI ID, with no gateway account to wait for. When you want cards, net banking and wallets, turn on a gateway in your console, and we help you get the account.</p>
+            <div class="actions">
+                @if (Model.SignupOpen) { <a class="btn pri lg" href="/signup">Create your account</a> }
+                <a class="btn lg" href="#upi">See how UPI works</a>
+            </div>
+            <ul class="ticks">
+                <li>No code needed to start: share a payment link or a QR code</li>
+                <li>One integration for developers, whichever gateway you use later</li>
+                <li>Your data stays on this platform's own databases</li>
+            </ul>
+        </div>
+        <div class="hero-card" aria-hidden="true">
+            <div class="pay">
+                <div class="card summary">
+                    <div class="merchant"><div class="logo">A</div><div><b>Acme Learning</b><div class="hint">Term fees, Class 6</div></div></div>
+                    <div class="amount">₹1,499.00</div>
+                </div>
+                <div class="card">
+                    <div class="method"><partial name="_MethodIcon" model='"upi"' /><div class="mtext"><b>PayLink UPI</b><span>Any UPI app: GPay, PhonePe, Paytm, BHIM…</span></div><span class="go">→</span></div>
+                    <div class="method"><partial name="_MethodIcon" model='"card"' /><div class="mtext"><b>Cards and net banking</b><span>Through your gateway</span></div><span class="go">→</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="upi" class="band">
+        <div class="band-head">
+            <span class="eyebrow">PayLink UPI · free to start</span>
+            <h2>Take UPI payments the same day you sign up</h2>
+            <p class="muted">No gateway application, no documents to wait on. Money goes straight from your payer's bank to yours. You confirm each payment, or let your bank statement confirm them for you.</p>
+        </div>
+        <ol class="steps4">
+            <li><b>Add your UPI ID</b><span>Your business UPI ID and name, once, in Payment methods.</span></li>
+            <li><b>Share a link or QR</b><span>A payment link, a QR at the counter, or a Pay button on your site.</span></li>
+            <li><b>Your payer pays</b><span>In any UPI app, then enters the UPI reference (UTR) and, if they like, a screenshot.</span></li>
+            <li><b>You confirm</b><span>Check the UTR, or upload your bank statement and matching payments are approved automatically.</span></li>
+        </ol>
+        <p class="hint">PayLink UPI is a good way to start. Payments are confirmed by you or your statement, not by a bank's instant notice; for that, add a gateway.</p>
+    </section>
+
+    <section id="gateways" class="band">
+        <div class="band-head">
+            <span class="eyebrow">Gateways · with onboarding help</span>
+            <h2>Cards, net banking and wallets when you need them</h2>
+            <p class="muted">Turn on a gateway in your console with your own account's keys: your integration doesn't change. No account yet? Ask for one from your console. We help you through the onboarding and stay with you once you're live.</p>
+        </div>
+        @if (Model.Gateways.Count > 0)
+        {
+            <div class="logos">@foreach (var g in Model.Gateways) { <span class="logo-chip">@g</span> }</div>
+        }
+        <div class="grid3 features">
+            <div class="card"><h3>Your account, your terms</h3><p class="muted">You hold the gateway account and its pricing; PayLink connects to it. Switch or add gateways from the console.</p></div>
+            <div class="card"><h3>Onboarding, guided</h3><p class="muted">Pick a gateway and press "Get an account". We pass your request to the right team or send you to the partner's own sign-up.</p></div>
+            <div class="card"><h3>Keeps working</h3><p class="muted">If one gateway has trouble, payers are moved to the next. Refunds, status checks and disputes are handled for you.</p></div>
+        </div>
+    </section>
+
+    <section class="band">
+        <div class="band-head"><span class="eyebrow">Everything in one console</span><h2>What you get</h2></div>
+        <div class="grid3 features">
+            <div class="card"><h3>Payment links and QR</h3><p class="muted">Fixed or "pay what you choose" amounts, one-time or reusable, with a QR for the counter.</p></div>
+            <div class="card"><h3>A Pay button for your site</h3><p class="muted">One line of script. Checkout opens in a window and your page hears the result.</p></div>
+            <div class="card"><h3>Checkout payers trust</h3><p class="muted">Your name, the amount and the way to pay. Nothing else to distract. On your own domain if you like.</p></div>
+            <div class="card"><h3>Risk rules</h3><p class="muted">Limits, velocity, countries and a risk score. Hold a payment for review instead of losing it.</p></div>
+            <div class="card"><h3>Reports and reconciliation</h3><p class="muted">Funnel, success rate and failure reasons; match gateway settlements and bank statements.</p></div>
+            <div class="card"><h3>Your team, your data</h3><p class="muted">Sign in with LoginLink, roles for your team, and a full audit trail of every change.</p></div>
+        </div>
+    </section>
+
+    <section id="developers" class="band dev">
+        <div>
+            <span class="eyebrow">For developers</span>
+            <h2>Integrate once</h2>
+            <p class="muted">Create a payment, send the payer to its checkout, trust the signed webhook. Test and live keys, idempotency, refunds, links and a read-only reporting API.</p>
+            <div class="actions"><a class="btn" href="/docs/payments-api">Read the API guide</a><a class="btn" href="/docs/api">API reference</a></div>
+        </div>
+        <pre class="secret code">curl https://your-paylink/api/v1/payments \
+  -H "Authorization: Bearer sk_test_…" \
+  -H "Content-Type: application/json" \
+  -d '{ "amount": 149900, "reference": "INV-2041" }'
+
+→ { "id": "pay_8f2kQ…", "status": "created",
+    "checkout_url": "https://your-paylink/pay/pay_8f2kQ…" }</pre>
+    </section>
+
+    <section id="signin" class="band split">
         <form method="post" class="card">
             <h3>Sign in to your console</h3>
             <div class="field"><label for="slug">Your PayLink address</label><div class="prefix"><span>/</span><input id="slug" name="slug" class="mono" placeholder="acme"></div></div>
@@ -16,8 +113,8 @@
             <h3>New to PayLink?</h3>
             @if (Model.SignupOpen)
             {
-                <p class="muted">Connect your LoginLink organization and choose where your payment data lives.</p>
-                <div class="actions"><a class="btn" href="/signup">Create an account</a></div>
+                <p class="muted">Sign up with your LoginLink organization (or get a new one), choose where your data lives, and take your first test payment in minutes.</p>
+                <div class="actions"><a class="btn pri" href="/signup">Create an account</a></div>
             }
             else
             {
@@ -25,5 +122,5 @@
             }
             <p class="hint">Running this server? <a href="/admin">Platform console</a></p>
         </div>
-    </div>
+    </section>
 </div>

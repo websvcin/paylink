@@ -37,6 +37,14 @@ public sealed class SettingsModel(PlatformSettings settings, PlatformDb platform
 
     public SmtpSettings? Smtp { get; private set; }
     public PayLink.Payments.FileStorageSettings Files { get; private set; } = new();
+    public bool CheckoutBadge { get; private set; } = true;
+
+    public async Task<IActionResult> OnPostBadgeAsync(bool show)
+    {
+        await settings.SetAsync(PlatformSettings.KeyCheckoutBadge, show ? "on" : "off");
+        await platformDb.AuditAsync(Me, "settings.checkout_badge_changed", show ? "on" : "off");
+        return Done(show ? "Payer pages show \"Secured by PayLink\"." : "Payer pages no longer show the PayLink badge.");
+    }
 
     public async Task<IActionResult> OnPostFilesAsync(string kind, string? server, string? key)
     {
@@ -109,6 +117,7 @@ public sealed class SettingsModel(PlatformSettings settings, PlatformDb platform
         TenantDomain = await settings.GetTenantDomainAsync();
         Smtp = await HttpContext.RequestServices.GetRequiredService<SmtpEmailSender>().GetAsync();
         Files = await HttpContext.RequestServices.GetRequiredService<PayLink.Payments.FileStore>().GetSettingsAsync();
+        CheckoutBadge = await settings.GetAsync(PlatformSettings.KeyCheckoutBadge) != "off";
         PlatformDescription = (await platformDb.TargetAsync()).Describe();
         SignupOpen = await settings.IsSignupOpenAsync();
         PublicBaseUrl = await settings.GetPublicBaseUrlAsync();
