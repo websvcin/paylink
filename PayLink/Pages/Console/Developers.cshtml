@@ -8,7 +8,20 @@
 @section Nav { <partial name="_ConsoleNav" /> }
 @section Who { <partial name="_ConsoleWho" /> }
 
-<div class="head"><div><h1>Developers</h1><p>Integrate once: create a payment from your server, send the payer to its <code>checkout_url</code>, and trust the signed webhook. Adding payment methods later needs no code change. See <a href="/docs/payments-api">the Payments API</a>.</p></div></div>
+<div class="head"><div><h1>Developers</h1><p>Integrate once: create a payment from your server, send the payer to its <code>checkout_url</code>, and trust the signed webhook. Adding payment methods later needs no code change. See <a href="/docs">the developer docs</a> and the <a href="/docs/api">API reference</a>.</p></div></div>
+
+<div class="grid2">
+    <div class="card">
+        <h3>Taking payments from your website or app</h3>
+        <p class="muted">Use a <b>secret key</b> (<code>sk_test_…</code> / <code>sk_live_…</code>) on your server with the <b>Payments API</b> (<code>/api/v1</code>), the same way you'd integrate PhonePe or PayU, but once for every method you turn on. Never put it in a browser or app.</p>
+        <p class="hint"><a href="/docs/payments-api">Payments API guide</a> · <a href="/docs/api/index.html?urls.primaryName=Payments%20API">reference</a></p>
+    </div>
+    <div class="card">
+        <h3>Automating this console</h3>
+        <p class="muted">Use a <b>developer key</b> (<code>tdk_…</code>) with the <b>tenant API</b> (<code>/api/tenant</code>) for scripts: approve UPI payments, upload bank statements, refunds, webhooks, risk rules. It can only do what you tick, and can't take payments.</p>
+        <p class="hint"><a href="/docs/automation">Automation guide</a> · <a href="/docs/api/index.html?urls.primaryName=Tenant%20automation%20API">reference</a></p>
+    </div>
+</div>
 
 @if (TempData["Secret"] is string secret)
 {

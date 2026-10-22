@@ -20,7 +20,8 @@ public sealed class TenantApiController(
     ConnectorRegistry registry,
     ConnectorSettingsService methods,
     WebhookService webhooks,
-    RiskRuleStore risk) : ControllerBase
+    RiskRuleStore risk,
+    UpiStatementService statements) : ControllerBase
 {
     private TenantRecord Tenant => (TenantRecord)HttpContext.Items[TenantKeyHandler.TenantItem]!;
     private TenantApiKey Key => (TenantApiKey)HttpContext.Items[TenantKeyHandler.KeyItem]!;
@@ -96,6 +97,55 @@ public sealed class TenantApiController(
     [RequireTenantCapability(TenantCapabilities.UpiVerify)]
     public async Task<IActionResult> Reject(string attemptId, [FromBody] NoteBody body) =>
         Outcome(await payments.VerifyUpiAsync(Tenant, attemptId, false, body.Note, new EventSource(Me)));
+
+    /// <summary>UPI payments already approved or rejected (newest first): who decided, when, and the note.</summary>
+    [HttpGet("upi/decided")]
+    [RequireTenantCapability(TenantCapabilities.UpiVerify)]
+    public async Task<IActionResult> UpiDecided(bool livemode = false, string? decision = null, string? q = null, string? from = null, string? to = null, int limit = 50, int offset = 0)
+    {
+        if (decision is not (null or "approved" or "rejected")) return Error(400, "invalid_request", "decision is approved or rejected.");
+        var dates = string.IsNullOrEmpty(from) ? null : DateRange.Parse(null, from, to);
+        var (rows, total) = await payments.UpiDecisionsAsync(Tenant, livemode, decision, q, dates, Math.Clamp(limit, 1, 200), Math.Max(0, offset));
+        return Json(new
+        {
+            @object = "list", total,
+            data = rows.Select(r => new { payment_id = r.PaymentId, r.Amount, r.Currency, r.Reference, r.Decision, utr = r.Utr, r.Note, decided_by = r.By, decided_by_type = r.ByType, decided_at = r.At }),
+        });
+    }
+
+    /// <summary>
+    /// Matches a bank statement (CSV) against UPI payments waiting for a check: credits whose UTR and amount match are approved.
+    /// Send the file as multipart/form-data (field "statement") or as the raw body with Content-Type text/csv.
+    /// </summary>
+    [HttpPost("upi/statements")]
+    [RequireTenantCapability(TenantCapabilities.UpiVerify)]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UpiStatement(bool livemode = false)
+    {
+        string text;
+        if (Request.HasFormContentType)
+        {
+            var file = (await Request.ReadFormAsync()).Files["statement"];
+            if (file is not { Length: > 0 }) return Error(400, "invalid_request", "Send the statement CSV in the form field \"statement\".");
+            using var reader = new StreamReader(file.OpenReadStream());
+            text = await reader.ReadToEndAsync();
+        }
+        else
+        {
+            using var reader = new StreamReader(Request.Body);
+            text = await reader.ReadToEndAsync();
+        }
+        if (string.IsNullOrWhiteSpace(text)) return Error(400, "invalid_request", "The statement is empty.");
+        var (outcome, problem) = await statements.MatchAsync(Tenant, livemode, text, new EventSource(Me));
+        if (problem is not null) return Error(422, "statement_unreadable", problem);
+        var o = outcome!;
+        return Json(new
+        {
+            upload_id = o.UploadId, credits = o.Credits, approved = o.Approved, need_a_look = o.NeedALook, not_found = o.NotFound, without_utr = o.NoUtr,
+            need_a_look_lines = (await statements.NeedALookAsync(Tenant, o.UploadId))
+                .Select(l => new { line = l.LineNo, l.Utr, l.Amount, l.Narration, l.Note }),
+        });
+    }
 
     // ---------- payment methods ----------
 

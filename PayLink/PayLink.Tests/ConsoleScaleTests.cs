@@ -1,4 +1,6 @@
+using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json.Nodes;
 using PayLink.Infrastructure;
 using PayLink.Payments;
 using PayLink.Platform;
@@ -139,5 +141,44 @@ public sealed class ConsoleScaleTests
         var r = await admin.FollowAsync(await admin.SubmitAsync("/admin/settings", "CrudApi", F(("url", "https://crud.example.in/"))));
         Assert.Contains("https://crud.example.in", await admin.TextAsync(r));
         Assert.Contains("https://crud.example.in", await priya.TextAsync(await priya.GetAsync("/acme/console/data")));
+    }
+
+    [Fact]
+    public async Task Scripts_upload_statements_and_read_decisions_and_the_reference_is_published()
+    {
+        var (app, ll, _, priya, tenant) = await StartAsync();
+        await using var _ll = ll;
+        await using var _app = app;
+        await priya.SubmitAsync("/acme/console/methods", null,
+            F(("connector", "upi"), ("mode", "test"), ("action", "enable"), ("test.vpa", "acme@okhdfcbank"), ("test.payee_name", "Acme Learning"), ("test.business_vpa_confirmed", "true")));
+        var svc = app.Get<PaymentService>();
+        var id = await Pay(app, tenant, 149900);
+        var payer = new Browser(app);
+        await payer.SubmitAsync($"/pay/{id}", "Choose", F(("connector", "upi")));
+        var a = (await svc.AttemptsAsync(tenant, id)).Single();
+        await payer.SubmitWithFileAsync($"/pay/{id}", "Utr", F(("attemptId", a.Id), ("utr", "412345678901")), "screenshot", "paid.png", Png, "image/png");
+
+        var tdk = await CreateKeyAsync(priya, "acme", "developer", false, TenantCapabilities.UpiVerify);
+        var api = new Browser(app).Api;
+        api.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tdk);
+        var csv = "Date,Narration,Ref No,Withdrawal,Deposit,Balance\n21/10/2026,UPI/412345678901/RAVI/ravi@okhdfcbank,412345678901,,1499.00,25499.00\n";
+        var r = await api.PostAsync("/api/tenant/upi/statements", new StringContent(csv, Encoding.UTF8, "text/csv"));
+        var json = JsonNode.Parse(await r.Content.ReadAsStringAsync())!;
+        Assert.True(r.IsSuccessStatusCode, json.ToJsonString());
+        Assert.Equal(1, (int)json["approved"]!);
+
+        var form = new MultipartFormDataContent { { new ByteArrayContent(Encoding.UTF8.GetBytes("nothing,useful\n")), "statement", "s.csv" } };
+        Assert.Equal(422, (int)(await api.PostAsync("/api/tenant/upi/statements", form)).StatusCode);
+
+        json = JsonNode.Parse(await api.GetStringAsync("/api/tenant/upi/decided?decision=approved"))!;
+        Assert.Equal(id, (string)json["data"]![0]!["payment_id"]!);
+        Assert.Equal(400, (int)(await api.GetAsync("/api/tenant/upi/decided?decision=maybe")).StatusCode);
+
+        var open = new Browser(app).Api;
+        var spec = JsonNode.Parse(await open.GetStringAsync("/docs/api/tenant/openapi.json"))!;
+        Assert.NotNull(spec["paths"]!["/api/tenant/upi/statements"]);
+        Assert.Null(JsonNode.Parse(await open.GetStringAsync("/docs/api/payments/openapi.json"))!["paths"]!["/api/tenant/upi/pending"]);
+        Assert.Contains("sk_live_", await open.GetStringAsync("/docs"));
+        Assert.Contains("/api/tenant/upi/statements", await open.GetStringAsync("/docs/automation"));
     }
 }

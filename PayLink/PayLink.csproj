@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- XML comments on the API controllers become the OpenAPI reference at /docs/api. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573;CS1572;CS1574</NoWarn>
     <RootNamespace>PayLink</RootNamespace>
     <AssemblyName>PayLink</AssemblyName>
     <Version>0.4.0</Version>
@@ -31,6 +34,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.1.2" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
     <PackageReference Include="MaxMind.Db" Version="4.1.0" />
     <PackageReference Include="DnsClient" Version="1.8.0" />
   </ItemGroup>
@@ -45,9 +49,7 @@
     Before restoring, pack each WebSvc.PayLink.* package from ../packages into the feed if that version is missing.
     Works the same on Windows, macOS and Linux; scripts/pack-packages.sh does the same and also refreshes the NuGet cache.
   -->
-  <Target Name="PackLocalPayLinkPackages"
-          BeforeTargets="Restore;_GenerateRestoreGraph;_GenerateRestoreGraphProjectEntry;_GenerateProjectRestoreGraph"
-          Condition="Exists('$(PayLinkPackagesSource)')">
+  <Target Name="PackLocalPayLinkPackages" BeforeTargets="Restore;_GenerateRestoreGraph;_GenerateRestoreGraphProjectEntry;_GenerateProjectRestoreGraph" Condition="Exists('$(PayLinkPackagesSource)')">
     <ItemGroup>
       <_PayLinkMissing Include="@(PayLinkLocalPackage)" Condition="!Exists('$(PayLinkLocalFeed)\%(Identity).%(Version).nupkg')" />
     </ItemGroup>

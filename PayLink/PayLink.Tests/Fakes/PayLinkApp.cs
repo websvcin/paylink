@@ -38,6 +38,8 @@ public sealed class PayLinkApp(string? dataRoot = null, bool keepData = false, H
     {
         base.Dispose(disposing);
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        // Each test makes its own PostgreSQL databases; idle pooled connections would otherwise pile up to max_connections.
+        Npgsql.NpgsqlConnection.ClearAllPools();
         if (keepData) return;
         try { Directory.Delete(DataRoot, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }

@@ -1,0 +1,37 @@
+@page "/docs"
+@{
+    ViewData["Title"] = "Developer docs";
+    ViewData["Where"] = "Developer docs";
+}
+<div class="narrow" style="display:grid;gap:18px">
+    <div class="head"><div><h1>Developer docs</h1><p>PayLink has three public HTTP APIs, each for a different reader and each with its own kind of key. The browser pages (<code>/admin</code>, <code>/{tenant}/console</code>, checkout) are for people and use LoginLink sign-in, not keys.</p></div>
+        <div class="actions"><a class="btn pri" href="/docs/api">API reference (Swagger)</a></div></div>
+
+    <div class="card flush">
+        <div class="tbl">
+            <table>
+                <thead><tr><th>API</th><th>Who uses it</th><th>Key</th><th>Base path</th></tr></thead>
+                <tbody>
+                    <tr><td><b>Payments API</b><br><a href="/docs/payments-api">Guide</a> · <a href="/docs/api/index.html?urls.primaryName=Payments%20API">Reference</a></td><td>A merchant's own server (website, app backend). The integration you'd otherwise write for Razorpay, PayU or PhonePe, written once.</td><td><code>sk_test_{tenant}_…</code><br><code>sk_live_{tenant}_…</code></td><td><code>/api/v1</code></td></tr>
+                    <tr><td><b>Tenant automation API</b><br><a href="/docs/automation">Guide</a> · <a href="/docs/api/index.html?urls.primaryName=Tenant%20automation%20API">Reference</a></td><td>Scripts and back-office tools that do what a merchant's team does in the console: approve UPI payments, upload bank statements, refunds, webhooks, risk rules.</td><td><code>tdk_{tenant}_…</code> with chosen capabilities</td><td><code>/api/tenant</code></td></tr>
+                    <tr><td><b>Platform API</b><br><a href="/docs/api/index.html?urls.primaryName=Platform%20API">Reference</a></td><td>Whoever runs this PayLink installation: create and manage tenants, auto-provisioning, audit.</td><td><code>pdk_…</code> from /admin → Developers</td><td><code>/api/admin</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Standards PayLink follows</h3>
+        <ul class="muted">
+            <li><b>REST over HTTPS with JSON</b>, described by <b>OpenAPI 3</b> (<a href="/docs/api/payments/openapi.json">payments</a>, <a href="/docs/api/tenant/openapi.json">tenant</a>, <a href="/docs/api/platform/openapi.json">platform</a>), so you can generate a client in any language.</li>
+            <li><b>Bearer keys</b> (<code>Authorization: Bearer …</code>, RFC 6750). Keys are stored only as hashes and shown once; revoke any time.</li>
+            <li><b>Prefixed keys</b> (<code>sk_test_</code>, <code>sk_live_</code>, <code>tdk_</code>, <code>pdk_</code>, <code>whsec_</code>), the convention Stripe made common: you can tell what a key is and whether it's live at a glance, and secret scanners can spot a leaked one. The tenant slug in the key names whose it is; it is not a secret, the random part is.</li>
+            <li><b>Test and live separation</b>: a test key can never touch real money.</li>
+            <li><b>Idempotency keys</b> on creates, so a retried request never makes a second payment.</li>
+            <li><b>Amounts in minor units</b> (paise) as integers, never floats. ISO 4217 currency codes.</li>
+            <li><b>Signed webhooks</b>: HMAC-SHA256 over <code>{timestamp}.{body}</code> with a replay window, retried with back-off for 24 hours.</li>
+            <li><b>Least privilege</b>: developer keys carry only the capabilities you tick; secret keys can't change settings.</li>
+            <li>Errors are JSON <code>{ "error": "code", "error_description": "…" }</code> with the right HTTP status.</li>
+        </ul>
+    </div>
+</div>

@@ -4,7 +4,7 @@
     ViewData["Where"] = "Developer docs";
 }
 <div class="narrow" style="display:grid;gap:18px">
-    <div class="head"><div><h1>Payments API</h1><p>The one integration a merchant writes. It doesn't change when payment methods are turned on or off. The full reference is <a href="https://github.com/websvcin/paylink/blob/main/docs/payments-api.md">docs/payments-api.md</a>.</p></div></div>
+    <div class="head"><div><h1>Payments API</h1><p>The one integration a merchant writes. It doesn't change when payment methods are turned on or off. Every route, field and error is in the <a href="/docs/api/index.html?urls.primaryName=Payments%20API">API reference</a>; all docs are at <a href="/docs">/docs</a>.</p></div></div>
 
     <div class="card">
         <h3>1. Create a payment from your server</h3>
@@ -40,7 +40,7 @@ PayLink-Event: payment.succeeded</pre>
                     <tr><td class="mono">GET /api/v1/payments/{id}</td><td>Status, attempts, how it was paid or why it failed</td></tr>
                     <tr><td class="mono">GET /api/v1/payments</td><td>List, newest first (<code>status</code>, <code>reference</code>, <code>limit</code>, <code>offset</code>)</td></tr>
                     <tr><td class="mono">POST /api/v1/payments/{id}/cancel</td><td>Cancel an open payment</td></tr>
-                    <tr><td class="mono">/api/tenant/…</td><td>Tenant developer API (tdk_ keys): payments, UPI verification, methods, webhooks, risk rules</td></tr>
+                    <tr><td class="mono">/api/tenant/…</td><td>Tenant automation API (tdk_ keys): payments, UPI verification and statements, methods, webhooks, risk rules. <a href="/docs/automation">Guide</a></td></tr>
                 </tbody>
             </table>
         </div>

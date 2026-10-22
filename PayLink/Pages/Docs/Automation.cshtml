@@ -1,0 +1,50 @@
+@page "/docs/automation"
+@{
+    ViewData["Title"] = "Automate your console";
+    ViewData["Where"] = "Developer docs";
+    var b = $"{Request.Scheme}://{Request.Host}";
+}
+<div class="narrow" style="display:grid;gap:18px">
+    <div class="head"><div><h1>Automate your console</h1><p>Everything your team does in the console for UPI can be scripted with a developer key. Create one in <b>Console → Developers → Create a key → Developer key</b> and tick <b>UPI verification</b>. Full reference: <a href="/docs/api/index.html?urls.primaryName=Tenant%20automation%20API">Tenant automation API</a>.</p></div></div>
+
+    <div class="card">
+        <h3>1. Upload today's bank statement</h3>
+        <p class="muted">Export your bank statement as CSV and send it as is. Every credit whose 12-digit UTR and amount match a UPI payment waiting for a check is approved; anything else stays in the queue and comes back in <code>need_a_look_lines</code>.</p>
+        <pre class="secret" style="white-space:pre-wrap;user-select:text">curl @b/api/tenant/upi/statements?livemode=true \
+  -H "Authorization: Bearer tdk_acme_…" \
+  -F statement=@@statement.csv</pre>
+        <pre class="secret" style="white-space:pre-wrap;user-select:text">{ "credits": 14, "approved": 12, "need_a_look": 1, "not_found": 1, "without_utr": 0,
+  "need_a_look_lines": [ { "line": 9, "utr": "412345678901", "amount": 49900, "note": "amount differs" } ] }</pre>
+        <p class="hint">Or send the raw file with <code>-H "Content-Type: text/csv" --data-binary @@statement.csv</code>. Download an example from Console → UPI → "Download an example".</p>
+    </div>
+
+    <div class="card">
+        <h3>2. Approve or reject what's left</h3>
+        <pre class="secret" style="white-space:pre-wrap;user-select:text"># What is waiting
+curl "@b/api/tenant/upi/pending?livemode=true" -H "Authorization: Bearer tdk_acme_…"
+
+# Approve one (the note is kept on the payment's journey)
+curl -X POST @b/api/tenant/upi/att_…/approve -H "Authorization: Bearer tdk_acme_…" \
+  -H "Content-Type: application/json" -d '{ "note": "Seen in HDFC statement" }'
+
+# Reject one
+curl -X POST @b/api/tenant/upi/att_…/reject -H "Authorization: Bearer tdk_acme_…" \
+  -H "Content-Type: application/json" -d '{ "note": "No such credit" }'</pre>
+    </div>
+
+    <div class="card">
+        <h3>3. Look back</h3>
+        <pre class="secret" style="white-space:pre-wrap;user-select:text">curl "@b/api/tenant/upi/decided?livemode=true&amp;decision=rejected&amp;from=2026-10-01&amp;to=2026-10-31" \
+  -H "Authorization: Bearer tdk_acme_…"</pre>
+    </div>
+
+    <div class="card">
+        <h3>A nightly job</h3>
+        <pre class="secret" style="white-space:pre-wrap;user-select:text">#!/bin/sh
+# crontab: 30 23 * * * /opt/acme/upi-match.sh /data/statements/today.csv
+set -e
+curl -fsS @b/api/tenant/upi/statements?livemode=true \
+  -H "Authorization: Bearer $PAYLINK_TDK" -F statement=@@"$1"</pre>
+        <p class="hint">Keep the key in an environment variable or secret store, never in the script. Every call is recorded in the console's audit log under the key's name.</p>
+    </div>
+</div>

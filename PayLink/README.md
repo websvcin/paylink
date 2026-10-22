@@ -10,7 +10,7 @@
 
 | Area | What works |
 |---|---|
-| **Setup** | New or restore (backup .zip or bootstrap.db); encryption key inside bootstrap.db (or `PayLink__MasterKey`); SQLite, MySQL or PostgreSQL platform and tenant databases; auto-provisioning (tested before saving); LoginLink with clear credential checks |
+| **Setup** | New or restore (backup .zip or bootstrap.db); encryption key kept in the data folder (mount `App_Data` and nothing else; `PayLink__MasterKey` stays optional); SQLite, MySQL or PostgreSQL platform and tenant databases; auto-provisioning (tested before saving); LoginLink with clear credential checks |
 | **Payments API** (`/api/v1`) | Create, get, list, cancel, refund; `Idempotency-Key`; test and live keys; links; disputes. See [docs/payments-api.md](../docs/payments-api.md) |
 | **Hosted checkout** at `/pay/{id}` | The merchant's methods in their order, retry with another method, return to the merchant; a test bar in Test |
 | **Gateways** | Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form), Stripe (Checkout), PayPal (Orders, captured on return); signed callbacks and webhooks; status polling; full and partial refunds; disputes from Razorpay, Stripe and PayPal |
@@ -23,7 +23,7 @@
 | **Data access** | Reporting API (`/api/v1/reporting`, CrudApi's filter language); Connect CrudApi with a SELECT-only user |
 | **Journey and webhooks** | Append-only payment journey, statuses that only move forward, signed webhooks with retries and redelivery |
 | **Platform** | Connector catalog (install, allow, drain, uninstall; packages from nuget.org at runtime); amount and currency limits; subdomain consoles and tenants' own domains (TXT verified); move a tenant's or the platform's database between engines; live dashboard; backup download; file storage in the data folder or FileLink |
-| **Developers** | Tenant developer keys (`tdk_`) and API; platform developer API; API request log; console with a Test/Live switch |
+| **Developers** | Docs at `/docs` and an OpenAPI 3 reference with Swagger UI at `/docs/api` (one document each for the Payments, tenant automation and platform APIs); tenant developer keys (`tdk_`) for scripts, including UPI approval, decision history and bank statement upload (`/api/tenant/upi/…`, guide at `/docs/automation`); platform developer API; API request log; console with a Test/Live switch |
 
 ## Run it
 

@@ -13,6 +13,7 @@ namespace PayLink.Api;
 /// Every notification is stored first (verified or not); only a verified one changes a payment.
 /// </summary>
 [ApiController]
+[ApiExplorerSettings(IgnoreApi = true)]
 [Route("hooks/{slug}/{connectorId}/{mode}")]
 public sealed class GatewayHooksController(
     PlatformRepository repo,

@@ -72,6 +72,7 @@ public sealed class TenantKeyHandler(
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
 public sealed class RequireTenantCapabilityAttribute(string capability) : Attribute, IAuthorizationFilter
 {
+    public string Capability => capability;
     public void OnAuthorization(AuthorizationFilterContext context)
     {
         if (!context.HttpContext.User.HasClaim(TenantKeyHandler.CapabilityClaim, capability))

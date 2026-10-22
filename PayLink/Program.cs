@@ -101,6 +101,8 @@ builder.Services.AddRazorPages(o =>
     o.Conventions.AllowAnonymousToPage("/Admin/Logout");
 });
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(o => PayLink.Api.ApiReference.Configure(o));
 // Write ₹ and non-Latin names as themselves instead of &#x…; escapes. HTML-significant characters are still encoded.
 builder.Services.Configure<Microsoft.Extensions.WebEncoders.WebEncoderOptions>(o =>
     o.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));
@@ -182,6 +184,11 @@ app.MapGet("/pay/{id}/status", async (string id, HttpContext http, PlatformDb pl
         return Results.NotFound(new { error = "not_found" });
     return Results.Json(new { payment_id = p.Id, status = p.Status, livemode = p.Livemode });
 });
+
+// OpenAPI documents at /docs/api/{payments|tenant|platform}/openapi.json and Swagger UI at /docs/api. Both are public: they
+// describe the APIs, and every call still needs a key.
+app.UseSwagger(o => o.RouteTemplate = "docs/api/{documentName}/openapi.json");
+app.UseSwaggerUI(o => PayLink.Api.ApiReference.ConfigureUi(o));
 
 app.MapRazorPages();
 app.MapControllers();
