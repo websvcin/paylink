@@ -102,13 +102,27 @@ public sealed partial class PaymentLinkService(TenantDb tenantDb, PlatformDb pla
         return (link, null);
     }
 
-    public async Task<IReadOnlyList<PaymentLink>> ListAsync(TenantRecord tenant, bool livemode)
+    public Task<IReadOnlyList<PaymentLink>> ListAsync(TenantRecord tenant, bool livemode) => ListAsync(tenant, livemode, null, null, 200, 0);
+
+    /// <summary>Links, newest first, optionally matching a word (title, code, description) and a state ("on" or "off").</summary>
+    public async Task<IReadOnlyList<PaymentLink>> ListAsync(TenantRecord tenant, bool livemode, string? q, string? state, int take, int skip)
     {
+        var where = "l.livemode = @livemode" + (string.IsNullOrWhiteSpace(q) ? "" : " AND (LOWER(l.title) LIKE @like OR l.code LIKE @like OR LOWER(l.description) LIKE @like)")
+            + (state == "on" ? " AND l.active = TRUE" : state == "off" ? " AND l.active = FALSE" : "");
         await using var c = await tenantDb.OpenAsync(tenant);
         return (await c.QueryAsync<PaymentLink>(
             "SELECT l.*, (SELECT COUNT(*) FROM payments p WHERE p.link_id = l.id AND p.status = 'succeeded') AS paid, " +
             "(SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.link_id = l.id AND p.status = 'succeeded') AS collected " +
-            "FROM payment_links l WHERE l.livemode = @livemode ORDER BY l.created_at DESC LIMIT 200;", new { livemode })).ToList();
+            $"FROM payment_links l WHERE {where} ORDER BY l.created_at DESC LIMIT {Math.Clamp(take, 1, 500)} OFFSET {Math.Max(0, skip)};",
+            new { livemode, like = $"%{q?.Trim().ToLowerInvariant()}%" })).ToList();
+    }
+
+    public async Task<long> CountAsync(TenantRecord tenant, bool livemode, string? q, string? state)
+    {
+        var where = "livemode = @livemode" + (string.IsNullOrWhiteSpace(q) ? "" : " AND (LOWER(title) LIKE @like OR code LIKE @like OR LOWER(description) LIKE @like)")
+            + (state == "on" ? " AND active = TRUE" : state == "off" ? " AND active = FALSE" : "");
+        await using var c = await tenantDb.OpenAsync(tenant);
+        return await c.ExecuteScalarAsync<long>($"SELECT COUNT(*) FROM payment_links WHERE {where};", new { livemode, like = $"%{q?.Trim().ToLowerInvariant()}%" });
     }
 
     public async Task<PaymentLink?> GetAsync(TenantRecord tenant, string id)

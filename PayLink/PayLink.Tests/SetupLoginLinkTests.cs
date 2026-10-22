@@ -64,7 +64,7 @@ public sealed class SetupLoginLinkTests
         Assert.Contains("The management credential works", html);
         r = await b.SubmitAsync("/setup?step=loginlink&ll=org", "LLOrg", F(("action", "continue")));
         Assert.Equal("/setup?step=loginlink&ll=admins", r.Headers.Location?.OriginalString);
-        Assert.Equal(0, ll.AppConnectors.Count);   // nothing created in LoginLink yet
+        Assert.Empty(ll.AppConnectors);   // nothing created in LoginLink yet
 
         // 5.4: finish. The app is registered with a sign-in method on, and the /admin rule is saved.
         html = await b.TextAsync(await b.GetAsync("/setup?step=loginlink&ll=admins"));

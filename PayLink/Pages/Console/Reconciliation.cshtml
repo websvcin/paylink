@@ -8,7 +8,14 @@
 @section Nav { <partial name="_ConsoleNav" /> }
 @section Who { <partial name="_ConsoleWho" /> }
 
-<div class="head"><div><h1>Reconciliation</h1><p>Did the money arrive? Upload a gateway's settlement report and PayLink matches each line to a payment: by the gateway's payment id, PayLink's ids, or the UTR. Amounts that differ, and lines PayLink doesn't know, are listed for you.</p></div></div>
+<div class="head"><div><h1>Reconciliation</h1><p>Did the money from your gateways reach your bank? Upload a gateway's settlement report and PayLink matches each line to a payment, marks it settled with its fees, and lists amounts that differ and lines it doesn't know.</p></div></div>
+
+<ol class="flowsteps" aria-label="Steps">
+    <li class="@(Model.Headers is null ? "now" : "done")">1. Choose the gateway and upload its report</li>
+    <li class="@(Model.Headers is not null ? "now" : "")">2. Check which column is which</li>
+    <li>3. See what matched</li>
+</ol>
+<p class="hint">For PayLink UPI payments, use the bank statement in UPI verification instead: they're not settled by a gateway.</p>
 
 @if (Model.Headers is { } headers && Model.Guess is { } g)
 {
@@ -17,10 +24,10 @@
         string.Join("", headers.Select((h, i) => $"<option value=\"{i}\"{(selected == i ? " selected" : "")}>{System.Net.WebUtility.HtmlEncode(h)}</option>"));
     <form method="post" asp-page-handler="Import" class="card">
         <input type="hidden" name="token" value="@Model.Mapping">
-        <h3>Which column is which?</h3>
-        <p class="hint">PayLink guessed from the column names; check them.</p>
+        <h3>2. Which column is which?</h3>
+        <p class="hint">PayLink guessed from the column names. Only the payment reference and the gross amount are needed; the rest fills in fees and the settlement date when they're there.</p>
         <div class="grid3">
-            <div class="field"><label>Gateway</label><select name="connector"><option value="">(any)</option>@foreach (var gw in Model.Gateways) { <option value="@gw">@gw</option> }</select></div>
+            <div class="field"><label>Gateway</label><select name="connector"><option value="">(any)</option>@foreach (var gw in Model.Gateways) { <option value="@gw" selected="@(Model.Gateway == gw)">@Model.GatewayName(gw)</option> }</select></div>
             <div class="field"><label>Payment reference</label><select name="reference">@Html.Raw(Opts(g.Reference, false))</select></div>
             <div class="field"><label>Gross amount</label><select name="gross">@Html.Raw(Opts(g.Gross, false))</select></div>
             <div class="field"><label>Fee</label><select name="fee">@Html.Raw(Opts(g.Fee, true))</select></div>
@@ -36,9 +43,22 @@
 else if (Model.CanOperate)
 {
     <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="card">
-        <h3>Upload a settlement report</h3>
-        <div class="field"><label for="report">CSV file</label><input id="report" name="report" type="file" accept=".csv,text/csv"><span class="hint">From the gateway's dashboard: Razorpay Settlements → Download (recon report), PayU Settlements, PhonePe or CCAvenue settlement reports.</span></div>
-        <div class="actions"><button class="btn pri" type="submit">Upload</button></div>
+        <h3>1. Upload a settlement report</h3>
+        <div class="grid2">
+            <div class="field"><label for="connector">Gateway</label><select id="connector" name="connector"><option value="">Other, or several</option>@foreach (var gw in Model.Gateways) { <option value="@gw">@Model.GatewayName(gw)</option> }</select><span class="hint">Matching then looks only at that gateway's payments.</span></div>
+            <div class="field"><label for="report">The report (CSV)</label><input id="report" name="report" type="file" accept=".csv,text/csv"><span class="hint">From the gateway's dashboard, usually under Settlements or Reports; download it as CSV (save Excel files as CSV first).</span></div>
+        </div>
+        <details>
+            <summary>What PayLink needs in the report</summary>
+            <ul class="hint" style="margin:8px 0;padding-left:1.2em">
+                <li><b>One row per payment</b>, with a header row. Every gateway names its columns differently, so you confirm them in the next step; PayLink suggests the likely ones.</li>
+                <li><b>A payment reference</b>: the gateway's payment id (for example Razorpay <code>pay_…</code>, PayU <code>mihpayid</code>, Stripe <code>pi_…</code>), PayLink's payment or attempt id, or the UTR. PayLink tries each.</li>
+                <li><b>The gross amount</b> in rupees (or paise: there's a tick box). It must equal the payment's amount, or the line is listed for you to check.</li>
+                <li>Optional: fee, tax (GST), net, settlement date, settlement id. They're saved on the payment and add up in the daily close below.</li>
+            </ul>
+            <p class="hint">If a report doesn't map well, copy its rows into the example's columns.</p>
+        </details>
+        <div class="actions"><button class="btn pri" type="submit">Upload and check columns</button><a class="btn sm" href="?handler=Template">Download an example</a></div>
     </form>
 }
 

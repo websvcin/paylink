@@ -20,7 +20,7 @@
 
 <div class="card">
     <h3>CrudApi (full table access)</h3>
-    <p class="muted">Connects your PayLink database to a <a href="https://github.com/websvcin/crudapi" target="_blank" rel="noopener">CrudApi</a> workspace, for REST and OData on every table. Read-only twice over: a database user that can only read, and CrudApi's Reader role.</p>
+    <p class="muted">Connects your PayLink database to a <a href="@Model.CrudApiUrl" target="_blank" rel="noopener">CrudApi</a> (<a href="@PayLink.Platform.PlatformSettings.CrudApiDocsUrl" target="_blank" rel="noopener">what is it?</a>) workspace, for REST and OData on every table. Read-only twice over: a database user that can only read, and CrudApi's Reader role.</p>
     @if (Model.Unavailable is not null)
     {
         <div class="notice warn">@Model.Unavailable</div>
@@ -56,7 +56,7 @@
             {
                 <form method="post" asp-page-handler="Register">
                     <div class="grid3">
-                        <div class="field"><label for="server">CrudApi address</label><input id="server" name="server" class="mono" placeholder="https://crud.example.in" required></div>
+                        <div class="field"><label for="server">CrudApi address</label><input id="server" name="server" class="mono" value="@Model.CrudApiUrl" required><span class="hint">Your platform's CrudApi. No workspace yet? <a href="@Model.CrudApiUrl" target="_blank" rel="noopener">Create one</a>, then make a developer key.</span></div>
                         <div class="field"><label for="workspace">Workspace</label><input id="workspace" name="workspace" class="mono" placeholder="acme"></div>
                         <div class="field"><label for="key">Workspace developer key</label><input id="key" name="key" class="mono" placeholder="wdk_…" autocomplete="off" required><span class="hint">With Databases and API credentials.</span></div>
                     </div>

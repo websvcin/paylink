@@ -33,20 +33,59 @@
 
 @if (Model.CanConfigure)
 {
-    <form method="post" asp-page-handler="Add" class="card">
-        <h3>Add a rule</h3>
-        <div class="grid3">
-            <div class="field"><label for="kind">Check</label>
-                <select id="kind" name="kind">
-                    @foreach (var k in RiskEngine.Kinds) { <option value="@k.Kind">@k.Label (@(k.Stage == "create" ? "on create" : "at checkout"))</option> }
-                </select>
-            </div>
-            <div class="field"><label for="value">Value</label><input id="value" name="value" class="mono" required placeholder="e.g. mailinator.com, 50000, 203.0.113.0/24"></div>
-            <div class="field"><label for="action">Then</label>
-                <select id="action" name="action"><option value="block">Block</option><option value="review">Hold for review</option></select>
-            </div>
+    <div class="card">
+        <h3>Start from a common rule</h3>
+        <p class="hint">One click adds the rule; remove it any time. Amounts are in rupees.</p>
+        <div class="presets">
+            @foreach (var t in RiskModel.Templates)
+            {
+                <form method="post" asp-page-handler="Add" class="preset">
+                    <input type="hidden" name="kind" value="@t.Kind"><input type="hidden" name="action" value="@t.Action"><input type="hidden" name="note" value="@t.Title">
+                    <b>@t.Title</b>
+                    <span class="hint">@t.Why</span>
+                    <div class="row">
+                        @if (t.Editable) { <input name="value" value="@t.Value" class="mono sm" aria-label="Value for @t.Title" required> }
+                        else { <input type="hidden" name="value" value="@t.Value"> }
+                        <span class="chip @(t.Action == "block" ? "bad" : "warn")">@(t.Action == "block" ? "Block" : "Hold for review")</span>
+                        <button class="btn sm" type="submit">Add</button>
+                    </div>
+                </form>
+            }
         </div>
-        <div class="field"><label for="note">Note (for your team)</label><input id="note" name="note"></div>
+    </div>
+
+    <form method="post" asp-page-handler="Add" class="card" id="builder">
+        <h3>Build your own</h3>
+        <p class="sentence">
+            When <select id="kind" name="kind" aria-label="Check">
+                <optgroup label="When the payment is created">
+                    @foreach (var k in RiskEngine.Kinds.Where(k => k.Stage == "create")) { <option value="@k.Kind" data-hint="@k.Hint" data-yesno="false">@k.Label.ToLowerInvariant()</option> }
+                </optgroup>
+                <optgroup label="When the payer starts paying">
+                    @foreach (var k in RiskEngine.Kinds.Where(k => k.Stage == "checkout")) { <option value="@k.Kind" data-hint="@k.Hint" data-yesno="@(k.Hint == "yes" ? "true" : "false")">@k.Label.ToLowerInvariant()</option> }
+                </optgroup>
+            </select>
+            <span id="valuewrap">is <input id="value" name="value" class="mono" required placeholder="@RiskEngine.Kinds[0].Hint"></span>,
+            then <select id="action" name="action" aria-label="Then"><option value="review">hold it for review</option><option value="block">block it</option></select>.
+        </p>
+        <p class="hint" id="kindhelp">Example: @RiskEngine.Kinds[0].Hint</p>
+        <div class="field"><label for="note">Note for your team (optional)</label><input id="note" name="note" placeholder="Why this rule exists"></div>
         <div class="actions"><button class="btn pri" type="submit">Add rule</button></div>
+        <details class="hint"><summary>How the risk score works</summary>
+            <p>“Risk score above” adds up these signals at checkout (0–100):</p>
+            <ul>@foreach (var s in RiskEngine.ScoreSignals) { <li><b>+@s.Weight</b> @s.Meaning</li> }</ul>
+            <p>Start with <b>Hold for review above 60</b>, watch what it catches for a week, then tighten.</p>
+        </details>
     </form>
+    <script>
+    (() => {
+        const kind = document.getElementById('kind'), value = document.getElementById('value'), wrap = document.getElementById('valuewrap'), help = document.getElementById('kindhelp');
+        const sync = () => {
+            const o = kind.selectedOptions[0], yesno = o.dataset.yesno === 'true';
+            wrap.hidden = yesno; value.required = !yesno; if (yesno) value.value = 'yes'; else if (value.value === 'yes') value.value = '';
+            value.placeholder = o.dataset.hint; help.textContent = yesno ? 'No value needed.' : 'Example: ' + o.dataset.hint;
+        };
+        kind.addEventListener('change', sync); sync();
+    })();
+    </script>
 }

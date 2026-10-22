@@ -12,12 +12,21 @@
 @section Nav { <partial name="_ConsoleNav" /> }
 @section Who { <partial name="_ConsoleWho" /> }
 
-<div class="head"><div><h1>Reports</h1><p>@(Model.Livemode ? "Live" : "Test") payments created in the last @Model.Days days.</p></div>
-    <div class="actions">
-        @foreach (var d in new[] { 7, 30, 90 }) { <a class="btn sm @(Model.Days == d ? "pri" : "")" href="?days=@d">@d days</a> }
-        <a class="btn sm" href="?handler=Csv&days=@Model.Days">Download CSV</a>
-    </div>
+<div class="head"><div><h1>Reports</h1><p>@(Model.Livemode ? "Live" : "Test") payments created @(Model.Dates.Preset == "custom" ? "from " + Model.Dates.Label : "in " + Model.Dates.Label) (UTC days).</p></div>
+    <div class="actions"><a class="btn sm" href="?handler=Csv&@Model.Dates.Query">Download CSV</a></div>
 </div>
+<form method="get" class="card filters">
+    <div class="rangebar">
+        @foreach (var (key, label) in DateRange.Presets)
+        {
+            <button class="btn sm @(Model.Dates.Preset == key ? "pri" : "")" type="submit" name="range" value="@key">@label</button>
+        }
+        <span class="custom"><label class="hint" for="from">From</label><input id="from" name="from" type="date" value="@Model.Dates.From.ToString("yyyy-MM-dd")">
+        <label class="hint" for="to">to</label><input id="to" name="to" type="date" value="@Model.Dates.To.ToString("yyyy-MM-dd")"></span>
+        <button class="btn pri" type="submit">Show</button>
+    </div>
+    <p class="hint">Up to a year at a time. Dates are in UTC.</p>
+</form>
 
 <div class="stats">
     <div class="stat"><span>Received</span><b>@Money.Format(r.Days.Sum(d => d.Amount), "INR")</b><span style="text-transform:none;letter-spacing:0">@f.Succeeded payment(s)@(r.Refunded > 0 ? $" · {Money.Format(r.Refunded, "INR")} refunded" : "")</span></div>

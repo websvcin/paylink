@@ -10,21 +10,47 @@
 
 <div class="head"><div><h1>Payments</h1><p>Every @Model.ModeName payment, whichever method was used. Open one to see its full journey.</p></div></div>
 
-<form method="get" class="searchbar" role="search">
-    <input name="q" value="@Model.Q" placeholder="Payment ID, your reference, UTR, email, phone…" aria-label="Search payments">
-    <select name="status" aria-label="Status">
-        <option value="">Any status</option>
-        @foreach (var s in PaymentStatuses.All) { <option value="@s" selected="@(Model.Status == s)">@PaymentStatuses.Label(s)</option> }
-    </select>
-    <button class="btn" type="submit">Search</button>
+<form method="get" class="card filters" role="search">
+    <div class="searchbar">
+        <input name="q" value="@Model.Q" placeholder="Payment ID, your reference, UTR, email, phone, name…" aria-label="Search payments">
+        <select name="status" aria-label="Status">
+            <option value="">Any status</option>
+            @foreach (var s in PaymentStatuses.All) { <option value="@s" selected="@(Model.Status == s)">@PaymentStatuses.Label(s)</option> }
+        </select>
+        <select name="method" aria-label="Method">
+            <option value="">Any method</option>
+            @foreach (var (id, name) in Model.Methods) { <option value="@id" selected="@(Model.Method == id)">@name</option> }
+        </select>
+    </div>
+    <div class="rangebar">
+        <span class="label">Created</span>
+        <a class="btn sm @(Model.Dates is null ? "pri" : "")" href="?@(Model.Dates is null ? Model.Query() : Model.Query().Replace(Model.Dates.Query, "range=all"))">All time</a>
+        @foreach (var (key, label) in DateRange.Presets)
+        {
+            <button class="btn sm @(Model.Dates?.Preset == key ? "pri" : "")" type="submit" name="range" value="@key">@label</button>
+        }
+        <span class="custom"><label class="sr" for="from">From</label><input id="from" name="from" type="date" value="@(Model.Dates?.Preset == "custom" ? Model.Dates.From.ToString("yyyy-MM-dd") : "")">
+        <span class="hint">to</span><label class="sr" for="to">To</label><input id="to" name="to" type="date" value="@(Model.Dates?.Preset == "custom" ? Model.Dates.To.ToString("yyyy-MM-dd") : "")"></span>
+        <span class="custom"><input name="min" value="@Model.Min" inputmode="decimal" placeholder="Min ₹" aria-label="Lowest amount" style="width:7em"><input name="max" value="@Model.Max" inputmode="decimal" placeholder="Max ₹" aria-label="Highest amount" style="width:7em"></span>
+        <button class="btn pri" type="submit">Apply</button>
+        <a class="btn sm" href="?">Clear</a>
+    </div>
+    <p class="hint">Dates are in UTC. For a custom range, fill in From (and To) and press Apply.</p>
 </form>
+
+<div class="stats">
+    <div class="stat"><span>Payments</span><b class="num">@Model.Totals.Count.ToString("N0")</b></div>
+    <div class="stat"><span>Amount</span><b class="num">@Money.Format(Model.Totals.Amount, "INR")</b></div>
+    <div class="stat"><span>Paid</span><b class="num">@Money.Format(Model.Totals.Paid, "INR")</b></div>
+    <div class="stat"><span>Range</span><b>@(Model.Dates?.Label ?? "all time")</b></div>
+</div>
 
 <div class="card flush">
     <div class="tbl">
         <table>
             <thead><tr><th>Payment</th><th>Amount</th><th>Status</th><th>Customer</th><th>Method</th><th>Created</th></tr></thead>
             <tbody>
-            @foreach (var p in Model.List.Take(PayLink.Pages.Console.PaymentsModel.PageSize))
+            @foreach (var p in Model.List)
             {
                 <tr>
                     <td><a href="@root/payments/@p.Id" class="mono">@p.Id</a>@if (p.Reference is not null) { <br><span class="hint">@p.Reference</span> }</td>
@@ -37,15 +63,18 @@
             }
             @if (Model.List.Count == 0)
             {
-                <tr><td colspan="6" class="empty">No @Model.ModeName payments@(string.IsNullOrEmpty(Model.Q) && string.IsNullOrEmpty(Model.Status) ? " yet" : " match")</td></tr>
+                <tr><td colspan="6" class="empty">No @Model.ModeName payments match</td></tr>
             }
             </tbody>
         </table>
     </div>
 </div>
-<div class="actions">
-    @if (Model.PageNo > 1) { <a class="btn sm" href="?q=@Model.Q&status=@Model.Status&p=@(Model.PageNo - 1)">← Newer</a> }
-    @if (Model.List.Count > PayLink.Pages.Console.PaymentsModel.PageSize) { <a class="btn sm" href="?q=@Model.Q&status=@Model.Status&p=@(Model.PageNo + 1)">Older →</a> }
+<div class="actions pager">
+    @if (Model.PageNo > 1) { <a class="btn sm" href="?@Model.Query(1)">« Newest</a><a class="btn sm" href="?@Model.Query(Model.PageNo - 1)">← Newer</a> }
+    <span class="hint">Page @Model.PageNo of @Model.Pages</span>
+    @if (Model.PageNo < Model.Pages) { <a class="btn sm" href="?@Model.Query(Model.PageNo + 1)">Older →</a><a class="btn sm" href="?@Model.Query(Model.Pages)">Oldest »</a> }
+    <span class="spacer"></span>
+    <a class="btn sm" href="?handler=Csv&@Model.Query()">Download these as CSV</a>
 </div>
 
 @if (Model.CanOperate)

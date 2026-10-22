@@ -8,10 +8,19 @@ public sealed class LinksModel(PaymentLinkService links, PayLink.Tenancy.CustomD
 {
     public IReadOnlyList<PaymentLink> Links { get; private set; } = [];
     public string BaseUrl { get; private set; } = "";
+    [BindProperty(SupportsGet = true)] public string? Q { get; set; }
+    [BindProperty(SupportsGet = true)] public string? State { get; set; }
+    [BindProperty(SupportsGet = true, Name = "p")] public int PageNo { get; set; } = 1;
+    public const int PageSize = 25;
+    public long Total { get; private set; }
+    public int Pages => (int)Math.Max(1, (Total + PageSize - 1) / PageSize);
+    public string Query(int page) => $"q={Uri.EscapeDataString(Q ?? "")}&state={State}&p={page}";
 
     public async Task OnGetAsync()
     {
-        Links = await links.ListAsync(Tenant, Livemode);
+        Total = await links.CountAsync(Tenant, Livemode, Q, State);
+        PageNo = Math.Clamp(PageNo, 1, Pages);
+        Links = await links.ListAsync(Tenant, Livemode, Q, State, PageSize, (PageNo - 1) * PageSize);
         BaseUrl = await domains.BaseUrlAsync(Tenant);
     }
 

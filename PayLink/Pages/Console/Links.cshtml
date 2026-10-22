@@ -9,6 +9,17 @@
 
 <div class="head"><div><h1>Payment links</h1><p>A page you can share for payments without building anything: send it in a message, print its QR code at the counter, or put a Pay button on your site. Each payment from a link is an ordinary payment, with the same webhooks and reports. Links made here are @Model.ModeName links.</p></div></div>
 
+<form method="get" class="searchbar" role="search">
+    <input name="q" value="@Model.Q" placeholder="Title, code or description" aria-label="Search links">
+    <select name="state" aria-label="State">
+        <option value="">On and off</option>
+        <option value="on" selected="@(Model.State == "on")">Turned on</option>
+        <option value="off" selected="@(Model.State == "off")">Turned off</option>
+    </select>
+    <button class="btn" type="submit">Search</button>
+    <span class="hint">@Model.Total.ToString("N0") link@(Model.Total == 1 ? "" : "s")</span>
+</form>
+
 <div class="card flush">
     <div class="tbl"><table><thead><tr><th>Link</th><th>Amount</th><th class="num">Paid</th><th class="num">Collected</th><th>Status</th><th></th></tr></thead><tbody>
         @foreach (var l in Model.Links)
@@ -30,9 +41,17 @@
                 </div></td>
             </tr>
         }
-        @if (Model.Links.Count == 0) { <tr><td colspan="6" class="empty">No @Model.ModeName links yet</td></tr> }
+        @if (Model.Links.Count == 0) { <tr><td colspan="6" class="empty">No @Model.ModeName links @(string.IsNullOrEmpty(Model.Q) && string.IsNullOrEmpty(Model.State) ? "yet" : "match")</td></tr> }
     </tbody></table></div>
 </div>
+@if (Model.Pages > 1)
+{
+    <div class="actions pager">
+        @if (Model.PageNo > 1) { <a class="btn sm" href="?@Model.Query(Model.PageNo - 1)">← Newer</a> }
+        <span class="hint">Page @Model.PageNo of @Model.Pages</span>
+        @if (Model.PageNo < Model.Pages) { <a class="btn sm" href="?@Model.Query(Model.PageNo + 1)">Older →</a> }
+    </div>
+}
 
 @if (Model.CanOperate)
 {

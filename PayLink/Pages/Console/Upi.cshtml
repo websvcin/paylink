@@ -10,12 +10,66 @@
 
 <div class="head"><div><h1>UPI verification</h1><p>PayLink UPI payments go straight to your UPI ID, so no bank tells PayLink they arrived. Check each UTR in your bank or UPI app, then approve or reject. Your webhook fires only after you decide.</p></div></div>
 
+<nav class="tabs" aria-label="UPI payments">
+    <a href="?view=waiting" aria-current="@(Model.View != "decided" ? "page" : "false")">Waiting @if (Model.Queue.Count > 0) { <span class="count">@Model.Queue.Count</span> }</a>
+    <a href="?view=decided" aria-current="@(Model.View == "decided" ? "page" : "false")">Decided</a>
+</nav>
+
+@if (Model.View == "decided")
+{
+    <form method="get" class="searchbar" role="search">
+        <input type="hidden" name="view" value="decided">
+        <input name="q" value="@Model.Q" placeholder="Payment ID, UTR, reference, email or phone" aria-label="Search">
+        <select name="decision" aria-label="Decision"><option value="">Approved and rejected</option><option value="approved" selected="@(Model.Decision == "approved")">Approved</option><option value="rejected" selected="@(Model.Decision == "rejected")">Rejected</option></select>
+        <select name="range" aria-label="When"><option value="">Any time</option>@foreach (var (key, label) in DateRange.Presets) { <option value="@key" selected="@(Model.Range == key)">@label</option> }</select>
+        <button class="btn" type="submit">Search</button>
+        <span class="hint">@Model.DecidedTotal.ToString("N0") decision@(Model.DecidedTotal == 1 ? "" : "s")</span>
+    </form>
+    <div class="card flush">
+        <div class="tbl"><table><thead><tr><th>Payment</th><th>Amount</th><th>Decision</th><th>UTR</th><th>Note</th><th>By</th><th>When</th></tr></thead><tbody>
+            @foreach (var d in Model.Decided)
+            {
+                <tr>
+                    <td><a class="mono" href="@root/payments/@d.PaymentId">@d.PaymentId</a>@if (d.Reference is not null) { <br><span class="hint">@d.Reference</span> }</td>
+                    <td class="num">@Money.Format(d.Amount, d.Currency)</td>
+                    <td><span class="chip @(d.Decision == "approved" ? "good" : "bad")">@(d.Decision == "approved" ? "Approved" : "Rejected")</span></td>
+                    <td class="mono">@d.Utr</td>
+                    <td>@d.Note</td>
+                    <td class="hint">@(d.Note?.StartsWith("Bank statement") == true ? "bank statement" : d.By)</td>
+                    <td class="hint">@Clock.Short(d.At)</td>
+                </tr>
+            }
+            @if (Model.Decided.Count == 0) { <tr><td colspan="7" class="empty">No decisions match</td></tr> }
+        </tbody></table></div>
+    </div>
+    @if (Model.Pages > 1)
+    {
+        <div class="actions pager">
+            @if (Model.PageNo > 1) { <a class="btn sm" href="?@Model.Query(Model.PageNo - 1)">← Newer</a> }
+            <span class="hint">Page @Model.PageNo of @Model.Pages</span>
+            @if (Model.PageNo < Model.Pages) { <a class="btn sm" href="?@Model.Query(Model.PageNo + 1)">Older →</a> }
+        </div>
+    }
+    return;
+}
+
 @if (Model.CanOperate)
 {
     <form method="post" asp-page-handler="Statement" enctype="multipart/form-data" class="card">
         <h3>Match a bank statement</h3>
-        <p class="muted">Upload your bank statement as CSV. Every credit whose UTR and amount match a waiting payment below is approved for you, with the statement line as the note. Anything else stays here for you to decide.</p>
-        <div class="actions"><input type="file" name="statement" accept=".csv,text/csv" required aria-label="Bank statement (CSV)"><button class="btn pri" type="submit">Match</button></div>
+        <p class="muted">Upload your bank account statement as CSV (in net banking: Account statement → Download → CSV). Every credit whose <b>UTR and amount</b> match a waiting payment below is approved for you, with the statement line as the note. Anything else stays here for you to decide.</p>
+        <details>
+            <summary>What PayLink reads from the file</summary>
+            <ul class="hint" style="margin:8px 0;padding-left:1.2em">
+                <li><b>The header row</b>, found even below the bank's account details at the top. It needs a narration column (<i>Narration</i>, <i>Description</i>, <i>Particulars</i> or <i>Remarks</i>) and a money column (<i>Deposit</i> or <i>Credit</i>, or one <i>Amount</i> column with a <i>Cr/Dr</i> column).</li>
+                <li><b>Credits only.</b> Withdrawals (debits) are skipped.</li>
+                <li><b>The UTR</b>: the 12-digit number in the reference column (<i>Ref No</i>, <i>UTR</i>, <i>Chq./Ref.No.</i>) or inside the narration, e.g. <code>UPI/412345678901/RAVI KUMAR/…</code>. It's the same 12 digits your payer typed. Not the UPI ID.</li>
+                <li><b>The amount</b> must be exactly the payment's amount. A different amount is listed for you to check, never approved.</li>
+                <li>A date column is shown with each line, if there is one.</li>
+            </ul>
+            <p class="hint">Tested with HDFC- and ICICI-style exports. If your bank's file isn't read, compare it with the example and rename its columns.</p>
+        </details>
+        <div class="actions"><input type="file" name="statement" accept=".csv,text/csv" required aria-label="Bank statement (CSV)"><button class="btn pri" type="submit">Match</button><a class="btn sm" href="?handler=StatementTemplate">Download an example</a></div>
     </form>
 }
 

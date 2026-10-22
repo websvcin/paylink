@@ -33,7 +33,6 @@
         <h3>Account</h3>
         <dl class="kv">
             <dt>Console</dt><dd><code>/@Model.Tenant.Slug/console</code></dd>
-            <dt>Sign-in</dt><dd>LoginLink organization <code>@Model.Tenant.LoginlinkOrg</code> (@(Model.Tenant.LoginlinkMode == "created" ? "created by PayLink" : "connected"))</dd>
             <dt>Your data</dt><dd>@Model.Tenant.DbDisplay <span class="hint">· @(Model.Tenant.DbMode switch { "sqlite" => "managed by PayLink", "auto" => "created for you", _ => "your own MySQL" })</span></dd>
             <dt>Team</dt><dd>@Model.Members member(s)</dd>
             <dt>Created</dt><dd>@Clock.Display(Model.Tenant.CreatedAt)</dd>
@@ -43,6 +42,20 @@
             <div class="notice warn">PayLink couldn't register itself as an API in your LoginLink organization: @Model.Tenant.ApiRegistrationError.</div>
         }
     </div>
+</div>
+
+<div class="card">
+    <h3>Sign-in (LoginLink)</h3>
+    <p class="hint">Your team signs in to this console with accounts in your own LoginLink organization. Who gets in is decided under <a href="@root/team">Team &amp; sign-in</a>.</p>
+    <dl class="kv">
+        <dt>LoginLink server</dt><dd>@if (Model.LoginLinkServer.Length > 0) { <a class="mono" href="@Model.LoginLinkServer" target="_blank" rel="noopener">@Model.LoginLinkServer</a> } else { <span class="hint">not set</span> }</dd>
+        <dt>Organization</dt><dd><code>@Model.Tenant.LoginlinkOrg</code> <span class="hint">· @(Model.Tenant.LoginlinkMode == "created" ? "created by PayLink for you" : "your existing organization, connected")</span></dd>
+        <dt>Issuer</dt><dd class="mono">@Model.Tenant.LoginlinkIssuer</dd>
+        <dt>Console app</dt><dd><span class="mono">@Model.Tenant.ConsoleClientId</span>@if (Model.Tenant.ConsoleAppId is not null) { <span class="hint"> · app @Model.Tenant.ConsoleAppId</span> }</dd>
+        <dt>Sign-in page</dt><dd><a class="mono" href="/@Model.Tenant.Slug/login">/@Model.Tenant.Slug/login</a></dd>
+        <dt>Management access</dt><dd>@if (Model.Tenant.MgmtClientId is not null) { <span class="chip good">stored</span> <span class="hint">PayLink can keep the app's sign-in methods and redirect URLs right.</span> } else { <span class="chip">none</span> <span class="hint">Change sign-in methods yourself in LoginLink → Apps → the app → Connectors.</span> }</dd>
+        <dt>PayLink API</dt><dd>@(Model.Tenant.ApiRegistration switch { "ok" or "registered" => "registered in your organization", "failed" => "registration failed (see above)", _ => "not registered" })</dd>
+    </dl>
 </div>
 
 <div class="card flush">

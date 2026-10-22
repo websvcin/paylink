@@ -38,6 +38,17 @@ public sealed class SettingsModel(PlatformSettings settings, PlatformDb platform
     public SmtpSettings? Smtp { get; private set; }
     public PayLink.Payments.FileStorageSettings Files { get; private set; } = new();
     public bool CheckoutBadge { get; private set; } = true;
+    public string CrudApiUrl { get; private set; } = "";
+
+    public async Task<IActionResult> OnPostCrudApiAsync(string? url)
+    {
+        url = url?.Trim().TrimEnd('/');
+        if (!string.IsNullOrEmpty(url) && !(Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme is "https" or "http"))
+            return Failed("Enter the CrudApi address as a full URL, like https://crud.webapis.in.");
+        await settings.SetAsync(PlatformSettings.KeyCrudApiUrl, string.IsNullOrEmpty(url) ? null : url);
+        await platformDb.AuditAsync(Me, "settings.crudapi_url_changed", url);
+        return Done(string.IsNullOrEmpty(url) ? $"Tenants are pointed at {PlatformSettings.DefaultCrudApiUrl}." : $"Tenants are pointed at {url}.");
+    }
 
     public async Task<IActionResult> OnPostBadgeAsync(bool show)
     {
@@ -118,6 +129,7 @@ public sealed class SettingsModel(PlatformSettings settings, PlatformDb platform
         Smtp = await HttpContext.RequestServices.GetRequiredService<SmtpEmailSender>().GetAsync();
         Files = await HttpContext.RequestServices.GetRequiredService<PayLink.Payments.FileStore>().GetSettingsAsync();
         CheckoutBadge = await settings.GetAsync(PlatformSettings.KeyCheckoutBadge) != "off";
+        CrudApiUrl = await settings.GetAsync(PlatformSettings.KeyCrudApiUrl) ?? "";
         PlatformDescription = (await platformDb.TargetAsync()).Describe();
         SignupOpen = await settings.IsSignupOpenAsync();
         PublicBaseUrl = await settings.GetPublicBaseUrlAsync();

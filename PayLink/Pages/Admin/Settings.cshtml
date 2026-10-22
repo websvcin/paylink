@@ -70,6 +70,13 @@
     @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Save</button></div> }
 </form>
 
+<form method="post" asp-page-handler="CrudApi" class="card">
+    <h3>CrudApi</h3>
+    <p class="hint">Tenants can open their PayLink tables read-only in <a href="@PlatformSettings.CrudApiDocsUrl" target="_blank" rel="noopener">CrudApi</a> (Console → Data access). This is the server their form is filled with. Leave blank for <span class="mono">@PlatformSettings.DefaultCrudApiUrl</span>, or enter your own CrudApi.</p>
+    <div class="field"><label for="crudurl">CrudApi address</label><input id="crudurl" name="url" class="mono" value="@Model.CrudApiUrl" placeholder="@PlatformSettings.DefaultCrudApiUrl"></div>
+    @if (Model.CanChange) { <div class="actions"><button class="btn" type="submit">Save</button></div> }
+</form>
+
 <form method="post" asp-page-handler="Files" class="card">
     <h3>File storage</h3>
     <p class="hint">Where payers' UPI screenshots are kept. Each stored file remembers where it is, so changing this never strands old ones.</p>

@@ -494,22 +494,72 @@ public sealed partial class PaymentService(
         return await AttemptsAsync(c, paymentId);
     }
 
-    public async Task<IReadOnlyList<Payment>> SearchAsync(TenantRecord tenant, bool livemode, string? status, string? q, int take = 50, int skip = 0, string? reference = null, string? linkId = null)
+    public Task<IReadOnlyList<Payment>> SearchAsync(TenantRecord tenant, bool livemode, string? status, string? q, int take = 50, int skip = 0, string? reference = null, string? linkId = null) =>
+        SearchAsync(tenant, livemode, new PaymentFilter(status, q, Reference: reference, LinkId: linkId), take, skip);
+
+    private static (string Where, object Args) Where(bool livemode, PaymentFilter f)
     {
         var where = new List<string> { "livemode = @livemode" };
-        if (!string.IsNullOrEmpty(reference)) where.Add("reference = @reference");
-        if (!string.IsNullOrEmpty(linkId)) where.Add("link_id = @linkId");
-        if (!string.IsNullOrEmpty(status) && PaymentStatuses.All.Contains(status)) where.Add("status = @status");
-        if (!string.IsNullOrWhiteSpace(q))
+        if (!string.IsNullOrEmpty(f.Reference)) where.Add("reference = @Reference");
+        if (!string.IsNullOrEmpty(f.LinkId)) where.Add("link_id = @LinkId");
+        if (!string.IsNullOrEmpty(f.Status) && PaymentStatuses.All.Contains(f.Status)) where.Add("status = @Status");
+        if (!string.IsNullOrEmpty(f.Connector)) where.Add("connector = @Connector");
+        if (f.Dates is not null) where.Add("created_at >= @start AND created_at < @end");
+        if (f.MinAmount is not null) where.Add("amount >= @MinAmount");
+        if (f.MaxAmount is not null) where.Add("amount <= @MaxAmount");
+        if (!string.IsNullOrWhiteSpace(f.Q))
             where.Add("(id = @q OR reference = @q OR utr = @q OR customer_email = @q OR customer_phone = @q OR customer_id = @q " +
                       "OR customer_name LIKE @like OR description LIKE @like OR id IN (SELECT payment_id FROM attempts WHERE utr = @q OR gateway_ref = @q OR id = @q))");
+        return (string.Join(" AND ", where), new
+        {
+            livemode, f.Status, f.Connector, f.MinAmount, f.MaxAmount, f.Reference, f.LinkId, q = f.Q?.Trim(), like = $"%{f.Q?.Trim()}%",
+            start = f.Dates?.Start, end = f.Dates?.End,
+        });
+    }
+
+    public async Task<IReadOnlyList<Payment>> SearchAsync(TenantRecord tenant, bool livemode, PaymentFilter filter, int take = 50, int skip = 0)
+    {
+        var (where, args) = Where(livemode, filter);
         await using var c = await tenantDb.OpenAsync(tenant);
         return (await c.QueryAsync<Payment>(
-            $"SELECT * FROM payments WHERE {string.Join(" AND ", where)} ORDER BY created_at DESC LIMIT {Math.Clamp(take, 1, 200)} OFFSET {Math.Max(0, skip)};",
-            new { livemode, status, q = q?.Trim(), like = $"%{q?.Trim()}%", reference, linkId })).ToList();
+            $"SELECT * FROM payments WHERE {where} ORDER BY created_at DESC LIMIT {Math.Clamp(take, 1, 50_000)} OFFSET {Math.Max(0, skip)};", args)).ToList();
+    }
+
+    /// <summary>How many payments match, the total amount, and how much of it was paid.</summary>
+    public async Task<(long Count, long Amount, long Paid)> TotalsAsync(TenantRecord tenant, bool livemode, PaymentFilter filter)
+    {
+        var (where, args) = Where(livemode, filter);
+        await using var c = await tenantDb.OpenAsync(tenant);
+        var row = await c.QueryFirstAsync(
+            $"SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS total, COALESCE(SUM(CASE WHEN status = 'succeeded' THEN amount ELSE 0 END), 0) AS paid FROM payments WHERE {where};", args);
+        var d = (IDictionary<string, object>)row;
+        return (Convert.ToInt64(d["n"]), Convert.ToInt64(d["total"]), Convert.ToInt64(d["paid"]));
     }
 
     /// <summary>UPI payments whose payer entered a UTR, waiting for the merchant to check them.</summary>
+    public sealed record UpiDecision(string PaymentId, long Amount, string Currency, string? Reference, string Decision, string? Utr, string? Note,
+        string? By, string ByType, string At);
+
+    /// <summary>UPI payments already approved or rejected, newest first, from the payment journey (who, when, with which note).</summary>
+    public async Task<(IReadOnlyList<UpiDecision> Rows, long Total)> UpiDecisionsAsync(TenantRecord tenant, bool livemode, string? decision, string? q, DateRange? dates, int take, int skip)
+    {
+        var types = decision switch { "approved" => "('upi.approved')", "rejected" => "('upi.rejected')", _ => "('upi.approved', 'upi.rejected')" };
+        var where = $"e.type IN {types} AND p.livemode = @livemode" + (dates is null ? "" : " AND e.at >= @start AND e.at < @end")
+            + (string.IsNullOrWhiteSpace(q) ? "" : " AND (p.id = @q OR p.utr = @q OR p.reference = @q OR p.customer_email = @q OR p.customer_phone = @q)");
+        var args = new { livemode, q = q?.Trim().Replace(" ", ""), start = dates?.Start, end = dates?.End };
+        await using var c = await tenantDb.OpenAsync(tenant);
+        var total = await c.ExecuteScalarAsync<long>($"SELECT COUNT(*) FROM payment_events e JOIN payments p ON p.id = e.payment_id WHERE {where};", args);
+        var rows = await c.QueryAsync<(string PaymentId, long Amount, string Currency, string? Reference, string Type, string? Data, string? ActorName, string ActorType, string At)>(
+            $"SELECT p.id, p.amount, p.currency, p.reference, e.type, e.data, e.actor_name, e.actor_type, e.at FROM payment_events e JOIN payments p ON p.id = e.payment_id " +
+            $"WHERE {where} ORDER BY e.at DESC LIMIT {Math.Clamp(take, 1, 200)} OFFSET {Math.Max(0, skip)};", args);
+        return (rows.Select(r =>
+        {
+            var data = string.IsNullOrEmpty(r.Data) ? null : System.Text.Json.Nodes.JsonNode.Parse(r.Data);
+            return new UpiDecision(r.PaymentId, r.Amount, r.Currency, r.Reference, r.Type == "upi.approved" ? "approved" : "rejected",
+                (string?)data?["utr"], (string?)data?["note"], r.ActorName, r.ActorType, r.At);
+        }).ToList(), total);
+    }
+
     public async Task<IReadOnlyList<(Payment Payment, Attempt Attempt)>> UpiQueueAsync(TenantRecord tenant, bool livemode)
     {
         await using var c = await tenantDb.OpenAsync(tenant);

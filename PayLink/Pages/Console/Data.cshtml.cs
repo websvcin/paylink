@@ -4,13 +4,14 @@ using PayLink.Tenancy;
 namespace PayLink.Pages.Console;
 
 /// <summary>Data access: the built-in reporting API, and connecting CrudApi for full read-only table access.</summary>
-public sealed class DataModel(CrudApiConnection crudApi, CustomDomains domains) : ConsolePage
+public sealed class DataModel(CrudApiConnection crudApi, CustomDomains domains, PayLink.Platform.PlatformSettings settings) : ConsolePage
 {
     public CrudApiLink? Link { get; private set; }
     public string? Unavailable { get; private set; }
     public bool CanCreateUser { get; private set; }
     public string DefaultHost { get; private set; } = "";
     public string BaseUrl { get; private set; } = "";
+    public string CrudApiUrl { get; private set; } = PayLink.Platform.PlatformSettings.DefaultCrudApiUrl;
 
     public async Task OnGetAsync()
     {
@@ -19,6 +20,7 @@ public sealed class DataModel(CrudApiConnection crudApi, CustomDomains domains) 
         CanCreateUser = Unavailable is null && await crudApi.CanCreateUserAsync(Tenant);
         DefaultHost = Unavailable is null ? new MySqlConnector.MySqlConnectionStringBuilder(TenantDb.Target(Tenant).ConnectionString).Server : "";
         BaseUrl = await domains.BaseUrlAsync(Tenant);
+        CrudApiUrl = await settings.GetCrudApiUrlAsync();
     }
 
     public async Task<IActionResult> OnPostReaderAsync(string? user, string? password, string? host)

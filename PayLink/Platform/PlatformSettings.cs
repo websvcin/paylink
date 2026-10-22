@@ -57,6 +57,12 @@ public sealed class PlatformSettings(PlatformDb db, SecretProtector secrets)
     public const string KeyTenantDomain = "tenant_domain";
     /// <summary>"off" hides the small "Secured by PayLink" badge on payer pages (white label).</summary>
     public const string KeyCheckoutBadge = "checkout_badge";
+    /// <summary>The CrudApi server tenants are pointed at from Data access.</summary>
+    public const string KeyCrudApiUrl = "crudapi_url";
+    public const string DefaultCrudApiUrl = "https://crud.webapis.in";
+    public const string CrudApiDocsUrl = "https://websvcin.github.io/crudapi/";
+
+    public async Task<string> GetCrudApiUrlAsync() => (await GetAsync(KeyCrudApiUrl))?.Trim().TrimEnd('/') is { Length: > 0 } u ? u : DefaultCrudApiUrl;
 
     public async Task<string?> GetAsync(string key)
     {

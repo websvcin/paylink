@@ -6,7 +6,7 @@ using PayLink.Tenancy;
 namespace PayLink.Payments;
 
 /// <summary>A tenant's reports: the checkout funnel, success by method, why payments fail, time to pay, daily totals.</summary>
-public sealed class Reports(TenantDb tenantDb)
+public sealed class Reports(TenantDb tenantDb, PaymentService payments)
 {
     public sealed record Funnel(long Created, long Opened, long Chose, long Succeeded);
     public sealed record ByConnector(string Connector, long Attempts, long Succeeded, double? MedianSeconds);
@@ -15,23 +15,28 @@ public sealed class Reports(TenantDb tenantDb)
     public sealed record Report(Funnel Funnel, IReadOnlyList<ByConnector> Connectors, IReadOnlyList<FailureRow> Failures,
         double? MedianTimeToPaySeconds, IReadOnlyList<Day> Days, long Refunded);
 
-    public async Task<Report> BuildAsync(TenantRecord tenant, bool livemode, int days)
+    public Task<Report> BuildAsync(TenantRecord tenant, bool livemode, int days) =>
+        BuildAsync(tenant, livemode, DateRange.Parse(days.ToString(), null, null));
+
+    public async Task<Report> BuildAsync(TenantRecord tenant, bool livemode, DateRange range)
     {
-        var since = DateTime.UtcNow.Date.AddDays(-(days - 1));
-        var s = Clock.Format(since);
+        var since = range.From.ToDateTime(TimeOnly.MinValue);
+        var days = range.Days;
+        var s = range.Start;
+        var e = range.End;
         await using var c = await tenantDb.OpenAsync(tenant);
-        var created = await c.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM payments WHERE livemode = @livemode AND created_at >= @s;", new { livemode, s });
+        var created = await c.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM payments WHERE livemode = @livemode AND created_at >= @s AND created_at < @e;", new { livemode, s, e });
         var opened = await c.ExecuteScalarAsync<long>(
-            "SELECT COUNT(DISTINCT e.payment_id) FROM payment_events e JOIN payments p ON p.id = e.payment_id WHERE e.type = 'checkout.opened' AND p.livemode = @livemode AND p.created_at >= @s;", new { livemode, s });
+            "SELECT COUNT(DISTINCT e.payment_id) FROM payment_events e JOIN payments p ON p.id = e.payment_id WHERE e.type = 'checkout.opened' AND p.livemode = @livemode AND p.created_at >= @s AND p.created_at < @e;", new { livemode, s, e });
         var chose = await c.ExecuteScalarAsync<long>(
-            "SELECT COUNT(DISTINCT a.payment_id) FROM attempts a JOIN payments p ON p.id = a.payment_id WHERE p.livemode = @livemode AND p.created_at >= @s;", new { livemode, s });
+            "SELECT COUNT(DISTINCT a.payment_id) FROM attempts a JOIN payments p ON p.id = a.payment_id WHERE p.livemode = @livemode AND p.created_at >= @s AND p.created_at < @e;", new { livemode, s, e });
         var paid = (await c.QueryAsync<(string CreatedAt, string PaidAt, long Amount)>(
-            "SELECT created_at, paid_at, amount FROM payments WHERE livemode = @livemode AND created_at >= @s AND status = 'succeeded' AND paid_at IS NOT NULL;", new { livemode, s })).ToList();
+            "SELECT created_at, paid_at, amount FROM payments WHERE livemode = @livemode AND created_at >= @s AND created_at < @e AND status = 'succeeded' AND paid_at IS NOT NULL;", new { livemode, s, e })).ToList();
         var attempts = (await c.QueryAsync<(string Connector, string Status, string CreatedAt, string UpdatedAt, string? FailureReason)>(
-            "SELECT a.connector, a.status, a.created_at, a.updated_at, a.failure_reason FROM attempts a JOIN payments p ON p.id = a.payment_id WHERE p.livemode = @livemode AND a.created_at >= @s;",
-            new { livemode, s })).ToList();
+            "SELECT a.connector, a.status, a.created_at, a.updated_at, a.failure_reason FROM attempts a JOIN payments p ON p.id = a.payment_id WHERE p.livemode = @livemode AND a.created_at >= @s AND a.created_at < @e;",
+            new { livemode, s, e })).ToList();
         var refunded = await c.ExecuteScalarAsync<long>(
-            "SELECT COALESCE(SUM(r.amount), 0) FROM refunds r WHERE r.livemode = @livemode AND r.status = 'succeeded' AND r.created_at >= @s;", new { livemode, s });
+            "SELECT COALESCE(SUM(r.amount), 0) FROM refunds r WHERE r.livemode = @livemode AND r.status = 'succeeded' AND r.created_at >= @s AND r.created_at < @e;", new { livemode, s, e });
 
         static double? Median(IEnumerable<double> values)
         {
@@ -52,11 +57,13 @@ public sealed class Reports(TenantDb tenantDb)
     }
 
     /// <summary>Payments created in the period, as CSV (amounts in rupees), for spreadsheets and accounting.</summary>
-    public async Task<string> CsvAsync(TenantRecord tenant, bool livemode, int days)
+    public Task<string> CsvAsync(TenantRecord tenant, bool livemode, int days) =>
+        CsvAsync(tenant, livemode, new PaymentFilter(Dates: DateRange.Parse(days.ToString(), null, null)));
+
+    /// <summary>The payments a filter matches (up to 50,000, oldest first), as CSV.</summary>
+    public async Task<string> CsvAsync(TenantRecord tenant, bool livemode, PaymentFilter filter)
     {
-        var s = Clock.Format(DateTime.UtcNow.Date.AddDays(-(days - 1)));
-        await using var c = await tenantDb.OpenAsync(tenant);
-        var rows = await c.QueryAsync<Payment>("SELECT * FROM payments WHERE livemode = @livemode AND created_at >= @s ORDER BY created_at;", new { livemode, s });
+        var rows = (await payments.SearchAsync(tenant, livemode, filter, 50_000)).OrderBy(p => p.CreatedAt);
         var sb = new System.Text.StringBuilder("id,created_at,status,amount,currency,refunded,reference,description,customer_name,customer_email,customer_phone,method,connector,utr,paid_at,failure_reason,settled_at,settlement_ref\n");
         static string F(object? v)
         {

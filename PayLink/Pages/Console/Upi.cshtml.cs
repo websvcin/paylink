@@ -7,12 +7,34 @@ public sealed class UpiModel(PaymentService payments, UpiStatementService statem
 {
     public IReadOnlyList<(Payment Payment, Attempt Attempt)> Queue { get; private set; } = [];
     public IReadOnlyList<BankStatementLine> NeedALook { get; private set; } = [];
+    [BindProperty(SupportsGet = true)] public string View { get; set; } = "waiting";
+    [BindProperty(SupportsGet = true)] public string? Decision { get; set; }
+    [BindProperty(SupportsGet = true)] public string? Q { get; set; }
+    [BindProperty(SupportsGet = true)] public string? Range { get; set; }
+    [BindProperty(SupportsGet = true, Name = "p")] public int PageNo { get; set; } = 1;
+    public const int PageSize = 50;
+    public IReadOnlyList<PaymentService.UpiDecision> Decided { get; private set; } = [];
+    public long DecidedTotal { get; private set; }
+    public int Pages => (int)Math.Max(1, (DecidedTotal + PageSize - 1) / PageSize);
+    public string Query(int page) => $"view=decided&decision={Decision}&q={Uri.EscapeDataString(Q ?? "")}&range={Range}&p={page}";
 
     public async Task OnGetAsync()
     {
         Queue = await payments.UpiQueueAsync(Tenant, Livemode);
         NeedALook = await statements.NeedALookAsync(Tenant);
+        if (View == "decided")
+        {
+            var dates = DateRange.Presets.Any(p => p.Key == Range) ? DateRange.Parse(Range, null, null) : null;
+            (Decided, DecidedTotal) = await payments.UpiDecisionsAsync(Tenant, Livemode, Decision, Q, dates, PageSize, (Math.Max(1, PageNo) - 1) * PageSize);
+        }
     }
+
+    /// <summary>A statement in the shape PayLink reads, to compare with your bank's export.</summary>
+    public IActionResult OnGetStatementTemplate() => File(System.Text.Encoding.UTF8.GetBytes(
+        "Date,Narration,Ref No,Withdrawal,Deposit,Balance\n" +
+        "21/10/2026,UPI/412345678901/RAVI KUMAR/ravi@okhdfcbank/Fees,412345678901,,1499.00,25499.00\n" +
+        "21/10/2026,UPI-ASHA-asha@ybl-423456789012-Fees,UPI-423456789012,,500.00,25999.00\n" +
+        "22/10/2026,NEFT RENT OCTOBER,N123456,8000.00,,17999.00\n"), "text/csv", "paylink-bank-statement-example.csv");
 
     [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<IActionResult> OnPostStatementAsync(IFormFile? statement)
