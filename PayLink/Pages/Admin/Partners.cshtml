@@ -1,0 +1,86 @@
+@page "/admin/partners"
+@model PayLink.Pages.Admin.PartnersModel
+@using PayLink.Platform
+@{
+    ViewData["Title"] = "Partner onboarding";
+    ViewData["Where"] = "Platform console";
+}
+@section Nav { <partial name="_AdminNav" /> }
+@section Who { <partial name="_AdminWho" /> }
+
+<div class="head"><div><h1>Partner onboarding</h1><p>Help tenants get an account with a gateway, so they can start taking cards and net banking without hunting for a provider. For each method choose a <b>partner link</b> (your referral or partner signup page; PayLink records the tenant's interest and sends them there) or a <b>form</b> (PayLink collects a few details and your team follows up). Tenants see “Get an account” next to the method on their Payment methods page.</p></div></div>
+
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Method</th><th>Programme</th><th>What tenants see</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var c in Model.Methods)
+            {
+                var m = c.Manifest;
+                var p = Model.Programs.GetValueOrDefault(m.Id) ?? new PartnerProgram { ConnectorId = m.Id };
+                <tr>
+                    <td><b>@m.Name</b></td>
+                    <td>@if (p.Mode == PartnerModes.Link) { <span class="chip good">Partner link</span> } else if (p.Mode == PartnerModes.Form) { <span class="chip good">Form</span> } else { <span class="chip">Off</span> }</td>
+                    <td class="hint">@(p.IsOn ? p.HeadlineFor(m.Name) : "Only “I have an account”")</td>
+                    <td>
+                        <details>
+                            <summary class="btn sm">Configure</summary>
+                            <form method="post" asp-page-handler="Program" class="stack" style="margin-top:10px;min-width:320px">
+                                <input type="hidden" name="connector" value="@m.Id">
+                                <div class="opts">
+                                    <label class="opt"><input type="radio" name="mode" value="off" checked="@(p.Mode == PartnerModes.Off)"><div><b>Off</b><span>Tenants bring their own account (“I have an account”).</span></div></label>
+                                    <label class="opt"><input type="radio" name="mode" value="link" checked="@(p.Mode == PartnerModes.Link)"><div><b>Partner link</b><span>Record the interest, then open your referral link.</span></div></label>
+                                    <label class="opt"><input type="radio" name="mode" value="form" checked="@(p.Mode == PartnerModes.Form)"><div><b>Form</b><span>Collect contact and business details; you follow up.</span></div></label>
+                                </div>
+                                <div class="field"><label for="link_@m.Id">Partner link (for “Partner link”)</label><input id="link_@m.Id" name="link" class="mono" value="@p.LinkUrl" placeholder="https://partner.example.com/signup?ref=yourcode&amp;merchant={tenant}"><span class="hint"><code>{tenant}</code> becomes the tenant's slug, so the partner can attribute the signup.</span></div>
+                                <div class="field"><label for="headline_@m.Id">Headline</label><input id="headline_@m.Id" name="headline" value="@p.Headline" maxlength="120" placeholder="@($"No {m.Name} account yet? Get one through us")"></div>
+                                <div class="field"><label for="pitch_@m.Id">One line under it (optional)</label><input id="pitch_@m.Id" name="pitch" value="@p.Pitch" maxlength="500" placeholder="We help with the paperwork and turn it on here when it's approved."><span class="hint">Avoid promising pricing or approval times; the partner decides those.</span></div>
+                                @if (Model.CanChange) { <div class="actions"><button class="btn pri" type="submit">Save</button></div> }
+                            </form>
+                        </details>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<h2>Requests</h2>
+<form method="get" class="filters card">
+    <div class="grid3" style="align-items:end">
+    <div class="field"><label for="status">Status</label><select id="status" name="status"><option value="">Any</option>@foreach (var s in PartnerRequestStatuses.All) { <option value="@s.Key" selected="@(Model.Status == s.Key)">@s.Label</option> }</select></div>
+    <div class="field"><label for="method">Method</label><select id="method" name="method"><option value="">Any</option>@foreach (var c in Model.Methods) { <option value="@c.Manifest.Id" selected="@(Model.Method == c.Manifest.Id)">@c.Manifest.Name</option> }</select></div>
+    <div class="actions"><button class="btn" type="submit">Filter</button></div>
+    </div>
+</form>
+<div class="card flush">
+    <div class="tbl">
+        <table>
+            <thead><tr><th>Tenant</th><th>Method</th><th>Contact</th><th>Details</th><th>Asked</th><th>Status</th></tr></thead>
+            <tbody>
+            @foreach (var r in Model.Requests)
+            {
+                var t = Model.Tenants.GetValueOrDefault(r.TenantId);
+                <tr>
+                    <td>@if (t is not null) { <a href="/admin/tenants/@t.Slug">@t.Name</a><br><span class="mono hint">@t.Slug</span> } else { <span class="hint">#@r.TenantId</span> }</td>
+                    <td>@Model.MethodName(r.ConnectorId)<br><span class="hint">@(r.Kind == PartnerModes.Link ? "opened partner link" : "filled the form")</span></td>
+                    <td>@r.ContactName<br><span class="hint">@r.ContactEmail @r.ContactPhone</span></td>
+                    <td class="hint">@foreach (var a in r.Answers) { <div><b>@a.Key</b>: @a.Value</div> }</td>
+                    <td class="hint">@Clock.Short(r.CreatedAt)<br>@r.CreatedBy</td>
+                    <td>
+                        <form method="post" asp-page-handler="Request" class="stack">
+                            <input type="hidden" name="id" value="@r.Id">
+                            <select name="status" aria-label="Status">@foreach (var s in PartnerRequestStatuses.All) { <option value="@s.Key" selected="@(r.Status == s.Key)">@s.Label</option> }</select>
+                            <input name="note" value="@r.AdminNote" placeholder="Note the tenant sees" aria-label="Note">
+                            @if (Model.CanChange) { <button class="btn sm" type="submit">Update</button> }
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (Model.Requests.Count == 0) { <tr><td colspan="6" class="empty">No requests yet.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>

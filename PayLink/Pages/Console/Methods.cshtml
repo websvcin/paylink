@@ -8,17 +8,79 @@
 @section Nav { <partial name="_ConsoleNav" /> }
 @section Who { <partial name="_ConsoleWho" /> }
 
-<div class="head"><div><h1>Payment methods</h1><p>Turn methods on here; your integration doesn't change. Test and Live have separate settings. Secrets are stored encrypted and never shown again.</p></div></div>
+<div class="head"><div><h1>Payment methods</h1><p>Start today with free PayLink UPI. Add a gateway for cards and net banking whenever you're ready: bring your own account, or get one through us. Your integration never changes.</p></div></div>
 
 @if (!Model.LiveReady)
 {
     <div class="notice warn">Live payments are off until one method has Live settings that pass their check. Test payments work now, with the Simulator.</div>
 }
 
+<div class="mgrid">
+    @foreach (var c in Model.Connectors.Where(c => !c.Manifest.TestOnly))
+    {
+        var m = c.Manifest;
+        var t = Model.Setting(m.Id, "test");
+        var l = Model.Setting(m.Id, "live");
+        var program = Model.Program(m.Id);
+        var req = Model.LatestRequest(m.Id);
+        <div class="mcard @(m.Id == "upi" ? "feature" : "")">
+            <div class="mtop"><partial name="_MethodIcon" model='m.Id == "upi" ? "upi" : "card"' /><div><b>@m.Name</b>@if (m.Id == "upi") { <span class="chip good">Free · start now</span> }</div></div>
+            <p class="hint">@PayLink.Pages.Console.MethodsModel.Blurb(m.Id)</p>
+            <div class="mstate">
+                <span class="chip @(t is { Enabled: true } ? "good" : "")">Test @(t is { Enabled: true } ? "on" : "off")</span>
+                <span class="chip @(l is { Enabled: true } ? "good" : "")">Live @(l is { Enabled: true } ? "on" : "off")</span>
+                @if (req is not null) { <span class="chip @PayLink.Platform.PartnerRequestStatuses.Tone(req.Status)" title="@req.AdminNote">Account: @PayLink.Platform.PartnerRequestStatuses.Label(req.Status)</span> }
+            </div>
+            @if (req?.AdminNote is { Length: > 0 } note) { <p class="hint">@note</p> }
+            <div class="actions">
+                <a class="btn sm @(t is { Enabled: true } || l is { Enabled: true } ? "" : "pri")" href="#setup-@m.Id" data-open="setup-@m.Id">@(t is { Enabled: true } || l is { Enabled: true } ? "Settings" : m.Id == "upi" ? "Turn on" : "I have an account")</a>
+                @if (program is not null && Model.CanConfigure && req is not { Status: "done" })
+                {
+                    @if (program.Mode == PayLink.Platform.PartnerModes.Link)
+                    {
+                        <form method="post" asp-page-handler="Partner" target="_blank" class="inline"><input type="hidden" name="connector" value="@m.Id"><button class="btn sm" type="submit">Get an account ↗</button></form>
+                    }
+                    else
+                    {
+                        <a class="btn sm" href="#apply-@m.Id" data-open="apply-@m.Id">Get an account</a>
+                    }
+                }
+            </div>
+            @if (program is not null && req is null) { <p class="hint"><b>@program.HeadlineFor(m.Name)</b>@if (program.Pitch is not null) { <br>@program.Pitch }</p> }
+        </div>
+    }
+</div>
+
+@foreach (var c in Model.Connectors.Where(c => Model.Program(c.Manifest.Id) is { Mode: "form" }))
+{
+    var m = c.Manifest;
+    var program = Model.Program(m.Id)!;
+    <details class="card" id="apply-@m.Id">
+        <summary><b>Get a @m.Name account</b></summary>
+        <form method="post" asp-page-handler="Partner" class="stack" style="margin-top:12px">
+            <p class="muted">@program.HeadlineFor(m.Name). @program.Pitch Share a few details and the team will contact you; the status shows on this page. Approval and pricing are decided by @m.Name.</p>
+            <input type="hidden" name="connector" value="@m.Id">
+            <div class="grid3">
+                <div class="field"><label for="pn_@m.Id">Contact name</label><input id="pn_@m.Id" name="name" required></div>
+                <div class="field"><label for="pe_@m.Id">Email</label><input id="pe_@m.Id" name="email" type="email" value="@Model.MyEmail" required></div>
+                <div class="field"><label for="pp_@m.Id">Phone</label><input id="pp_@m.Id" name="phone" type="tel" required></div>
+            </div>
+            <div class="grid2">
+                @foreach (var q in PayLink.Platform.PartnerOnboarding.FormQuestions)
+                {
+                    <div class="field"><label for="q_@(m.Id)_@q.Key">@q.Label</label><input id="q_@(m.Id)_@q.Key" name="q_@q.Key" placeholder="@q.Hint"></div>
+                }
+            </div>
+            @if (Model.CanConfigure) { <div class="actions"><button class="btn pri" type="submit">Send request</button></div> }
+        </form>
+    </details>
+}
+
 @if (Model.Routing.Count > 0)
 {
-    <form method="post" asp-page-handler="Routing" class="card">
-        <h3>Routing (@Model.ModeName)</h3>
+    <details class="card">
+        <summary><b>Order and amounts (@Model.ModeName)</b> <span class="hint">· @string.Join(" → ", Model.Routing.Select(r => r.Connector.Manifest.Name))</span></summary>
+    <form method="post" asp-page-handler="Routing" style="margin-top:12px">
         <p class="muted">The order payers see methods in, and the amounts each one is offered for. A gateway that fails to start @ConnectorSettingsService.BreakerErrors times in a row rests for @((int)ConnectorSettingsService.BreakerCooldown.TotalMinutes) minutes and checkout leaves it out, unless no other method is left.</p>
         <div class="tbl"><table><thead><tr><th>Method</th><th>Order</th><th>From (₹)</th><th>Up to (₹)</th><th>Now</th></tr></thead><tbody>
             @foreach (var (c, s) in Model.Routing)
@@ -37,15 +99,18 @@
         <label><input type="checkbox" name="failover" value="on" checked="@Model.Failover"> If a gateway can't start a payment, send the payer to the next gateway automatically</label>
         @if (Model.CanConfigure) { <div class="actions"><button class="btn pri" type="submit">Save routing</button></div> }
     </form>
+    </details>
 }
+
+<h2>Settings</h2>
 
 @foreach (var c in Model.Connectors)
 {
     var m = c.Manifest;
-    <div class="card">
-        <div class="actions" style="justify-content:space-between">
-            <div><h3 style="display:inline">@m.Name</h3> <span class="hint">· @string.Join(", ", m.Methods.Select(x => x.ToString().ToUpperInvariant() == "UPI" ? "UPI" : x.ToString())) · @(m.Currencies.Contains("*") ? "any currency" : string.Join(", ", m.Currencies)) · @c.GetType().Assembly.GetName().Name @m.Version</span></div>
-        </div>
+    var anyOn = Model.Setting(m.Id, "test") is { Enabled: true } || Model.Setting(m.Id, "live") is { Enabled: true };
+    var failed = Model.Setting(m.Id, "test") is { CheckOk: false } || Model.Setting(m.Id, "live") is { CheckOk: false };
+    <details class="card" id="setup-@m.Id" open="@failed">
+        <summary><b>@m.Name</b> @if (anyOn) { <span class="chip good">On</span> } <span class="hint">· @string.Join(", ", m.Methods.Select(x => x.ToString().ToUpperInvariant() == "UPI" ? "UPI" : x.ToString())) · @(m.Currencies.Contains("*") ? "any currency" : string.Join(", ", m.Currencies)) · @c.GetType().Assembly.GetName().Name @m.Version</span></summary>
         @if (m.Id == "simulator")
         {
             <p class="muted">Always offered on test checkouts: the payer picks <b>Succeed</b>, <b>Fail</b> or <b>Stay pending</b>, so you can test your integration and webhooks without a gateway account. Never shown on live payments.</p>
@@ -113,6 +178,12 @@
                 }
             </div>
         }
-    </div>
+    </details>
 }
+<script>
+    // Buttons on the cards open the matching section and scroll to it.
+    const openTarget = id => { const d = document.getElementById(id); if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
+    document.querySelectorAll('[data-open]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openTarget(a.dataset.open); history.replaceState(null, '', '#' + a.dataset.open); }));
+    if (location.hash) openTarget(location.hash.slice(1));
+</script>
 <p class="hint">Each method is its own connector package; new ones appear here with no change to your integration. Payers see the methods turned on for the payment's mode, in this order.</p>

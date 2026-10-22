@@ -37,6 +37,7 @@ builder.Services.AddHostedService<StartupMigrations>();
 // Payments (Phase 1)
 builder.Services.AddSingleton<ConnectorRegistry>();
 builder.Services.AddSingleton<ConnectorCatalog>();
+builder.Services.AddSingleton<PartnerOnboarding>();
 builder.Services.AddSingleton<ConnectorPackages>();
 builder.Services.AddSingleton<PlatformPayments>();
 builder.Services.AddSingleton<Reports>();

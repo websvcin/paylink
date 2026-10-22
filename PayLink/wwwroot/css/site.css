@@ -279,4 +279,20 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .preset .row { display: flex; gap: 8px; align-items: center; margin-top: auto; flex-wrap: wrap; }
 .preset input.sm { width: 9em; padding: 4px 8px; }
 .sentence { font-size: 1.05em; line-height: 2.6; }
-.sentence select, .sentence input { display: inline-block; width: auto; min-width: 10em; margin: 0 4px; }
+.sentence select, .sentence input { display: inline-block; width: auto; min-width: 10em; max-width: 100%; margin: 0 4px; }
+@media (max-width: 600px) { .sentence select, .sentence input { display: block; width: 100%; margin: 6px 0; } }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+
+/* Payment methods: cards first, settings below */
+.mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.mcard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.mcard.feature { border-color: var(--good, #1F8A5B); box-shadow: 0 0 0 1px var(--good, #1F8A5B) inset; }
+.mcard .mtop { display: flex; gap: 10px; align-items: center; }
+.mcard .mtop .chip { margin-left: 6px; }
+.mcard .mstate { display: flex; gap: 6px; flex-wrap: wrap; }
+.mcard .actions { margin-top: auto; }
+details.card > summary { cursor: pointer; list-style: none; display: block; }
+details.card:not([open]) { padding-top: 14px; padding-bottom: 14px; gap: 0; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary::before { content: "▸ "; color: var(--muted); }
+details.card[open] > summary::before { content: "▾ "; }

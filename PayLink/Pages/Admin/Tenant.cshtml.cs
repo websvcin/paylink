@@ -8,8 +8,10 @@ namespace PayLink.Pages.Admin;
 
 /// <summary>One tenant: where its console lives (path or subdomain) and where its data lives (move to another engine).</summary>
 public sealed class TenantModel(PlatformRepository repo, PlatformSettings settings, PlatformDb platformDb, TenantDb tenantDb, DatabaseMoves moves,
-    ConsoleCallbacks callbacks, CustomDomains domains, BootstrapStore bootstrap) : AdminPage
+    ConsoleCallbacks callbacks, CustomDomains domains, BootstrapStore bootstrap, PartnerOnboarding partners, PayLink.Payments.ConnectorRegistry registry) : AdminPage
 {
+    public IReadOnlyList<PartnerRequest> PartnerRequests { get; private set; } = [];
+    public string MethodName(string id) => registry.Get(id)?.Manifest.Name ?? id;
     [FromRoute] public string Slug { get; set; } = "";
     [BindProperty] public ServerDbInput Byo { get; set; } = new();
 
@@ -28,6 +30,7 @@ public sealed class TenantModel(PlatformRepository repo, PlatformSettings settin
         PublicBaseUrl = await settings.GetPublicBaseUrlAsync();
         HostingReady = (await bootstrap.GetHostingAsync()).Kind != WebSvc.PayLink.Storage.Provisioning.HostingKind.None;
         Domain = await domains.ForTenantAsync(t.Id);
+        PartnerRequests = await partners.ForTenantAsync(t.Id);
         return true;
     }
 

@@ -17,6 +17,9 @@
         <dt>LoginLink</dt><dd><code>@t.LoginlinkOrg</code> (@(t.LoginlinkMode == "created" ? "created by PayLink" : "connected"))@(t.MgmtClientId is null ? " · no management credential stored" : "")</dd>
         <dt>Data</dt><dd>@t.DbDisplay · @(t.DbMode switch { "sqlite" => "SQLite, managed by PayLink", "auto" => "MySQL, auto-provisioned", _ => (t.DbEngine == "PostgreSql" ? "PostgreSQL" : "MySQL") + ", their own" })</dd>
         <dt>Created</dt><dd>@Clock.Display(t.CreatedAt) via @t.CreatedVia</dd>
+        <dt>Account requests</dt><dd>@if (Model.PartnerRequests.Count == 0) { <span class="hint">None</span> }
+            else { @foreach (var pr in Model.PartnerRequests) { <div>@Model.MethodName(pr.ConnectorId) <span class="chip @PayLink.Platform.PartnerRequestStatuses.Tone(pr.Status)">@PayLink.Platform.PartnerRequestStatuses.Label(pr.Status)</span> <span class="hint">@Clock.Short(pr.CreatedAt) · @(pr.Kind == "link" ? "partner link" : "form")</span></div> }
+                <a class="hint" href="/admin/partners">Manage in Partner onboarding</a> }</dd>
     </dl>
 </div>
 
