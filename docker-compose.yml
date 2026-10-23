@@ -1,0 +1,41 @@
+# PayLink alone (SQLite for the platform and tenants):
+#   docker compose up -d && docker compose logs paylink      # the one-time setup code; then open http://localhost:8080/setup
+# With a MySQL server (for the platform database and auto-provisioned tenant databases):
+#   MYSQL_ROOT_PASSWORD=choose-one docker compose --profile mysql up -d
+#   (setup → Database hosting → "A MySQL server": host mysql, port 3306, user root)
+# With a PostgreSQL server:
+#   POSTGRES_PASSWORD=choose-one docker compose --profile postgres up -d
+#   (setup → Platform database → PostgreSQL: host postgres, port 5432, database paylink, user postgres)
+services:
+  paylink:
+    image: websvcin/paylink:latest
+    container_name: paylink
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./App_Data:/app/App_Data
+    environment:
+      # Behind a reverse proxy, list its address so client IPs and https are read correctly.
+      - PayLink__TrustedProxies=
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    profiles: ["mysql"]
+    container_name: paylink-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    profiles: ["postgres"]
+    container_name: paylink-postgres
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      - POSTGRES_DB=paylink
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped

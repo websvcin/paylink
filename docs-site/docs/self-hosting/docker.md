@@ -20,7 +20,7 @@ The image runs as a non-root user and has a health check on [`/healthz`](reverse
 
 ## Docker Compose
 
-From the `PayLink/` folder of the repository:
+With the `docker-compose.yml` at the root of the [repository](https://github.com/websvcin/paylink):
 
 ```bash
 docker compose up -d                       # PayLink alone, SQLite everywhere
@@ -46,7 +46,7 @@ services:
 
 ## Building the image yourself
 
-The image also needs `packages/` and `scripts/`, so build from the repository root:
+From the application's source (the `PayLink/` app folder with `packages/` and `scripts/` next to it), build from the source root, because the image also needs `packages/` and `scripts/`:
 
 ```bash
 docker build -f PayLink/Dockerfile -t websvcin/paylink .
@@ -54,7 +54,7 @@ docker build -f PayLink/Dockerfile -t websvcin/paylink .
 
 ## Without Docker
 
-PayLink is an ASP.NET Core 8 app:
+PayLink is an ASP.NET Core 8 app. From the application's source:
 
 ```bash
 cd PayLink

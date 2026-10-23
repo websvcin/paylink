@@ -1,17 +1,9 @@
-# Build output for every project (PayLink/, packages/)
-bin/
-obj/
-TestResults/
-.vs/
-.vscode/
-.idea/
-*.user
-*.suo
+# Docs site build output (see docs-site/.gitignore too)
+node_modules/
+.docusaurus/
+build/
 
-# NuGet packages built by scripts/pack-packages.sh
-artifacts/
-
-# App-specific rules are in PayLink/.gitignore
-
-# Never commit credentials (legacy code once kept a service-account key here)
-**/Credentials/*.json
+# Data folders from docker compose
+App_Data/
+mysql-data/
+postgres-data/
