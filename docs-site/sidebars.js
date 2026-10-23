@@ -114,6 +114,7 @@ const sidebars = {
         'self-hosting/reverse-proxy-and-health',
         'self-hosting/environment-variables',
         'self-hosting/upgrades',
+        'self-hosting/filelink-contract',
       ],
     },
     {

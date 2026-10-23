@@ -41,7 +41,7 @@ The [CrudApi](https://websvcin.github.io/crudapi/) server tenants are pointed at
 Where payers' UPI screenshots are kept:
 
 - **The data folder** (`files/`), included in backups. Default.
-- **FileLink**: a FileLink server and key, checked before it's saved.
+- **FileLink**: a FileLink server and key, checked before it's saved. What PayLink calls on it is in the [FileLink contract](filelink-contract.md).
 
 Each stored file remembers where it is, so switching never strands old ones.
 
