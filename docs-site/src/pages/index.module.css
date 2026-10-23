@@ -1,0 +1,29 @@
+.hero {
+  padding: 64px 28px 44px;
+  text-align: center;
+  border-bottom: 1px solid var(--pl-line);
+}
+
+.heroTitle {
+  font-size: 40px;
+  line-height: 1.15;
+  text-wrap: balance;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.heroSubtitle {
+  color: var(--pl-ink-soft);
+  font-size: 16px;
+  max-width: 540px;
+  margin: 16px auto 0;
+  line-height: 1.6;
+}
+
+.heroActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}

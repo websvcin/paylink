@@ -1,0 +1,2370 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "PayLink Tenant automation API",
+        "description": "For scripts that run one merchant's console: approve or reject UPI payments, upload bank statements, manage methods, webhooks and risk rules. Authenticate with a developer key (tdk_\u2026) as `Authorization: Bearer <key>`; each route needs the capability shown on it. Choose test or live data with `?livemode=true|false` (default false). Everything a tenant admin can do in the console has a route here. A platform key with the TenantOperations capability can call any route for a tenant with `PayLink-Tenant: {slug}` (every capability).",
+        "version": "v1"
+    },
+    "paths": {
+        "/api/tenant/overview": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "What the console's overview shows: the last 7 days, what is waiting, and how far set-up has got.",
+                "description": "Needs a developer key with the **payments.read** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/payments": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Creates a payment (as \"New payment\" in the console does) and returns its checkout_url to share. Amounts in paise.",
+                "description": "Needs a developer key with the **payments.write** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.CreatePaymentBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.CreatePaymentBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.CreatePaymentBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Payments, newest first, with the console's filters. Dates are UTC days (yyyy-MM-dd); amounts in paise. Answers total and total_amount for the filter.",
+                "description": "Needs a developer key with the **payments.read** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "method",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "min_amount",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    },
+                    {
+                        "name": "max_amount",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    },
+                    {
+                        "name": "reference",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 50
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/payments/{id}/release": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Releases a payment a risk rule put on hold, so the payer can pay.",
+                "description": "Needs a developer key with the **payments.write** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/payments/export": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "The payments list as CSV (up to 50,000 rows), with the same filters as GET /payments.",
+                "description": "Needs a developer key with the **payments.read** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "method",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "min_amount",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    },
+                    {
+                        "name": "max_amount",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    },
+                    {
+                        "name": "reference",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/payments/{id}/attempts/{attemptId}/proof": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "The payer's UPI screenshot for an attempt. Every view is audited.",
+                "description": "Needs a developer key with the **upi.verify** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/links": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Payment links, newest first; q searches title and code, state is on or off.",
+                "description": "Needs a developer key with the **links** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 50
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Creates a payment link. Amounts in paise; leave amount out to let the payer choose.",
+                "description": "Needs a developer key with the **links** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.LinkBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.LinkBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.LinkBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/links/{id}": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "One payment link.",
+                "description": "Needs a developer key with the **links** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Turns a link on or off. A link that's off tells payers it's no longer taking payments.",
+                "description": "Needs a developer key with the **links** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.ActiveBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.ActiveBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.ActiveBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/links/{id}/qr": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "The link's QR code as SVG, for printing.",
+                "description": "Needs a developer key with the **links** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/reports": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "The Reports page as JSON: funnel, methods, failure reasons and daily volume. A range is at most 366 days.",
+                "description": "Needs a developer key with the **reports** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/settlements": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Imports a gateway's settlement report (CSV, multipart field \"report\" or a text/csv body). Without a mapping PayLink uses the\r\ncolumns it recognises (the same guess the console shows); pass column numbers (0-based) to override.",
+                "description": "Needs a developer key with the **reconciliation** capability.",
+                "parameters": [
+                    {
+                        "name": "connector",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "reference",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "gross",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "fee",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "tax",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "net",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "settlement_ref",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "paise",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Imported reports, lines that need a look, the daily close and paid gateway payments not yet settled.",
+                "description": "Needs a developer key with the **reconciliation** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/disputes": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Disputes reported by gateways.",
+                "description": "Needs a developer key with the **disputes** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/disputes/{id}/note": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Saves your note on a dispute (what evidence you sent).",
+                "description": "Needs a developer key with the **disputes** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/routing": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "The checkout order and amount ranges of the methods that are on, which are resting after errors, and failover.",
+                "description": "Needs a developer key with the **methods** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Sets the checkout order and amount ranges of methods that are on, and whether failed starts move to the next gateway.",
+                "description": "Needs a developer key with the **methods** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RoutingBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RoutingBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RoutingBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/account-requests": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Gateways the platform helps tenants get an account with, and this tenant's requests.",
+                "description": "Needs a developer key with the **methods** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "\"Get an account\": records the request. For a partner-link programme the response carries the link to open.",
+                "description": "Needs a developer key with the **methods** capability.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.AccountRequestBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.AccountRequestBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.AccountRequestBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/webhooks/{id}/test": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Sends a webhook.test event to an endpoint.",
+                "description": "Needs a developer key with the **webhooks** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/alerts": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Alert kinds, this tenant's alerts and recently sent ones.",
+                "description": "Needs a developer key with the **alerts** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Adds an alert: kind, threshold, window in minutes, channel (both, webhook or email).",
+                "description": "Needs a developer key with the **alerts** capability.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.AlertBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.AlertBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.AlertBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/alerts/{id}": {
+            "delete": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Removes an alert.",
+                "description": "Needs a developer key with the **alerts** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/team": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Who may sign in, the members with their roles, and the role map.",
+                "description": "Needs a developer key with the **team** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/team/admission": {
+            "put": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Who may sign in to the console: approve_only, auto_tenant_admins, role or anyone.",
+                "description": "Needs a developer key with the **team** capability.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.ModeBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.ModeBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.ModeBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/team/members/{id}": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Approves a person with a role, changes their role, or removes them. Keys can't make owners or remove the last owner;\r\nowners are made by an owner in the console.",
+                "description": "Needs a developer key with the **team** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.MemberBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.MemberBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.MemberBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/team/role-map": {
+            "put": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Maps a LoginLink role to a PayLink role (used by the \"role\" admission mode). An empty paylink_role removes the mapping.",
+                "description": "Needs a developer key with the **team** capability.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RoleMapBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RoleMapBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RoleMapBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/domain": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "The tenant's own domain, its DNS records and verification state.",
+                "description": "Needs a developer key with the **domain** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Adds a domain. Add the TXT record returned, point the domain at PayLink, then verify.",
+                "description": "Needs a developer key with the **domain** capability.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.DomainBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.DomainBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.DomainBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Removes the domain; the platform's address is used again.",
+                "description": "Needs a developer key with the **domain** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/domain/verify": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Checks the TXT record. Answers 422 while it isn't found.",
+                "description": "Needs a developer key with the **domain** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/data-access": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "The CrudApi connection, the platform's CrudApi address, and the reporting API path.",
+                "description": "Needs a developer key with the **data_access** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Unregisters the database from CrudApi and removes the read-only user PayLink made.",
+                "description": "Needs a developer key with the **data_access** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/data-access/reader": {
+            "put": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Step 1: a read-only database user (PayLink creates one when it can; otherwise send yours, which is checked to be SELECT-only).",
+                "description": "Needs a developer key with the **data_access** capability.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.ReaderBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.ReaderBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.ReaderBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/data-access/register": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Step 2: registers the database in a CrudApi workspace and creates a Reader client. Its secret is returned once.",
+                "description": "Needs a developer key with the **data_access** capability.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RegisterBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RegisterBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RegisterBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/keys": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "The tenant's keys (secrets never returned).",
+                "description": "Needs a developer key with the **keys** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Creates a secret key (kind \"secret\", for /api/v1) or a developer key (kind \"developer\", for /api/tenant). A developer key\r\ncan only be given capabilities the calling key has. The key is returned once.",
+                "description": "Needs a developer key with the **keys** capability.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.KeyBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.KeyBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.KeyBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/keys/{id}": {
+            "delete": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Revokes a key. Calls with it answer 401 from then on.",
+                "description": "Needs a developer key with the **keys** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/requests": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "The API request log: the last calls made with this tenant's keys (no bodies).",
+                "description": "Needs a developer key with the **keys** capability.",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/audit": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "The tenant's audit log, newest first. verify=true also checks the hash chain.",
+                "description": "Needs a developer key with the **audit** capability.",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 200
+                        }
+                    },
+                    {
+                        "name": "verify",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/payments/{id}": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "A payment with its attempts, refunds and full journey (every event, with who did it).",
+                "description": "Needs a developer key with the **payments.read** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/payments/{id}/cancel": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Cancels an open payment.",
+                "description": "Needs a developer key with the **payments.write** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/payments/{id}/refunds": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "A refund through the gateway, or (manual = true, reason required) a refund the merchant made outside PayLink.",
+                "description": "Needs a developer key with the **refunds** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RefundBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RefundBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RefundBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/upi/pending": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "PayLink UPI payments waiting for a decision: the UTR the payer entered, and whether there's a screenshot.",
+                "description": "Needs a developer key with the **upi.verify** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/upi/{attemptId}/approve": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Approves a UPI payment: the money arrived. The note is kept on the journey.",
+                "description": "Needs a developer key with the **upi.verify** capability.",
+                "parameters": [
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/upi/{attemptId}/reject": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Rejects a UPI payment: no such credit. The note is kept on the journey.",
+                "description": "Needs a developer key with the **upi.verify** capability.",
+                "parameters": [
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.NoteBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/upi/decided": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "UPI payments already approved or rejected (newest first): who decided, when, and the note.",
+                "description": "Needs a developer key with the **upi.verify** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "decision",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 50
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/upi/statements": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Matches a bank statement (CSV) against UPI payments waiting for a check: credits whose UTR and amount match are approved.\r\nSend the file as multipart/form-data (field \"statement\") or as the raw body with Content-Type text/csv.",
+                "description": "Needs a developer key with the **upi.verify** capability.",
+                "parameters": [
+                    {
+                        "name": "livemode",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "text/csv": {
+                            "schema": {
+                                "type": "string"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "statement"
+                                ],
+                                "type": "object",
+                                "properties": {
+                                    "statement": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/methods": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Every payment method with its fields and this tenant's Test and Live settings (secrets never returned).",
+                "description": "Needs a developer key with the **methods** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/methods/{connectorId}/{mode}": {
+            "put": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Saves a method's settings for test or live and, with enabled true, checks them and turns it on. A failed check answers 422.",
+                "description": "Needs a developer key with the **methods** capability.",
+                "parameters": [
+                    {
+                        "name": "connectorId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "mode",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.MethodBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.MethodBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.MethodBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/webhooks": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Webhook endpoints.",
+                "description": "Needs a developer key with the **webhooks** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Adds a webhook endpoint. The signing secret (whsec_) is returned once.",
+                "description": "Needs a developer key with the **webhooks** capability.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.WebhookBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.WebhookBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.WebhookBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/webhooks/{id}": {
+            "delete": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Removes a webhook endpoint.",
+                "description": "Needs a developer key with the **webhooks** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/webhooks/deliveries": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Recent webhook deliveries, optionally for one payment.",
+                "description": "Needs a developer key with the **webhooks** capability.",
+                "parameters": [
+                    {
+                        "name": "paymentId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/webhooks/deliveries/{id}/redeliver": {
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Sends a delivery again.",
+                "description": "Needs a developer key with the **webhooks** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/risk-rules": {
+            "get": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Risk rules.",
+                "description": "Needs a developer key with the **risk** capability.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Adds a risk rule: kind, value, action (block or review) and a note.",
+                "description": "Needs a developer key with the **risk** capability.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RuleBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RuleBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.TenantApiController.RuleBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tenant/risk-rules/{id}": {
+            "delete": {
+                "tags": [
+                    "TenantApi"
+                ],
+                "summary": "Removes a risk rule.",
+                "description": "Needs a developer key with the **risk** capability.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Api.TenantApiController.AccountRequestBody": {
+                "type": "object",
+                "properties": {
+                    "connector": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "answers": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        },
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.ActiveBody": {
+                "type": "object",
+                "properties": {
+                    "active": {
+                        "type": "boolean"
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.AlertBody": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "threshold": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "window_minutes": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "channel": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.CreatePaymentBody": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "reference": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "return_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "customer_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "customer_email": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "customer_phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "customer_id": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "metadata": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        },
+                        "nullable": true
+                    },
+                    "expires_in_seconds": {
+                        "type": "integer",
+                        "format": "int32",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.DomainBody": {
+                "type": "object",
+                "properties": {
+                    "domain": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.KeyBody": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "kind": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "livemode": {
+                        "type": "boolean"
+                    },
+                    "capabilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "nullable": true
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.LinkBody": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "amount": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "min_amount": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "max_amount": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "ask_email": {
+                        "type": "boolean"
+                    },
+                    "ask_phone": {
+                        "type": "boolean"
+                    },
+                    "return_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "max_payments": {
+                        "type": "integer",
+                        "format": "int32",
+                        "nullable": true
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "code": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.MemberBody": {
+                "type": "object",
+                "properties": {
+                    "decision": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.MethodBody": {
+                "type": "object",
+                "properties": {
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "settings": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string",
+                            "nullable": true
+                        },
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.ModeBody": {
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.NoteBody": {
+                "type": "object",
+                "properties": {
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.ReaderBody": {
+                "type": "object",
+                "properties": {
+                    "user": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "password": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "host": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.RefundBody": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "reason": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "manual": {
+                        "type": "boolean"
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.RegisterBody": {
+                "type": "object",
+                "properties": {
+                    "server": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "workspace": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "key": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.RoleMapBody": {
+                "type": "object",
+                "properties": {
+                    "loginlink_role": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "paylink_role": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.RouteBody": {
+                "type": "object",
+                "properties": {
+                    "connector": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "order": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "min_amount": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "max_amount": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.RoutingBody": {
+                "type": "object",
+                "properties": {
+                    "methods": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Api.TenantApiController.RouteBody"
+                        },
+                        "nullable": true
+                    },
+                    "failover": {
+                        "type": "boolean",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.RuleBody": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "value": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "action": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.TenantApiController.WebhookBody": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "livemode": {
+                        "type": "boolean"
+                    },
+                    "events": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "securitySchemes": {
+            "bearer": {
+                "type": "http",
+                "description": "sk_ key for the Payments API, tdk_ key for the tenant API, pdk_ key for the platform API.",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "security": [
+        {
+            "bearer": []
+        }
+    ]
+}

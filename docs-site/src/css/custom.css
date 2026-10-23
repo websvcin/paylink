@@ -1,0 +1,121 @@
+/**
+ * PayLink docs theme: the same type and layout as the LoginLink and CrudApi docs, in PayLink's teal.
+ * Fonts load from Google Fonts.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --pl-ink: #14161c;
+  --pl-ink-soft: #4b5060;
+  --pl-ink-faint: #8b8f9c;
+  --pl-paper: #fbfbf9;
+  --pl-paper-raised: #ffffff;
+  --pl-line: #e7e6e2;
+  --pl-accent: #0e7c6b;
+  --pl-accent-soft: #dcf0eb;
+  --pl-accent-ink: #0a5c50;
+  --pl-mint: #0f9d78;
+  --pl-mint-soft: #e6f6f0;
+  --pl-code-bg: #14161c;
+  --pl-code-ink: #d4d7de;
+
+  --ifm-color-primary: var(--pl-accent);
+  --ifm-color-primary-dark: #0d7060;
+  --ifm-color-primary-darker: #0c6a5b;
+  --ifm-color-primary-darkest: #0a574b;
+  --ifm-color-primary-light: #0f8876;
+  --ifm-color-primary-lighter: #108e7b;
+  --ifm-color-primary-lightest: #12a28d;
+
+  --ifm-background-color: var(--pl-paper);
+  --ifm-navbar-background-color: var(--pl-paper-raised);
+  --ifm-color-content: var(--pl-ink);
+  --ifm-color-content-secondary: var(--pl-ink-soft);
+  --ifm-toc-border-color: var(--pl-line);
+  --ifm-table-border-color: var(--pl-line);
+  --ifm-hr-border-color: var(--pl-line);
+
+  --ifm-font-family-base: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ifm-heading-font-family: 'Archivo', 'Segoe UI Semibold', -apple-system, sans-serif;
+  --ifm-font-family-monospace: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+  --ifm-heading-font-weight: 700;
+  --ifm-heading-letter-spacing: -0.01em;
+
+  --ifm-code-font-size: 90%;
+  --ifm-code-background: var(--pl-accent-soft);
+  --ifm-code-color: var(--pl-accent-ink);
+  --docusaurus-highlighted-code-line-bg: rgba(14, 124, 107, 0.12);
+
+  --ifm-navbar-shadow: none;
+  --ifm-global-radius: 10px;
+}
+
+[data-theme='dark'] {
+  --pl-ink: #f3f4f6;
+  --pl-ink-soft: #b7bbc7;
+  --pl-ink-faint: #7d8290;
+  --pl-paper: #0f1015;
+  --pl-paper-raised: #181a22;
+  --pl-line: #2a2d38;
+  --pl-accent: #3dc1a8;
+  --pl-accent-soft: #11302a;
+  --pl-accent-ink: #9de6d6;
+  --pl-mint: #34d9a5;
+  --pl-mint-soft: #113a2d;
+  --pl-code-bg: #0b0c10;
+  --pl-code-ink: #d4d7de;
+
+  --ifm-color-primary: var(--pl-accent);
+  --ifm-color-primary-dark: #35b39b;
+  --ifm-color-primary-darker: #32a993;
+  --ifm-color-primary-darkest: #298b79;
+  --ifm-color-primary-light: #55c9b3;
+  --ifm-color-primary-lighter: #62cdb8;
+  --ifm-color-primary-lightest: #88d9c9;
+
+  --ifm-background-color: var(--pl-paper);
+  --ifm-navbar-background-color: var(--pl-paper-raised);
+  --ifm-color-content: var(--pl-ink);
+  --ifm-color-content-secondary: var(--pl-ink-soft);
+
+  --ifm-code-background: var(--pl-accent-soft);
+  --ifm-code-color: var(--pl-accent-ink);
+  --docusaurus-highlighted-code-line-bg: rgba(61, 193, 168, 0.18);
+}
+
+h1,
+h2,
+h3,
+.navbar__title {
+  letter-spacing: -0.01em;
+}
+
+.hero__title,
+h1 {
+  text-wrap: balance;
+}
+
+/* Callout-style admonitions match the mockup's mint "tip" box */
+.theme-admonition-tip {
+  --ifm-color-success-contrast-background: var(--pl-mint-soft);
+  --ifm-color-success-dark: var(--pl-mint);
+}
+
+.markdown > p code,
+.markdown li code {
+  border-radius: 5px;
+}
+
+.navbar__logo {
+  margin-right: 8px;
+}
+
+/* Tables of fields and routes are the core of these docs: keep them readable. */
+.markdown table { display: table; width: 100%; font-size: 0.94rem; }
+.markdown table td:first-child code { white-space: nowrap; }
+
+.pl-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; background: var(--pl-accent-soft); color: var(--pl-accent-ink); }
+
+/* Screenshots of PayLink pages */
+.markdown img { border: 1px solid var(--pl-line); border-radius: 8px; }

@@ -1,0 +1,489 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "PayLink Payments API",
+        "description": "For the merchant's server: create payments and payment links, read their status, refund, and query reporting data. Authenticate with a secret key (sk_test_\u2026 for test data, sk_live_\u2026 for live) as `Authorization: Bearer <key>`. Send an `Idempotency-Key` header on creates. Amounts are integers in paise. Webhooks are signed with your whsec_ secret; see /docs/payments-api. A platform key with the TenantOperations capability can call these routes for a tenant with `PayLink-Tenant: {slug}` and `PayLink-Mode: test|live`.",
+        "version": "v1"
+    },
+    "paths": {
+        "/api/v1/links": {
+            "post": {
+                "tags": [
+                    "LinksApi"
+                ],
+                "summary": "Creates a payment link (a reusable page at /l/{code}). Test keys make test links, live keys live ones.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "amount": {
+                                        "type": "integer",
+                                        "format": "int64"
+                                    },
+                                    "min_amount": {
+                                        "type": "integer",
+                                        "format": "int64"
+                                    },
+                                    "max_amount": {
+                                        "type": "integer",
+                                        "format": "int64"
+                                    },
+                                    "currency": {
+                                        "type": "string"
+                                    },
+                                    "ask_email": {
+                                        "type": "boolean"
+                                    },
+                                    "ask_phone": {
+                                        "type": "boolean"
+                                    },
+                                    "return_url": {
+                                        "type": "string"
+                                    },
+                                    "max_payments": {
+                                        "type": "integer",
+                                        "format": "int32"
+                                    },
+                                    "expires_at": {
+                                        "type": "string"
+                                    },
+                                    "code": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "LinksApi"
+                ],
+                "summary": "All links for this key's mode.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/links/{id}": {
+            "get": {
+                "tags": [
+                    "LinksApi"
+                ],
+                "summary": "One link, by id or code.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/links/{id}/deactivate": {
+            "post": {
+                "tags": [
+                    "LinksApi"
+                ],
+                "summary": "Stops the link taking payments.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/links/{id}/activate": {
+            "post": {
+                "tags": [
+                    "LinksApi"
+                ],
+                "summary": "Lets the link take payments again.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/payments": {
+            "post": {
+                "tags": [
+                    "PaymentsApi"
+                ],
+                "summary": "Creates a payment and returns its checkout_url. Send an Idempotency-Key. Amounts in minor units (paise).",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "amount": {
+                                        "type": "integer",
+                                        "format": "int64"
+                                    },
+                                    "currency": {
+                                        "type": "string"
+                                    },
+                                    "reference": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "customer": {
+                                        "type": "object",
+                                        "properties": {
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "email": {
+                                                "type": "string"
+                                            },
+                                            "phone": {
+                                                "type": "string"
+                                            },
+                                            "id": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "return_url": {
+                                        "type": "string"
+                                    },
+                                    "metadata": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "expires_in": {
+                                        "type": "integer",
+                                        "format": "int32"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "PaymentsApi"
+                ],
+                "summary": "Payments for this key's mode, newest first.",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "reference",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "link_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 20
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/payments/{id}": {
+            "get": {
+                "tags": [
+                    "PaymentsApi"
+                ],
+                "summary": "A payment: status, attempts, how it was paid (paid_with) or why it failed (failure), refunds.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/disputes": {
+            "get": {
+                "tags": [
+                    "PaymentsApi"
+                ],
+                "summary": "Disputes reported by gateways (Razorpay, Stripe, PayPal); payment_id narrows to one payment.",
+                "parameters": [
+                    {
+                        "name": "payment_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/payments/{id}/cancel": {
+            "post": {
+                "tags": [
+                    "PaymentsApi"
+                ],
+                "summary": "Cancels an open payment. A processing payment can't be cancelled: the payer may already have paid.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/payments/{id}/refunds": {
+            "post": {
+                "tags": [
+                    "PaymentsApi"
+                ],
+                "summary": "Refunds all (no amount) or part of a succeeded payment through its gateway.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "PaymentsApi"
+                ],
+                "summary": "The payment's refunds.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/reporting": {
+            "get": {
+                "tags": [
+                    "ReportingApi"
+                ],
+                "summary": "The datasets (payments, attempts, refunds, disputes, links, events) and their columns.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/reporting/{dataset}": {
+            "get": {
+                "tags": [
+                    "ReportingApi"
+                ],
+                "summary": "Rows of a dataset, with CrudApi's list parameters: filter, orderBy, display, limit, offset, groupBy, count.",
+                "parameters": [
+                    {
+                        "name": "dataset",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "orderBy",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "display",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "groupBy",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "count",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearer": {
+                "type": "http",
+                "description": "sk_ key for the Payments API, tdk_ key for the tenant API, pdk_ key for the platform API.",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "security": [
+        {
+            "bearer": []
+        }
+    ]
+}

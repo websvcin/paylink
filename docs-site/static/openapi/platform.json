@@ -1,0 +1,471 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "PayLink Platform API",
+        "description": "For whoever runs the PayLink platform: create and manage tenants, auto-provisioning approvals, the audit log. Authenticate with a platform developer key (pdk_\u2026) created in /admin \u2192 Developer API. With TenantOperations a key also acts for tenants (PayLink-Tenant header on /api/tenant and /api/v1) and manages tenants' keys.",
+        "version": "v1"
+    },
+    "paths": {
+        "/api/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "Platform counts: tenants, admins, approvals, keys, and live payments in the last 7 days.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/admin/tenants": {
+            "get": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "Tenants in this key's reach; q searches name, address and LoginLink organization.",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "take",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "Creates a tenant for an existing LoginLink organization. Needs Tenants and LoginLink.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.CreateTenantBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.CreateTenantBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.CreateTenantBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/admin/tenants/{id}": {
+            "get": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "One tenant.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "Suspends (\"suspended\") or reactivates (\"active\") a tenant.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.StatusBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.StatusBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.StatusBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/admin/tenants/{id}/keys": {
+            "get": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "A tenant's keys (secret keys for /api/v1, developer keys for /api/tenant). Secrets are never listed.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "Creates a key for a tenant, e.g. to hand a product built on PayLink its own sk_ key, or a tdk_ key with chosen capabilities.\r\nThe secret is returned once. Recorded in the tenant's and the platform's audit logs.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.TenantKeyBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.TenantKeyBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.TenantKeyBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/admin/tenants/{id}/keys/{keyId}": {
+            "delete": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "Revokes one of a tenant's keys.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    },
+                    {
+                        "name": "keyId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/admin/auto-provisioning/approvals": {
+            "get": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "LoginLink organizations approved for an auto-provisioned database at signup.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "Approves an organization for an auto-provisioned database at signup.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.ApprovalBody"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.ApprovalBody"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Api.AdminApiController.ApprovalBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/admin/auto-provisioning/approvals/{organization}": {
+            "delete": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "Removes an approval.",
+                "parameters": [
+                    {
+                        "name": "organization",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/admin/audit": {
+            "get": {
+                "tags": [
+                    "AdminApi"
+                ],
+                "summary": "The platform audit log, newest first.",
+                "parameters": [
+                    {
+                        "name": "take",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 100
+                        }
+                    },
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Api.AdminApiController.ApprovalBody": {
+                "type": "object",
+                "properties": {
+                    "organization": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.AdminApiController.CreateTenantBody": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "slug": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "loginLink": {
+                        "$ref": "#/components/schemas/Api.AdminApiController.CreateTenantLoginLink"
+                    },
+                    "database": {
+                        "$ref": "#/components/schemas/Api.AdminApiController.CreateTenantDatabase"
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.AdminApiController.CreateTenantDatabase": {
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "connectionString": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "engine": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false,
+                "description": "Mode sqlite, auto or byo; for byo, Engine mysql (default) or postgresql and its connection string."
+            },
+            "Api.AdminApiController.CreateTenantLoginLink": {
+                "type": "object",
+                "properties": {
+                    "organization": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "clientId": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "clientSecret": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.AdminApiController.StatusBody": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Api.AdminApiController.TenantKeyBody": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "kind": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "livemode": {
+                        "type": "boolean"
+                    },
+                    "capabilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "nullable": true
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "securitySchemes": {
+            "bearer": {
+                "type": "http",
+                "description": "sk_ key for the Payments API, tdk_ key for the tenant API, pdk_ key for the platform API.",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "security": [
+        {
+            "bearer": []
+        }
+    ]
+}
