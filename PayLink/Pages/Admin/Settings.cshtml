@@ -82,7 +82,7 @@
     <p class="hint">Where payers' UPI screenshots are kept. Each stored file remembers where it is, so changing this never strands old ones.</p>
     <div class="opts">
         <label class="opt"><input type="radio" name="kind" value="local" checked="@(Model.Files.Kind != "filelink")"><div><b>The data folder</b><span><code>files/</code>, included in backups.</span></div></label>
-        <label class="opt"><input type="radio" name="kind" value="filelink" checked="@(Model.Files.Kind == "filelink")"><div><b>FileLink</b><span>A FileLink server (see docs/filelink-contract.md). Checked before it's saved.</span></div></label>
+        <label class="opt"><input type="radio" name="kind" value="filelink" checked="@(Model.Files.Kind == "filelink")"><div><b>FileLink</b><span>A FileLink server (see the <a href="@(PayLink.Platform.PlatformSettings.DocsSiteUrl)self-hosting/filelink-contract" target="_blank" rel="noopener">FileLink contract</a>). Checked before it's saved.</span></div></label>
         <div class="reveal card"><div class="grid2">
             <div class="field"><label for="flServer">FileLink address</label><input id="flServer" name="server" class="mono" value="@Model.Files.Server" placeholder="https://files.example.in"></div>
             <div class="field"><label for="flKey">Key</label><input id="flKey" name="key" type="password" autocomplete="new-password" placeholder="@(string.IsNullOrEmpty(Model.Files.Key) ? "" : Masking.Placeholder(Model.Files.Key))"></div>

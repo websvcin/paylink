@@ -6,12 +6,12 @@
 
 ## Status
 
-**Phase 4 (this release): all planned phases are in.** Everything below works and is covered by tests on SQLite, MySQL and PostgreSQL. Still open: FileLink itself, which is a separate product; PayLink already speaks the [contract](../docs/filelink-contract.md) it needs.
+**Phase 4 (this release): all planned phases are in.** Everything below works and is covered by tests on SQLite, MySQL and PostgreSQL. Still open: FileLink itself, which is a separate product; PayLink already speaks the [contract](https://websvcin.github.io/paylink/self-hosting/filelink-contract) it needs.
 
 | Area | What works |
 |---|---|
 | **Setup** | New or restore (backup .zip or bootstrap.db); encryption key kept in the data folder (mount `App_Data` and nothing else; `PayLink__MasterKey` stays optional); SQLite, MySQL or PostgreSQL platform and tenant databases; auto-provisioning (tested before saving); LoginLink with clear credential checks |
-| **Payments API** (`/api/v1`) | Create, get, list, cancel, refund; `Idempotency-Key`; test and live keys; links; disputes. See [docs/payments-api.md](../docs/payments-api.md) |
+| **Payments API** (`/api/v1`) | Create, get, list, cancel, refund; `Idempotency-Key`; test and live keys; links; disputes. See the [Payments API guide](https://websvcin.github.io/paylink/integrate/payments-api) |
 | **Hosted checkout** at `/pay/{id}` | The merchant's methods in their order, retry with another method, return to the merchant; a test bar in Test |
 | **Gateways** | Razorpay (Payment Links), PhonePe (v2 OAuth or v1 salt key), PayU (hashed form), CCAvenue (encrypted form), Stripe (Checkout), PayPal (Orders, captured on return); signed callbacks and webhooks; status polling; full and partial refunds; disputes from Razorpay, Stripe and PayPal |
 | **PayLink UPI** (free) | QR to the merchant's UPI ID, payer's UTR and screenshot, verification queue, reused-UTR check, manual refunds; bank statement matching (matching UTR and amount approve automatically) |
@@ -103,7 +103,6 @@ paylink/                            repository root
 │  ├─ WebSvc.PayLink.Abstractions   connector contract
 │  ├─ WebSvc.PayLink.Storage        SQLite/MySQL, migrations, probes, MySQL/Plesk/cPanel provisioning
 │  └─ WebSvc.PayLink.Storage.Tests
-├─ docs/platform-api.md             the Platform Developer API
 └─ scripts/pack-packages.sh         builds the packages into artifacts/packages
 ```
 

@@ -52,7 +52,7 @@ public sealed class LocalFileBackend(AppPaths paths) : IFileBackend
 }
 
 /// <summary>
-/// A FileLink server, through the small contract in docs/filelink-contract.md: PUT a file, GET it back, a health check.
+/// A FileLink server, through the small contract in https://websvcin.github.io/paylink/self-hosting/filelink-contract: PUT a file, GET it back, a health check.
 /// References are "filelink:{id}". Bytes go server to server; nothing in the browser holds a FileLink key.
 /// </summary>
 public sealed class FileLinkBackend(HttpClient http, string server, string key) : IFileBackend

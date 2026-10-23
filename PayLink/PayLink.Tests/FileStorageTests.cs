@@ -10,7 +10,7 @@ using static PayLink.Tests.Flows;
 
 namespace PayLink.Tests;
 
-/// <summary>Phase 4: file storage in the data folder or FileLink (docs/filelink-contract.md), and switching between them.</summary>
+/// <summary>Phase 4: file storage in the data folder or FileLink (the FileLink contract in the docs), and switching between them.</summary>
 public sealed class FileStorageTests
 {
     private static readonly FakeLoginLink.Person Priya = new("sub-priya", "priya@acme.in", "Priya", "tenant_admin", []);
