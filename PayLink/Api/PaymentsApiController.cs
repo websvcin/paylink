@@ -42,6 +42,7 @@ public sealed class PaymentsApiController(PaymentService payments, PayLink.Tenan
         [JsonPropertyName("expires_in")] public int? ExpiresIn { get; set; }
     }
 
+    /// <summary>Creates a payment and returns its checkout_url. Send an Idempotency-Key. Amounts in minor units (paise).</summary>
     [HttpPost("payments")]
     public async Task<IActionResult> Create()
     {
@@ -58,6 +59,7 @@ public sealed class PaymentsApiController(PaymentService payments, PayLink.Tenan
         return await Shape(result.Payment!, result.Replayed ? 200 : 201);
     }
 
+    /// <summary>A payment: status, attempts, how it was paid (paid_with) or why it failed (failure), refunds.</summary>
     [HttpGet("payments/{id}")]
     public async Task<IActionResult> Get(string id)
     {
@@ -66,6 +68,7 @@ public sealed class PaymentsApiController(PaymentService payments, PayLink.Tenan
         return await Shape(p, 200);
     }
 
+    /// <summary>Payments for this key's mode, newest first.</summary>
     [HttpGet("payments")]
     public async Task<IActionResult> List(string? status, string? reference, [FromQuery(Name = "link_id")] string? linkId, int limit = 20, int offset = 0)
     {
@@ -74,6 +77,7 @@ public sealed class PaymentsApiController(PaymentService payments, PayLink.Tenan
         return new JsonResult(new { @object = "list", data = list.Select(p => PaymentJson.From(p, baseUrl)) }, PaymentJson.Options);
     }
 
+    /// <summary>Disputes reported by gateways (Razorpay, Stripe, PayPal); payment_id narrows to one payment.</summary>
     [HttpGet("disputes")]
     public async Task<IActionResult> Disputes([FromQuery(Name = "payment_id")] string? paymentId)
     {
@@ -81,6 +85,7 @@ public sealed class PaymentsApiController(PaymentService payments, PayLink.Tenan
         return new JsonResult(new { @object = "list", data = list.Select(PaymentJson.From) }, PaymentJson.Options);
     }
 
+    /// <summary>Cancels an open payment. A processing payment can't be cancelled: the payer may already have paid.</summary>
     [HttpPost("payments/{id}/cancel")]
     public async Task<IActionResult> Cancel(string id)
     {
@@ -114,6 +119,7 @@ public sealed class PaymentsApiController(PaymentService payments, PayLink.Tenan
         return new JsonResult(PaymentJson.From(outcome.Refund!), PaymentJson.Options) { StatusCode = 201 };
     }
 
+    /// <summary>The payment's refunds.</summary>
     [HttpGet("payments/{id}/refunds")]
     public async Task<IActionResult> Refunds(string id)
     {

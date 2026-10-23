@@ -38,6 +38,7 @@ public sealed class LinksApiController(PaymentLinkService links, PayLink.Tenancy
         long? Amount, long? MinAmount, long? MaxAmount, string Currency, bool AskEmail, bool AskPhone, string? ReturnUrl,
         int? MaxPayments, string? ExpiresAt, bool Active, bool Open, long PaymentsSucceeded, long AmountCollected, string CreatedAt);
 
+    /// <summary>Creates a payment link (a reusable page at /l/{code}). Test keys make test links, live keys live ones.</summary>
     [HttpPost("")]
     public async Task<IActionResult> Create()
     {
@@ -51,6 +52,7 @@ public sealed class LinksApiController(PaymentLinkService links, PayLink.Tenancy
         return await Shape(link!, 201);
     }
 
+    /// <summary>All links for this key's mode.</summary>
     [HttpGet("")]
     public async Task<IActionResult> List()
     {
@@ -59,13 +61,16 @@ public sealed class LinksApiController(PaymentLinkService links, PayLink.Tenancy
         return new JsonResult(new { @object = "list", data = list.Select(l => Dto(l, baseUrl)) }, PaymentJson.Options);
     }
 
+    /// <summary>One link, by id or code.</summary>
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id) =>
         await Find(id) is { } l ? await Shape(l, 200) : Error(404, "not_found", $"No {(Key.Livemode ? "live" : "test")} link {id}.");
 
+    /// <summary>Stops the link taking payments.</summary>
     [HttpPost("{id}/deactivate")]
     public Task<IActionResult> Deactivate(string id) => SetActive(id, false);
 
+    /// <summary>Lets the link take payments again.</summary>
     [HttpPost("{id}/activate")]
     public Task<IActionResult> Activate(string id) => SetActive(id, true);
 

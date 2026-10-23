@@ -1,5 +1,7 @@
 # Platform Developer API
 
+> The full, current documentation is at https://websvcin.github.io/paylink/automation/platform-api (source in `docs-site/` on `main`).
+
 Automates the platform console from scripts. Base path `/api/admin`.
 
 ## Keys
@@ -19,6 +21,7 @@ Keys can only be created and revoked from a signed-in console session, so a leak
 | `AutoProvisioning` | `GET/POST /auto-provisioning/approvals`, `DELETE /auto-provisioning/approvals/{organization}` |
 | `Audit` | `GET /audit` |
 | `Dashboard` | `GET /dashboard` |
+| `TenantOperations` | Act for any tenant in reach: `PayLink-Tenant: {slug}` on `/api/tenant` (every capability) and `/api/v1` (with `PayLink-Mode: test|live`); `GET/POST /tenants/{id}/keys`, `DELETE /tenants/{id}/keys/{keyId}` |
 | `DatabaseHosting`, `Settings` | Reserved for upcoming read routes |
 
 ## Errors

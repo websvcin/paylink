@@ -19,6 +19,7 @@ public sealed class ReportingApiController(TenantDb tenantDb) : ControllerBase
     private TenantRecord Tenant => (TenantRecord)HttpContext.Items[TenantKeyHandler.TenantItem]!;
     private TenantApiKey Key => (TenantApiKey)HttpContext.Items[TenantKeyHandler.KeyItem]!;
 
+    /// <summary>The datasets (payments, attempts, refunds, disputes, links, events) and their columns.</summary>
     [HttpGet("")]
     public IActionResult Datasets() => new JsonResult(new
     {
@@ -30,6 +31,7 @@ public sealed class ReportingApiController(TenantDb tenantDb) : ControllerBase
         }),
     }, PaymentJson.Options);
 
+    /// <summary>Rows of a dataset, with CrudApi's list parameters: filter, orderBy, display, limit, offset, groupBy, count.</summary>
     [HttpGet("{dataset}")]
     public async Task<IActionResult> Read(string dataset, string? filter, string? orderBy, string? display, int? limit, int? offset, string? groupBy, bool count = false)
     {

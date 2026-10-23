@@ -102,6 +102,7 @@ public sealed partial class TenantApiController
         };
     }
 
+    /// <summary>Payment links, newest first; q searches title and code, state is on or off.</summary>
     [HttpGet("links")]
     [RequireTenantCapability(TenantCapabilities.Links)]
     public async Task<IActionResult> Links(bool livemode = false, string? q = null, string? state = null, int limit = 50, int offset = 0)
@@ -117,6 +118,7 @@ public sealed partial class TenantApiController
     public sealed record LinkBody(string Title, string? Description, long? Amount, [property: System.Text.Json.Serialization.JsonPropertyName("min_amount")] long? MinAmount, [property: System.Text.Json.Serialization.JsonPropertyName("max_amount")] long? MaxAmount, string? Currency,
         [property: System.Text.Json.Serialization.JsonPropertyName("ask_email")] bool AskEmail, [property: System.Text.Json.Serialization.JsonPropertyName("ask_phone")] bool AskPhone, [property: System.Text.Json.Serialization.JsonPropertyName("return_url")] string? ReturnUrl, [property: System.Text.Json.Serialization.JsonPropertyName("max_payments")] int? MaxPayments, [property: System.Text.Json.Serialization.JsonPropertyName("expires_at")] string? ExpiresAt, string? Code);
 
+    /// <summary>Creates a payment link. Amounts in paise; leave amount out to let the payer choose.</summary>
     [HttpPost("links")]
     [RequireTenantCapability(TenantCapabilities.Links)]
     public async Task<IActionResult> CreateLink([FromBody] LinkBody body, bool livemode = false)
@@ -127,6 +129,7 @@ public sealed partial class TenantApiController
         return Json(await LinkJson(link!), 201);
     }
 
+    /// <summary>One payment link.</summary>
     [HttpGet("links/{id}")]
     [RequireTenantCapability(TenantCapabilities.Links)]
     public async Task<IActionResult> Link(string id) =>
@@ -221,11 +224,13 @@ public sealed partial class TenantApiController
 
     // ---------- disputes ----------
 
+    /// <summary>Disputes reported by gateways.</summary>
     [HttpGet("disputes")]
     [RequireTenantCapability(TenantCapabilities.Disputes)]
     public async Task<IActionResult> Disputes(bool livemode = false) =>
         Json(new { data = (await payments.DisputesAsync(Tenant, livemode)).Select(PaymentJson.From) });
 
+    /// <summary>Saves your note on a dispute (what evidence you sent).</summary>
     [HttpPost("disputes/{id}/note")]
     [RequireTenantCapability(TenantCapabilities.Disputes)]
     public async Task<IActionResult> NoteDispute(string id, [FromBody] NoteBody body) =>
@@ -233,6 +238,7 @@ public sealed partial class TenantApiController
 
     // ---------- routing and account requests ----------
 
+    /// <summary>The checkout order and amount ranges of the methods that are on, which are resting after errors, and failover.</summary>
     [HttpGet("routing")]
     [RequireTenantCapability(TenantCapabilities.Methods)]
     public async Task<IActionResult> Routing(bool livemode = false)
@@ -308,6 +314,7 @@ public sealed partial class TenantApiController
 
     // ---------- webhooks: test event ----------
 
+    /// <summary>Sends a webhook.test event to an endpoint.</summary>
     [HttpPost("webhooks/{id:long}/test")]
     [RequireTenantCapability(TenantCapabilities.Webhooks)]
     public async Task<IActionResult> TestWebhook(long id)
@@ -319,6 +326,7 @@ public sealed partial class TenantApiController
 
     // ---------- alerts ----------
 
+    /// <summary>Alert kinds, this tenant's alerts and recently sent ones.</summary>
     [HttpGet("alerts")]
     [RequireTenantCapability(TenantCapabilities.Alerts)]
     public async Task<IActionResult> Alerts()
@@ -333,12 +341,14 @@ public sealed partial class TenantApiController
 
     public sealed record AlertBody(string Kind, string Threshold, [property: System.Text.Json.Serialization.JsonPropertyName("window_minutes")] int WindowMinutes = 60, string Channel = "both");
 
+    /// <summary>Adds an alert: kind, threshold, window in minutes, channel (both, webhook or email).</summary>
     [HttpPost("alerts")]
     [RequireTenantCapability(TenantCapabilities.Alerts)]
     public async Task<IActionResult> AddAlert([FromBody] AlertBody body) =>
         await S<AlertService>().AddAsync(Tenant, body.Kind, body.Threshold, body.WindowMinutes, body.Channel, Me) is { } problem
             ? Error(400, "invalid_request", problem) : Json(new { added = true }, 201);
 
+    /// <summary>Removes an alert.</summary>
     [HttpDelete("alerts/{id:long}")]
     [RequireTenantCapability(TenantCapabilities.Alerts)]
     public async Task<IActionResult> RemoveAlert(long id)
@@ -349,6 +359,7 @@ public sealed partial class TenantApiController
 
     // ---------- team ----------
 
+    /// <summary>Who may sign in, the members with their roles, and the role map.</summary>
     [HttpGet("team")]
     [RequireTenantCapability(TenantCapabilities.Team)]
     public async Task<IActionResult> Team()
@@ -438,6 +449,7 @@ public sealed partial class TenantApiController
         txt_record = new { name = d.ChallengeName, value = d.ChallengeValue },
     };
 
+    /// <summary>The tenant's own domain, its DNS records and verification state.</summary>
     [HttpGet("domain")]
     [RequireTenantCapability(TenantCapabilities.Domain)]
     public async Task<IActionResult> Domain()
@@ -448,6 +460,7 @@ public sealed partial class TenantApiController
 
     public sealed record DomainBody(string Domain);
 
+    /// <summary>Adds a domain. Add the TXT record returned, point the domain at PayLink, then verify.</summary>
     [HttpPut("domain")]
     [RequireTenantCapability(TenantCapabilities.Domain)]
     public async Task<IActionResult> SetDomain([FromBody] DomainBody body)
@@ -456,6 +469,7 @@ public sealed partial class TenantApiController
         return problem is not null ? Error(400, "invalid_request", problem) : Json(new { domain = DomainJson(added) }, 201);
     }
 
+    /// <summary>Checks the TXT record. Answers 422 while it isn't found.</summary>
     [HttpPost("domain/verify")]
     [RequireTenantCapability(TenantCapabilities.Domain)]
     public async Task<IActionResult> VerifyDomain()
@@ -465,6 +479,7 @@ public sealed partial class TenantApiController
         return Json(new { verified = ok, message, domain = DomainJson(await domains.ForTenantAsync(Tenant.Id)) }, ok ? 200 : 422);
     }
 
+    /// <summary>Removes the domain; the platform's address is used again.</summary>
     [HttpDelete("domain")]
     [RequireTenantCapability(TenantCapabilities.Domain)]
     public async Task<IActionResult> RemoveDomain()
@@ -475,6 +490,7 @@ public sealed partial class TenantApiController
 
     // ---------- data access (CrudApi) ----------
 
+    /// <summary>The CrudApi connection, the platform's CrudApi address, and the reporting API path.</summary>
     [HttpGet("data-access")]
     [RequireTenantCapability(TenantCapabilities.DataAccess)]
     public async Task<IActionResult> DataAccess()
@@ -513,12 +529,14 @@ public sealed partial class TenantApiController
         return ok ? Json(new { message, reader_client_secret = secret }, 201) : Error(422, "crudapi_refused", message);
     }
 
+    /// <summary>Unregisters the database from CrudApi and removes the read-only user PayLink made.</summary>
     [HttpDelete("data-access")]
     [RequireTenantCapability(TenantCapabilities.DataAccess)]
     public async Task<IActionResult> DisconnectCrudApi() => Json(new { message = await S<CrudApiConnection>().DisconnectAsync(Tenant, Me) });
 
     // ---------- keys ----------
 
+    /// <summary>The tenant's keys (secrets never returned).</summary>
     [HttpGet("keys")]
     [RequireTenantCapability(TenantCapabilities.Keys)]
     public async Task<IActionResult> Keys() =>
@@ -554,6 +572,7 @@ public sealed partial class TenantApiController
         return Json(new { key.Id, key.Name, key.Kind, key.Livemode, prefix = key.KeyPrefix, capabilities = key.CapabilityList, secret }, 201);
     }
 
+    /// <summary>Revokes a key. Calls with it answer 401 from then on.</summary>
     [HttpDelete("keys/{id:long}")]
     [RequireTenantCapability(TenantCapabilities.Keys)]
     public async Task<IActionResult> RevokeKey(long id) =>

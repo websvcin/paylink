@@ -69,6 +69,31 @@ public static class ApiReference
         o.EnableTryItOutByDefault();
     }
 
+    private static OpenApiRequestBody Json(Type type) => new()
+    {
+        Required = true,
+        Content = { ["application/json"] = new OpenApiMediaType { Schema = Schema(type) } },
+    };
+
+    /// <summary>A schema with the snake_case names PaymentJson uses.</summary>
+    private static OpenApiSchema Schema(Type type)
+    {
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        if (type == typeof(string)) return new OpenApiSchema { Type = "string" };
+        if (type == typeof(bool)) return new OpenApiSchema { Type = "boolean" };
+        if (type == typeof(int) || type == typeof(long)) return new OpenApiSchema { Type = "integer", Format = type == typeof(long) ? "int64" : "int32" };
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+            return new OpenApiSchema { Type = "object", AdditionalProperties = Schema(type.GetGenericArguments()[1]) };
+        var schema = new OpenApiSchema { Type = "object" };
+        foreach (var p in type.GetProperties())
+        {
+            var name = p.GetCustomAttributes(typeof(System.Text.Json.Serialization.JsonPropertyNameAttribute), false)
+                .Cast<System.Text.Json.Serialization.JsonPropertyNameAttribute>().FirstOrDefault()?.Name ?? System.Text.Json.JsonNamingPolicy.SnakeCaseLower.ConvertName(p.Name);
+            schema.Properties[name] = Schema(p.PropertyType);
+        }
+        return schema;
+    }
+
     /// <summary>Says which tenant developer key capability a route needs, and documents raw-body uploads.</summary>
     private sealed class CapabilityFilter : IOperationFilter
     {
@@ -78,6 +103,11 @@ public static class ApiReference
                 .Cast<RequireTenantCapabilityAttribute>().FirstOrDefault();
             if (cap is not null)
                 operation.Description = $"Needs a developer key with the **{cap.Capability}** capability.\n\n{operation.Description}".Trim();
+            // These two read their JSON themselves (snake_case, as the Payments API documents it), so describe the body here.
+            if (context.MethodInfo.Name == "Create" && context.MethodInfo.DeclaringType == typeof(PaymentsApiController))
+                operation.RequestBody = Json(typeof(PaymentsApiController.CreateBody));
+            if (context.MethodInfo.Name == "Create" && context.MethodInfo.DeclaringType == typeof(LinksApiController))
+                operation.RequestBody = Json(typeof(LinksApiController.CreateBody));
             if (context.MethodInfo.Name == nameof(TenantApiController.UpiStatement))
             {
                 operation.RequestBody = new OpenApiRequestBody

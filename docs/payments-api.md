@@ -1,5 +1,7 @@
 # Payments API
 
+> The full, current documentation is at https://websvcin.github.io/paylink/ (source in `docs-site/` on `main`). This file is a short reference kept with the code.
+
 The one integration a merchant writes. It doesn't change when the merchant turns payment methods on or off.
 
 1. **Create a payment** from your server: `POST /api/v1/payments`. The response has a `checkout_url`.
@@ -10,13 +12,13 @@ JSON is snake_case. Amounts are integers in minor units (paise for INR: `149900`
 
 ## Keys
 
-Create keys in **Console → Developers**. Every key is shown once; PayLink stores only its SHA-256 hash. Keys are created and revoked only from a signed-in console session.
+Create keys in **Console → Developers** (or with a `tdk_` key that has the *keys* capability, or a platform key with *Act for tenants*). Every key is shown once; PayLink stores only its SHA-256 hash.
 
 | Key | Used for | Notes |
 |---|---|---|
 | `sk_test_{tenant}_…` | `/api/v1` in Test | Only ever creates and sees test payments. Works from day one with the built-in Simulator. |
 | `sk_live_{tenant}_…` | `/api/v1` in Live | Live payments are refused (`live_not_ready`) until one payment method has Live settings that pass their check. |
-| `tdk_{tenant}_…` | `/api/tenant` | Tenant developer key: automates the console within its capabilities. It can't create payments. |
+| `tdk_{tenant}_…` | `/api/tenant` | Tenant developer key: automates everything the console does, within the capabilities ticked. |
 
 ```
 Authorization: Bearer sk_test_acme_…
@@ -217,17 +219,9 @@ Each is its own NuGet package that depends only on `WebSvc.PayLink.Abstractions`
 
 ## Tenant developer API
 
-Base path `/api/tenant`, `Authorization: Bearer tdk_…`. Choose test or live data with `?livemode=true|false` (default false). A missing capability returns `403 insufficient_scope`.
+Base path `/api/tenant`, `Authorization: Bearer tdk_…` (or a platform key with *Act for tenants* and `PayLink-Tenant: {slug}`). Choose test or live data with `?livemode=true|false` (default false). Every console action has a route; a missing capability returns `403 insufficient_scope`.
 
-| Capability | Routes |
-|---|---|
-| `payments.read` | `GET /payments?status=&q=&limit=&offset=`, `GET /payments/{id}` (with the full journey) |
-| `payments.write` | `POST /payments/{id}/cancel` `{ "note": "…" }` |
-| `refunds` | `POST /payments/{id}/refunds` `{ "amount": 5000, "reason": "…", "manual": false }` (manual refunds need a reason) |
-| `upi.verify` | `GET /upi/pending`, `POST /upi/{attempt_id}/approve` and `/reject` `{ "note": "…" }` (note required) |
-| `methods` | `GET /methods`, `PUT /methods/{connector}/{test|live}` `{ "enabled": true, "settings": { "vpa": "acme@okhdfcbank", … } }`. Secrets are never returned. |
-| `webhooks` | `GET/POST /webhooks`, `DELETE /webhooks/{id}`, `GET /webhooks/deliveries?payment_id=`, `POST /webhooks/deliveries/{id}/redeliver` |
-| `risk` | `GET/POST /risk-rules`, `DELETE /risk-rules/{id}` |
+Capabilities: `payments.read`, `payments.write`, `refunds`, `upi.verify`, `links`, `reports`, `reconciliation`, `disputes`, `methods`, `webhooks`, `risk`, `alerts`, `team`, `domain`, `data_access`, `keys`, `audit`. The routes for each are in the [automation API guide](https://websvcin.github.io/paylink/automation/tenant-api) and the OpenAPI document at `/docs/api/tenant/openapi.json`.
 
 ## Errors
 

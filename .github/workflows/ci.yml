@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    paths-ignore: ['docs-site/**', '.github/workflows/deploy-docs.yml']
   pull_request:
+    paths-ignore: ['docs-site/**', '.github/workflows/deploy-docs.yml']
 
 jobs:
   build-and-test:

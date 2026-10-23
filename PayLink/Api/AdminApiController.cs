@@ -41,6 +41,7 @@ public sealed class AdminApiController(
 
     private bool InReach(TenantRecord t) => !OwnTenantsOnly || t.CreatedByKeyId == KeyId;
 
+    /// <summary>Platform counts: tenants, admins, approvals, keys, and live payments in the last 7 days.</summary>
     [HttpGet("dashboard")]
     [RequireCapability(Capabilities.Dashboard)]
     public async Task<IActionResult> Dashboard()
@@ -49,6 +50,7 @@ public sealed class AdminApiController(
         return Ok(new { activeTenants = c.Active, suspendedTenants = c.Suspended, platformAdmins = c.Admins, pendingAdmins = c.PendingAdmins, approvals = c.Approvals, developerKeys = c.Keys });
     }
 
+    /// <summary>Tenants in this key's reach; q searches name, address and LoginLink organization.</summary>
     [HttpGet("tenants")]
     [RequireCapability(Capabilities.Tenants)]
     public async Task<IActionResult> Tenants([FromQuery] string? q, [FromQuery] int take = 50)
@@ -57,6 +59,7 @@ public sealed class AdminApiController(
         return Ok(new { tenants = list.Select(Shape) });
     }
 
+    /// <summary>One tenant.</summary>
     [HttpGet("tenants/{id:long}")]
     [RequireCapability(Capabilities.Tenants)]
     public async Task<IActionResult> Tenant(long id)
@@ -67,6 +70,7 @@ public sealed class AdminApiController(
 
     public sealed record StatusBody(string Status);
 
+    /// <summary>Suspends ("suspended") or reactivates ("active") a tenant.</summary>
     [HttpPatch("tenants/{id:long}")]
     [RequireCapability(Capabilities.Tenants)]
     public async Task<IActionResult> SetStatus(long id, [FromBody] StatusBody body)
@@ -172,6 +176,7 @@ public sealed class AdminApiController(
         return StatusCode(201, new { key.Id, key.Name, key.Kind, key.Livemode, prefix = key.KeyPrefix, capabilities = key.CapabilityList, secret });
     }
 
+    /// <summary>Revokes one of a tenant's keys.</summary>
     [HttpDelete("tenants/{id:long}/keys/{keyId:long}")]
     [RequireCapability(Capabilities.TenantOperations)]
     public async Task<IActionResult> RevokeTenantKey(long id, long keyId, [FromServices] PayLink.Payments.TenantKeyService keys)
@@ -183,6 +188,7 @@ public sealed class AdminApiController(
         return NoContent();
     }
 
+    /// <summary>LoginLink organizations approved for an auto-provisioned database at signup.</summary>
     [HttpGet("auto-provisioning/approvals")]
     [RequireCapability(Capabilities.AutoProvisioning)]
     public async Task<IActionResult> Approvals() =>
@@ -190,6 +196,7 @@ public sealed class AdminApiController(
 
     public sealed record ApprovalBody(string Organization, string? Note);
 
+    /// <summary>Approves an organization for an auto-provisioned database at signup.</summary>
     [HttpPost("auto-provisioning/approvals")]
     [RequireCapability(Capabilities.AutoProvisioning)]
     public async Task<IActionResult> AddApproval([FromBody] ApprovalBody body)
@@ -201,6 +208,7 @@ public sealed class AdminApiController(
         return StatusCode(201, new { organization = slug });
     }
 
+    /// <summary>Removes an approval.</summary>
     [HttpDelete("auto-provisioning/approvals/{organization}")]
     [RequireCapability(Capabilities.AutoProvisioning)]
     public async Task<IActionResult> RemoveApproval(string organization)
@@ -210,6 +218,7 @@ public sealed class AdminApiController(
         return NoContent();
     }
 
+    /// <summary>The platform audit log, newest first.</summary>
     [HttpGet("audit")]
     [RequireCapability(Capabilities.Audit)]
     public async Task<IActionResult> Audit([FromQuery] int take = 100, [FromQuery] int skip = 0)
