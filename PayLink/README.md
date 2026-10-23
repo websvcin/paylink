@@ -23,7 +23,7 @@
 | **Data access** | Reporting API (`/api/v1/reporting`, CrudApi's filter language); Connect CrudApi with a SELECT-only user |
 | **Journey and webhooks** | Append-only payment journey, statuses that only move forward, signed webhooks with retries and redelivery |
 | **Platform** | Connector catalog (install, allow, drain, uninstall; packages from nuget.org at runtime); amount and currency limits; subdomain consoles and tenants' own domains (TXT verified); move a tenant's or the platform's database between engines; live dashboard; backup download; file storage in the data folder or FileLink |
-| **Developers** | Docs at `/docs` and an OpenAPI 3 reference with Swagger UI at `/docs/api` (one document each for the Payments, tenant automation and platform APIs); tenant developer keys (`tdk_`) for scripts, including UPI approval, decision history and bank statement upload (`/api/tenant/upi/…`, guide at `/docs/automation`); platform developer API; API request log; console with a Test/Live switch |
+| **Developers** | Full documentation at https://websvcin.github.io/paylink/ (built from `docs-site/` on `main`); in-app `/docs` and an OpenAPI 3 reference with Swagger UI at `/docs/api`. Two kinds of tenant keys: integration keys (`sk_test_`/`sk_live_`, Payments API) and automation keys (`tdk_`, tenant API) that can do everything the console does, limited to the capabilities ticked. Platform keys (`pdk_`) with *Act for tenants* call any tenant's APIs with `PayLink-Tenant: {slug}` and create tenants' keys. API request log; console with a Test/Live switch |
 
 ## Run it
 

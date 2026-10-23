@@ -86,6 +86,8 @@ public static class Capabilities
     public const string Settings = "Settings";
     public const string Audit = "Audit";
     public const string Dashboard = "Dashboard";
+    /// <summary>Act for tenants: call the tenant API and the Payments API with "PayLink-Tenant: {slug}", and manage tenants' keys.</summary>
+    public const string TenantOperations = "TenantOperations";
 
     public static readonly IReadOnlyList<(string Name, string Label, string Covers)> All =
     [
@@ -96,6 +98,7 @@ public static class Capabilities
         (Settings, "Limits and settings", "Read platform settings"),
         (Audit, "Audit", "Read the platform audit log"),
         (Dashboard, "Dashboard", "Read-only platform counts"),
+        (TenantOperations, "Act for tenants", "Everything a tenant admin can do, for any tenant in reach: send PayLink-Tenant: {slug} to /api/tenant (all capabilities) or /api/v1 (with PayLink-Mode: test|live); create and revoke tenants' keys"),
     ];
 }
 

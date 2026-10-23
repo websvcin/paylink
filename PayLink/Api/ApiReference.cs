@@ -18,14 +18,17 @@ public static class ApiReference
         new("payments", "Payments API", "api/v1/", "sk_test_acme_…",
             "For the merchant's server: create payments and payment links, read their status, refund, and query reporting data. " +
             "Authenticate with a secret key (sk_test_… for test data, sk_live_… for live) as `Authorization: Bearer <key>`. " +
-            "Send an `Idempotency-Key` header on creates. Amounts are integers in paise. Webhooks are signed with your whsec_ secret; see /docs/payments-api."),
+            "Send an `Idempotency-Key` header on creates. Amounts are integers in paise. Webhooks are signed with your whsec_ secret; see /docs/payments-api. " +
+            "A platform key with the TenantOperations capability can call these routes for a tenant with `PayLink-Tenant: {slug}` and `PayLink-Mode: test|live`."),
         new("tenant", "Tenant automation API", "api/tenant/", "tdk_acme_…",
             "For scripts that run one merchant's console: approve or reject UPI payments, upload bank statements, manage methods, webhooks and risk rules. " +
             "Authenticate with a developer key (tdk_…) as `Authorization: Bearer <key>`; each route needs the capability shown on it. " +
-            "Choose test or live data with `?livemode=true|false` (default false)."),
+            "Choose test or live data with `?livemode=true|false` (default false). Everything a tenant admin can do in the console has a route here. " +
+            "A platform key with the TenantOperations capability can call any route for a tenant with `PayLink-Tenant: {slug}` (every capability)."),
         new("platform", "Platform API", "api/admin/", "pdk_…",
             "For whoever runs the PayLink platform: create and manage tenants, auto-provisioning approvals, the audit log. " +
-            "Authenticate with a platform developer key (pdk_…) created in /admin → Developers."),
+            "Authenticate with a platform developer key (pdk_…) created in /admin → Developer API. With TenantOperations a key also acts for tenants " +
+            "(PayLink-Tenant header on /api/tenant and /api/v1) and manages tenants' keys."),
     ];
 
     public static void Configure(SwaggerGenOptions o)

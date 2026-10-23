@@ -296,3 +296,6 @@ details.card:not([open]) { padding-top: 14px; padding-bottom: 14px; gap: 0; }
 details.card > summary::-webkit-details-marker { display: none; }
 details.card > summary::before { content: "▸ "; color: var(--muted); }
 details.card[open] > summary::before { content: "▾ "; }
+@media (max-width: 600px) { .caps { grid-template-columns: minmax(0, 1fr); } }
+.toplink { color: var(--muted); text-decoration: none; font-size: .9rem; margin-right: 14px; }
+.toplink:hover { color: var(--ink); }

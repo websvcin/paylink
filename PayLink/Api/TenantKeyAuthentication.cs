@@ -34,6 +34,7 @@ public sealed class TenantKeyHandler(
         var header = Request.Headers.Authorization.ToString();
         if (!header.StartsWith("Bearer ", StringComparison.Ordinal)) return AuthenticateResult.NoResult();
         var secret = header["Bearer ".Length..].Trim();
+        if (secret.StartsWith("pdk_", StringComparison.Ordinal)) return await PlatformKeyAsync(secret);
         if (TenantKeyService.Parse(secret) is not { } parsed) return AuthenticateResult.NoResult();
 
         var tenant = await platform.TenantBySlugAsync(parsed.Slug);
@@ -49,8 +50,55 @@ public sealed class TenantKeyHandler(
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme)), Scheme));
     }
 
+    public const string TenantHeader = "PayLink-Tenant";
+    public const string ModeHeader = "PayLink-Mode";
+
+    /// <summary>
+    /// A platform developer key with the TenantOperations capability acts for the tenant named in PayLink-Tenant: on /api/tenant
+    /// with every capability, on /api/v1 as that tenant's test or live secret key (PayLink-Mode). Tenants outside the key's reach are not found.
+    /// Every call is audited in the tenant's log under the platform key's name.
+    /// </summary>
+    private async Task<AuthenticateResult> PlatformKeyAsync(string secret)
+    {
+        var slug = Request.Headers[TenantHeader].ToString().Trim().ToLowerInvariant();
+        if (slug.Length == 0) return AuthenticateResult.NoResult();
+        var pdk = await platform.DeveloperKeyBySecretAsync(secret);
+        if (pdk is not { IsUsable: true }) return AuthenticateResult.Fail("invalid_key");
+        if (!pdk.CapabilityList.Contains(Capabilities.TenantOperations))
+        {
+            Context.Items["paylink.auth_error"] = "insufficient_scope";
+            return AuthenticateResult.Fail("insufficient_scope");
+        }
+        var tenant = await platform.TenantBySlugAsync(slug);
+        if (tenant is null || (pdk.Reach == "own" && tenant.CreatedByKeyId != pdk.Id)) return AuthenticateResult.Fail("invalid_key");
+        if (!tenant.IsActive) { Context.Items["paylink.auth_error"] = "tenant_suspended"; return AuthenticateResult.Fail("tenant_suspended"); }
+        await platform.TouchDeveloperKeyAsync(pdk.Id);
+
+        var tenantApi = Request.Path.StartsWithSegments("/api/tenant", StringComparison.OrdinalIgnoreCase);
+        var live = string.Equals(Request.Headers[ModeHeader].ToString(), "live", StringComparison.OrdinalIgnoreCase);
+        var key = new TenantApiKey
+        {
+            Id = 0, Name = $"platform key {pdk.Name} (pdk #{pdk.Id})", Kind = tenantApi ? TenantKeyKinds.Developer : TenantKeyKinds.Secret,
+            Livemode = !tenantApi && live, KeyPrefix = pdk.KeyPrefix,
+            Capabilities = tenantApi ? string.Join(",", TenantCapabilities.All.Select(c => c.Key)) : null, CreatedAt = pdk.CreatedAt,
+        };
+        Context.Items[TenantItem] = tenant;
+        Context.Items[KeyItem] = key;
+        var claims = new List<Claim> { new(KindClaim, key.Kind), new(LiveClaim, key.Livemode ? "true" : "false"), new(PlatformKeyClaim, pdk.Id.ToString()) };
+        claims.AddRange(key.CapabilityList.Select(c => new Claim(CapabilityClaim, c)));
+        return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme)), Scheme));
+    }
+
+    public const string PlatformKeyClaim = "tk_pdk";
+
     protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
     {
+        if (Context.Items["paylink.auth_error"] as string == "insufficient_scope")
+        {
+            Response.StatusCode = 403;
+            await Response.WriteAsJsonAsync(new { error = "insufficient_scope", error_description = "This platform key doesn't have the TenantOperations capability." });
+            return;
+        }
         Response.StatusCode = 401;
         if (Context.Items["paylink.auth_error"] as string == "tenant_suspended")
         {

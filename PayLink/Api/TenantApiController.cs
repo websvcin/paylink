@@ -14,7 +14,7 @@ namespace PayLink.Api;
 [ApiController]
 [Route("api/tenant")]
 [Authorize(Policy = "TenantDeveloperKey")]
-public sealed class TenantApiController(
+public sealed partial class TenantApiController(
     PaymentService payments,
     PlatformSettings settings,
     ConnectorRegistry registry,
@@ -31,12 +31,20 @@ public sealed class TenantApiController(
 
     [HttpGet("payments")]
     [RequireTenantCapability(TenantCapabilities.PaymentsRead)]
-    public async Task<IActionResult> Payments(bool livemode = false, string? status = null, string? q = null, int limit = 50, int offset = 0)
+    public async Task<IActionResult> Payments(bool livemode = false, string? status = null, string? q = null, string? method = null,
+        string? from = null, string? to = null, long? min_amount = null, long? max_amount = null, string? reference = null, int limit = 50, int offset = 0)
     {
         var baseUrl = await settings.GetPublicBaseUrlAsync();
-        var list = await payments.SearchAsync(Tenant, livemode, status, q, Math.Clamp(limit, 1, 200), offset);
-        return Json(new { @object = "list", data = list.Select(p => PaymentJson.From(p, baseUrl)) });
+        var filter = Filter(status, q, method, from, to, min_amount, max_amount, reference);
+        var list = await payments.SearchAsync(Tenant, livemode, filter, Math.Clamp(limit, 1, 200), Math.Max(0, offset));
+        var totals = await payments.TotalsAsync(Tenant, livemode, filter);
+        return Json(new { @object = "list", total = totals.Count, total_amount = totals.Amount, data = list.Select(p => PaymentJson.From(p, baseUrl)) });
     }
+
+    /// <summary>Filters shared by the list and the CSV export. Amounts are in paise; dates are UTC days (yyyy-MM-dd), both ends included.</summary>
+    private static PaymentFilter Filter(string? status, string? q, string? method, string? from, string? to, long? min, long? max, string? reference) =>
+        new(string.IsNullOrEmpty(status) ? null : status, q, string.IsNullOrEmpty(method) ? null : method,
+            string.IsNullOrEmpty(from) ? null : DateRange.Parse(null, from, to), min, max, string.IsNullOrEmpty(reference) ? null : reference);
 
     [HttpGet("payments/{id}")]
     [RequireTenantCapability(TenantCapabilities.PaymentsRead)]

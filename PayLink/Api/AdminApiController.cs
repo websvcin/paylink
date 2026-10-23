@@ -129,6 +129,60 @@ public sealed class AdminApiController(
         }
     }
 
+    // ---------- tenants' keys (TenantOperations) ----------
+
+    public sealed record TenantKeyBody(string Name, string Kind, bool Livemode, List<string>? Capabilities, [property: System.Text.Json.Serialization.JsonPropertyName("expires_at")] string? ExpiresAt);
+
+    /// <summary>A tenant's keys (secret keys for /api/v1, developer keys for /api/tenant). Secrets are never listed.</summary>
+    [HttpGet("tenants/{id:long}/keys")]
+    [RequireCapability(Capabilities.TenantOperations)]
+    public async Task<IActionResult> TenantKeys(long id, [FromServices] PayLink.Payments.TenantKeyService keys)
+    {
+        var t = await repo.TenantByIdAsync(id);
+        if (t is null || !InReach(t)) return Error(404, "not_found", "No such tenant.");
+        return Ok(new
+        {
+            data = (await keys.ListAsync(t)).Select(k => new
+            {
+                k.Id, k.Name, k.Kind, k.Livemode, prefix = k.KeyPrefix, capabilities = k.CapabilityList, k.CreatedAt, k.CreatedBy, k.LastUsedAt, k.ExpiresAt, k.RevokedAt,
+            }),
+        });
+    }
+
+    /// <summary>
+    /// Creates a key for a tenant, e.g. to hand a product built on PayLink its own sk_ key, or a tdk_ key with chosen capabilities.
+    /// The secret is returned once. Recorded in the tenant's and the platform's audit logs.
+    /// </summary>
+    [HttpPost("tenants/{id:long}/keys")]
+    [RequireCapability(Capabilities.TenantOperations)]
+    public async Task<IActionResult> CreateTenantKey(long id, [FromBody] TenantKeyBody body, [FromServices] PayLink.Payments.TenantKeyService keys)
+    {
+        var t = await repo.TenantByIdAsync(id);
+        if (t is null || !InReach(t)) return Error(404, "not_found", "No such tenant.");
+        if (string.IsNullOrWhiteSpace(body.Name)) return Error(400, "invalid_request", "name is needed.");
+        if (body.Kind is not (PayLink.Payments.TenantKeyKinds.Secret or PayLink.Payments.TenantKeyKinds.Developer)) return Error(400, "invalid_request", "kind is secret or developer.");
+        var caps = body.Capabilities ?? [];
+        if (body.Kind == PayLink.Payments.TenantKeyKinds.Developer)
+        {
+            if (caps.Count == 0) return Error(400, "invalid_request", "A developer key needs at least one capability.");
+            if (caps.FirstOrDefault(c => !PayLink.Payments.TenantCapabilities.IsKnown(c)) is { } unknown) return Error(400, "invalid_request", $"Unknown capability {unknown}.");
+        }
+        var (key, secret) = await keys.CreateAsync(t, body.Kind, body.Name, body.Livemode, caps, body.ExpiresAt, Me);
+        await platformDb.AuditAsync(Me, "tenant.key_created", t.Slug, $"{key.Name} ({key.Kind})");
+        return StatusCode(201, new { key.Id, key.Name, key.Kind, key.Livemode, prefix = key.KeyPrefix, capabilities = key.CapabilityList, secret });
+    }
+
+    [HttpDelete("tenants/{id:long}/keys/{keyId:long}")]
+    [RequireCapability(Capabilities.TenantOperations)]
+    public async Task<IActionResult> RevokeTenantKey(long id, long keyId, [FromServices] PayLink.Payments.TenantKeyService keys)
+    {
+        var t = await repo.TenantByIdAsync(id);
+        if (t is null || !InReach(t)) return Error(404, "not_found", "No such tenant.");
+        if (!await keys.RevokeAsync(t, keyId, Me)) return Error(404, "not_found", $"No active key {keyId}.");
+        await platformDb.AuditAsync(Me, "tenant.key_revoked", t.Slug, keyId.ToString());
+        return NoContent();
+    }
+
     [HttpGet("auto-provisioning/approvals")]
     [RequireCapability(Capabilities.AutoProvisioning)]
     public async Task<IActionResult> Approvals() =>

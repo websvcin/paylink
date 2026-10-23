@@ -8,7 +8,23 @@
 @section Nav { <partial name="_AdminNav" /> }
 @section Who { <partial name="_AdminWho" /> }
 
-<div class="head"><div><h1>Developer API</h1><p>Platform developer keys (<code>pdk_</code>) automate this console from scripts. Each key gets only the capabilities you tick. A key can never create another key.</p></div></div>
+<div class="head"><div><h1>Developer API</h1><p>Platform developer keys (<code>pdk_</code>) automate this console from scripts. Each key gets only the capabilities you tick. A key can never create another platform key.</p></div></div>
+
+<div class="card">
+    <h3>Building a product on PayLink</h3>
+    <p class="muted">Give your product one platform key with <b>Tenants</b> and <b>Act for tenants</b>. It can then create a tenant for each of your customers and do, for each of them, everything their admin can do in the console, with no per-tenant key to store:</p>
+    <pre class="secret" style="white-space:pre-wrap;user-select:text"># Platform API: create the tenant
+curl -X POST @baseUrl/api/admin/tenants -H "Authorization: Bearer pdk_…" -H "Content-Type: application/json" -d '{ … }'
+
+# Tenant API, acting for that tenant: turn on PayLink UPI
+curl -X PUT @baseUrl/api/tenant/methods/upi/test -H "Authorization: Bearer pdk_…" -H "PayLink-Tenant: acme" \
+  -H "Content-Type: application/json" -d '{ "enabled": true, "settings": { "vpa": "acme@okhdfcbank", "payee_name": "Acme" } }'
+
+# Payments API, acting for that tenant (PayLink-Mode: test or live)
+curl -X POST @baseUrl/api/v1/payments -H "Authorization: Bearer pdk_…" -H "PayLink-Tenant: acme" -H "PayLink-Mode: test" \
+  -H "Content-Type: application/json" -d '{ "amount": 49900, "currency": "INR" }'</pre>
+    <p class="hint">Or create keys for a tenant with <code>POST /api/admin/tenants/{id}/keys</code> (an <code>sk_</code> key for its own server, or a <code>tdk_</code> key with chosen capabilities). A key with reach "only tenants it creates" can't act for any other tenant. Every call is in the tenant's audit log under the platform key's name. Reference: <a href="/docs/api/index.html?urls.primaryName=Platform%20API">Platform API</a>.</p>
+</div>
 
 <div class="card flush">
     <div class="tbl">

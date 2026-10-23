@@ -280,17 +280,40 @@ public static class TenantCapabilities
     public const string Webhooks = "webhooks";
     public const string Risk = "risk";
     public const string Refunds = "refunds";
+    public const string Links = "links";
+    public const string Reports = "reports";
+    public const string Reconciliation = "reconciliation";
+    public const string Disputes = "disputes";
+    public const string Alerts = "alerts";
+    public const string Team = "team";
+    public const string Domain = "domain";
+    public const string DataAccess = "data_access";
+    public const string Keys = "keys";
+    public const string Audit = "audit";
 
+    /// <summary>Everything a tenant admin can do in the console, grouped as on the Developers page.</summary>
     public static readonly (string Key, string Label)[] All =
     [
+        (PaymentsRead, "Payments (read): list, search, export and see journeys"),
+        (PaymentsWrite, "Payments (write): create, cancel and release held payments"),
         (Refunds, "Refunds: refund paid payments, in full or in part"),
-        (PaymentsRead, "Payments (read): list and search payments, see journeys"),
-        (PaymentsWrite, "Payments (write): cancel open payments"),
-        (UpiVerify, "UPI verification: approve or reject UTRs"),
-        (Methods, "Payment methods: turn on and configure connectors"),
-        (Webhooks, "Webhooks: endpoints and redelivery"),
-        (Risk, "Risk rules: block lists and limits"),
+        (UpiVerify, "UPI verification: approve or reject UTRs, upload bank statements, see screenshots"),
+        (Links, "Payment links: create, list, turn on and off, QR codes"),
+        (Reports, "Reports: funnel, success rates, failure reasons, CSV"),
+        (Reconciliation, "Reconciliation: upload settlement reports, mismatches, daily close"),
+        (Disputes, "Disputes: list and note chargebacks"),
+        (Methods, "Payment methods: turn on and configure connectors, routing, account requests"),
+        (Webhooks, "Webhooks: endpoints, test events and redelivery"),
+        (Risk, "Risk rules: block lists, limits and holds"),
+        (Alerts, "Alerts: success-rate and backlog alerts"),
+        (Team, "Team: who may sign in, members' roles, the role map"),
+        (Domain, "Your domain: add, verify and remove"),
+        (DataAccess, "Data access: connect and disconnect CrudApi"),
+        (Keys, "Keys: create and revoke keys (never with more than this key has)"),
+        (Audit, "Audit log: read and verify the chain"),
     ];
+
+    public static bool IsKnown(string capability) => All.Any(a => a.Key == capability);
 }
 
 public sealed class WebhookEndpoint

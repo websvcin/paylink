@@ -8,20 +8,7 @@
 @section Nav { <partial name="_ConsoleNav" /> }
 @section Who { <partial name="_ConsoleWho" /> }
 
-<div class="head"><div><h1>Developers</h1><p>Integrate once: create a payment from your server, send the payer to its <code>checkout_url</code>, and trust the signed webhook. Adding payment methods later needs no code change. See <a href="/docs">the developer docs</a> and the <a href="/docs/api">API reference</a>.</p></div></div>
-
-<div class="grid2">
-    <div class="card">
-        <h3>Taking payments from your website or app</h3>
-        <p class="muted">Use a <b>secret key</b> (<code>sk_test_…</code> / <code>sk_live_…</code>) on your server with the <b>Payments API</b> (<code>/api/v1</code>), the same way you'd integrate PhonePe or PayU, but once for every method you turn on. Never put it in a browser or app.</p>
-        <p class="hint"><a href="/docs/payments-api">Payments API guide</a> · <a href="/docs/api/index.html?urls.primaryName=Payments%20API">reference</a></p>
-    </div>
-    <div class="card">
-        <h3>Automating this console</h3>
-        <p class="muted">Use a <b>developer key</b> (<code>tdk_…</code>) with the <b>tenant API</b> (<code>/api/tenant</code>) for scripts: approve UPI payments, upload bank statements, refunds, webhooks, risk rules. It can only do what you tick, and can't take payments.</p>
-        <p class="hint"><a href="/docs/automation">Automation guide</a> · <a href="/docs/api/index.html?urls.primaryName=Tenant%20automation%20API">reference</a></p>
-    </div>
-</div>
+<div class="head"><div><h1>Developers</h1><p>Two kinds of keys, for two jobs: <a href="#integration">integration keys</a> for taking payments from your website or app, and <a href="#automation">automation keys</a> for scripts that run this console. Adding payment methods later needs no code change. See <a href="/docs">the developer docs</a> and the <a href="/docs/api">API reference</a>.</p></div></div>
 
 @if (TempData["Secret"] is string secret)
 {
@@ -31,55 +18,95 @@
     </div>
 }
 
-<div class="card">
-    <h3>Try it</h3>
-    <pre class="secret" style="white-space:pre-wrap;user-select:text">curl @Model.BaseUrl/api/v1/payments \
+<h2 id="integration">1. Integration keys <span class="hint">· take payments from your website or app</span></h2>
+<div class="grid2">
+    <div class="card">
+        <p class="muted">A <b>secret key</b> (<code>sk_@(mode)_@(Model.Tenant.Slug)_…</code>) lets <b>your server</b> create payments, read their status and refund through the <b>Payments API</b> (<code>/api/v1</code>), the way you'd integrate PhonePe or PayU, once for every method. Keep it on the server, never in a browser or app. @(Model.Livemode ? "Live keys take real money." : "Test keys only ever create test payments; switch to Live in the menu for live keys.")</p>
+        <pre class="secret" style="white-space:pre-wrap;user-select:text">curl @Model.BaseUrl/api/v1/payments \
   -H "Authorization: Bearer sk_@(mode)_@(Model.Tenant.Slug)_…" \
-  -H "Idempotency-Key: order-1042" \
-  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: order-1042" -H "Content-Type: application/json" \
   -d '{ "amount": 149900, "currency": "INR", "reference": "order-1042",
-        "description": "Course fee", "return_url": "https://example.com/orders/1042" }'</pre>
-</div>
-
-<div class="card flush">
-    <div class="tbl">
-        <table>
-            <thead><tr><th>Key</th><th>Kind</th><th>Created</th><th>Last used</th><th></th></tr></thead>
-            <tbody>
-            @foreach (var k in Model.Keys)
-            {
-                <tr>
-                    <td><b>@k.Name</b><br><span class="mono hint">@k.KeyPrefix</span></td>
-                    <td>@if (k.Kind == TenantKeyKinds.Secret) { <span class="chip @(k.Livemode ? "good" : "warn")">@(k.Livemode ? "Live secret" : "Test secret")</span> }
-                        else { <span class="chip info">Developer</span><br><span class="hint">@k.Capabilities</span> }</td>
-                    <td class="hint">@Clock.Short(k.CreatedAt) · @k.CreatedBy</td>
-                    <td class="hint">@Clock.Short(k.LastUsedAt)</td>
-                    <td>@if (k.RevokedAt is not null) { <span class="chip bad">Revoked</span> }
-                        else if (Model.CanDevelop) { <form method="post" asp-page-handler="Revoke" class="inline"><input type="hidden" name="id" value="@k.Id"><button class="btn sm danger" type="submit">Revoke</button></form> }</td>
-                </tr>
-            }
-            @if (Model.Keys.Count == 0) { <tr><td colspan="5" class="empty">No keys yet</td></tr> }
-            </tbody>
-        </table>
+        "return_url": "https://example.com/orders/1042" }'</pre>
+        <p class="hint"><a href="/docs/payments-api">Payments API guide</a> · <a href="/docs/api/index.html?urls.primaryName=Payments%20API">reference</a></p>
+    </div>
+    <div class="card">
+        @if (Model.CanDevelop)
+        {
+            <form method="post" asp-page-handler="Key" class="stack">
+                <h3>New @(Model.Livemode ? "live" : "test") secret key</h3>
+                <input type="hidden" name="kind" value="secret">
+                <div class="field"><label for="skname">Where it's used</label><input id="skname" name="name" placeholder="Shop server" required></div>
+                <div class="actions"><button class="btn pri" type="submit">Create secret key</button></div>
+            </form>
+        }
+        <div class="tbl">
+            <table>
+                <thead><tr><th>Secret key</th><th>Mode</th><th>Last used</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var k in Model.Keys.Where(k => k.Kind == TenantKeyKinds.Secret))
+                {
+                    <tr>
+                        <td><b>@k.Name</b><br><span class="mono hint">@k.KeyPrefix</span></td>
+                        <td><span class="chip @(k.Livemode ? "good" : "warn")">@(k.Livemode ? "Live" : "Test")</span></td>
+                        <td class="hint">@Clock.Short(k.LastUsedAt)</td>
+                        <td>@if (k.RevokedAt is not null) { <span class="chip bad">Revoked</span> }
+                            else if (Model.CanDevelop) { <form method="post" asp-page-handler="Revoke" class="inline"><input type="hidden" name="id" value="@k.Id"><button class="btn sm danger" type="submit">Revoke</button></form> }</td>
+                    </tr>
+                }
+                @if (!Model.Keys.Any(k => k.Kind == TenantKeyKinds.Secret)) { <tr><td colspan="4" class="empty">No secret keys yet</td></tr> }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-@if (Model.CanDevelop)
-{
-    <form method="post" asp-page-handler="Key" class="card">
-        <h3>Create a key</h3>
-        <div class="opts">
-            <label class="opt"><input type="radio" name="kind" value="secret" checked><div><b>@(Model.Livemode ? "Live" : "Test") secret key</b><span>For your server: create payments and read their status with <code>/api/v1</code>. @(Model.Livemode ? "Live keys take real money." : "Test keys only ever create test payments.") Switch Test/Live in the menu for the other kind.</span></div></label>
-            <label class="opt"><input type="radio" name="kind" value="developer"><div><b>Developer key (tdk_)</b><span>Automates this console with <code>/api/tenant</code>, limited to the capabilities you choose. It can't take payments.</span></div></label>
-            <div class="reveal caps">
-                @foreach (var (key, label) in TenantCapabilities.All) { <label><input type="checkbox" name="capabilities" value="@key"><div>@key<span>@label</span></div></label> }
-            </div>
+<h2 id="automation">2. Automation keys <span class="hint">· scripts that run this console</span></h2>
+<div class="grid2">
+    <div class="card">
+        <p class="muted">A <b>developer key</b> (<code>tdk_@(Model.Tenant.Slug)_…</code>) lets <b>your scripts and back-office tools</b> do what your team does here, through the <b>tenant API</b> (<code>/api/tenant</code>): approve UPI payments and upload bank statements, create links and payments, refund, set up methods and routing, webhooks, risk rules, alerts, team, domain, reports, reconciliation and more. It can do only what you tick. Choose test or live data with <code>?livemode=true</code>.</p>
+        <pre class="secret" style="white-space:pre-wrap;user-select:text">curl "@Model.BaseUrl/api/tenant/upi/statements?livemode=true" \
+  -H "Authorization: Bearer tdk_@(Model.Tenant.Slug)_…" -F statement=@@today.csv</pre>
+        <p class="hint"><a href="/docs/automation">Automation guide</a> · <a href="/docs/api/index.html?urls.primaryName=Tenant%20automation%20API">reference</a></p>
+    </div>
+    <div class="card">
+        @if (Model.CanDevelop)
+        {
+            <form method="post" asp-page-handler="Key" class="stack">
+                <h3>New developer key</h3>
+                <input type="hidden" name="kind" value="developer">
+                <div class="field"><label for="dkname">What it's for</label><input id="dkname" name="name" placeholder="Nightly UPI matching" required></div>
+                <label class="check"><input type="checkbox" id="capall"><span><b>Everything</b> (full automation of this console)</span></label>
+                <div class="caps" id="caps">
+                    @foreach (var (key, label) in TenantCapabilities.All) { <label><input type="checkbox" name="capabilities" value="@key"><div>@key<span>@label</span></div></label> }
+                </div>
+                <div class="actions"><button class="btn pri" type="submit">Create developer key</button></div>
+            </form>
+            <script>
+                document.getElementById('capall').addEventListener('change', e => document.querySelectorAll('#caps input').forEach(c => c.checked = e.target.checked));
+            </script>
+        }
+        <div class="tbl">
+            <table>
+                <thead><tr><th>Developer key</th><th>Can</th><th>Last used</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var k in Model.Keys.Where(k => k.Kind == TenantKeyKinds.Developer))
+                {
+                    <tr>
+                        <td><b>@k.Name</b><br><span class="mono hint">@k.KeyPrefix</span></td>
+                        <td class="hint">@(k.CapabilityList.Count == TenantCapabilities.All.Length ? "everything" : string.Join(", ", k.CapabilityList))</td>
+                        <td class="hint">@Clock.Short(k.LastUsedAt)</td>
+                        <td>@if (k.RevokedAt is not null) { <span class="chip bad">Revoked</span> }
+                            else if (Model.CanDevelop) { <form method="post" asp-page-handler="Revoke" class="inline"><input type="hidden" name="id" value="@k.Id"><button class="btn sm danger" type="submit">Revoke</button></form> }</td>
+                    </tr>
+                }
+                @if (!Model.Keys.Any(k => k.Kind == TenantKeyKinds.Developer)) { <tr><td colspan="4" class="empty">No developer keys yet</td></tr> }
+                </tbody>
+            </table>
         </div>
-        <div class="field"><label for="keyname">Name</label><input id="keyname" name="name" placeholder="Shop server" required></div>
-        <div class="actions"><button class="btn pri" type="submit">Create key</button></div>
-    </form>
-}
+    </div>
+</div>
 
+<h2 id="webhooks">3. Webhooks <span class="hint">· PayLink tells your server what happened</span></h2>
 <div class="card flush">
     <div class="tbl">
         <table>
@@ -145,6 +172,7 @@
     </div>
 </div>
 
+<h2 id="log">4. API request log <span class="hint">· every call made with this account's keys</span></h2>
 <div class="card flush">
     <div class="tbl">
         <table>

@@ -61,6 +61,8 @@ public sealed class PlatformSettings(PlatformDb db, SecretProtector secrets)
     public const string KeyCrudApiUrl = "crudapi_url";
     public const string DefaultCrudApiUrl = "https://crud.webapis.in";
     public const string CrudApiDocsUrl = "https://websvcin.github.io/crudapi/";
+    /// <summary>PayLink's own documentation site (GitHub Pages, built from docs-site/ on main).</summary>
+    public const string DocsSiteUrl = "https://websvcin.github.io/paylink/";
 
     public async Task<string> GetCrudApiUrlAsync() => (await GetAsync(KeyCrudApiUrl))?.Trim().TrimEnd('/') is { Length: > 0 } u ? u : DefaultCrudApiUrl;
 
